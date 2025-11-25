@@ -1,0 +1,9 @@
+{
+  "sandboxConfig": {
+    "src": "https://picsum.photos/seed/sandbox-config/800/350",
+    "width": 800,
+    "height": 350,
+    "alt": "Twilio Sandbox Configuration",
+    "data-ai-hint": "twilio sandbox"
+  }
+}
