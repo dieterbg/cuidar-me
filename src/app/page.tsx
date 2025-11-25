@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, FormEvent, FC, useEffect } from 'react';
@@ -8,16 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { CuidarMeLogo } from '@/components/icons';
 import { useAuth } from '@/hooks/use-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
+import Image from 'next/image';
+import { Loader2 } from 'lucide-react';
 
 const handleAuthError = (error: any, toast: ReturnType<typeof useToast>['toast']) => {
     let title = "Erro de autenticação";
     let description = "Ocorreu um erro inesperado.";
 
-    // Erros do Supabase
     if (error.message) {
         if (error.message.includes('Invalid login credentials')) {
             title = "Credenciais Inválidas";
@@ -53,7 +51,6 @@ const LoginForm: FC = () => {
         setIsPending(true);
         try {
             await signIn(email, password);
-            // O redirecionamento é tratado pelo hook useAuth e pelo useEffect da página.
         } catch (error: any) {
             handleAuthError(error, toast);
         } finally {
@@ -65,14 +62,31 @@ const LoginForm: FC = () => {
         <form onSubmit={handleLogin} className="space-y-4 pt-4">
             <div className="space-y-2">
                 <Label htmlFor="login-email">Email</Label>
-                <Input id="login-email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isPending} />
+                <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={isPending}
+                    className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20"
+                />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="login-password">Senha</Label>
-                <Input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isPending} />
+                <Input
+                    id="login-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isPending}
+                    className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20"
+                />
             </div>
-            <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? 'Aguarde...' : 'Entrar'}
+            <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
+                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar na Plataforma'}
             </Button>
         </form>
     );
@@ -120,7 +134,7 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
         try {
             const roleToAssign = userType === 'patient' ? 'paciente' : 'pendente';
 
-            await signUp(email, password, {
+            await signUp(email.toLowerCase().trim(), password, {
                 displayName: name,
                 role: roleToAssign,
                 phone: rawPhone,
@@ -137,26 +151,26 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
         <form onSubmit={handleRegister} className="space-y-4 pt-4">
             <div className="space-y-2 pt-2">
                 <Label htmlFor="register-name">Nome Completo</Label>
-                <Input id="register-name" type="text" placeholder="Seu nome completo" value={name} onChange={(e) => setName(e.target.value)} required disabled={isPending} />
+                <Input id="register-name" type="text" placeholder="Seu nome completo" value={name} onChange={(e) => setName(e.target.value)} required disabled={isPending} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
             </div>
             {userType === 'patient' && (
                 <>
                     <div className="space-y-2">
                         <Label htmlFor="register-phone">WhatsApp (com DDD)</Label>
-                        <Input id="register-phone" type="tel" placeholder="(11) 99999-9999" value={phone} onChange={handlePhoneChange} required disabled={isPending} maxLength={15} />
+                        <Input id="register-phone" type="tel" placeholder="(11) 99999-9999" value={phone} onChange={handlePhoneChange} required disabled={isPending} maxLength={15} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
                     </div>
                 </>
             )}
             <div className="space-y-2">
                 <Label htmlFor="register-email">Email</Label>
-                <Input id="register-email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isPending} />
+                <Input id="register-email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isPending} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="register-password">Senha</Label>
-                <Input id="register-password" type="password" placeholder="Mínimo de 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isPending} />
+                <Input id="register-password" type="password" placeholder="Mínimo de 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isPending} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
             </div>
-            <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? 'Criando conta...' : 'Cadastrar'}
+            <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
+                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Criar Conta Gratuita'}
             </Button>
         </form>
     );
@@ -167,68 +181,116 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
 export default function RootPage() {
     const { user, profile, loading } = useAuth();
     const router = useRouter();
-    const { toast } = useToast();
 
     useEffect(() => {
-        // A lógica de redirecionamento é simples: se o usuário estiver logado e
-        // o perfil dele carregado, o app deve ir para o /dashboard, que atuará como roteador.
         if (!loading && user && profile) {
-            router.replace('/dashboard');
+            if (profile.role === 'paciente') {
+                router.replace('/portal/welcome');
+            } else if (profile.role === 'pendente') {
+                router.replace('/dashboard');
+            } else {
+                router.replace('/overview');
+            }
         }
     }, [user, profile, loading, router]);
 
-    // Mostra a tela de carregamento se a autenticação estiver em progresso
-    // ou se o usuário já estiver logado e o redirecionamento estiver prestes a acontecer.
     if (loading || (user && profile)) {
         return (
             <div className="flex h-screen items-center justify-center bg-background">
-                <p>Carregando...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-[#899d5e]" />
             </div>
         );
     }
 
-    // Mostra o formulário de login/registro se não houver usuário logado e
-    // a verificação de autenticação já tiver sido concluída.
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background p-4">
-            <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                    <div className="flex justify-center mb-4">
-                        <CuidarMeLogo />
+        <div className="flex min-h-screen bg-background">
+            {/* Left Side - Hero/Branding */}
+            <div className="hidden lg:flex lg:w-1/2 bg-[#F9FAF6] relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-[#EBECE8]">
+                <div className="relative z-10 flex flex-col items-center">
+                    <div className="relative h-24 w-72 mb-8">
+                        <Image
+                            src="/logo.svg"
+                            alt="Cuidar.me Logo"
+                            fill
+                            className="object-contain mix-blend-multiply"
+                            priority
+                        />
                     </div>
-                    <CardTitle>Acesso à Plataforma</CardTitle>
-                    <CardDescription>
-                        Faça login ou crie sua conta para começar.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Tabs defaultValue="login">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="login">Entrar</TabsTrigger>
-                            <TabsTrigger value="register">Criar Conta</TabsTrigger>
-                        </TabsList>
+                    <h1 className="text-4xl font-bold tracking-tight text-foreground max-w-lg leading-tight">
+                        Transformando o cuidado com a saúde através da tecnologia e empatia.
+                    </h1>
+                    <p className="mt-6 text-lg text-muted-foreground max-w-md mx-auto">
+                        Acompanhamento personalizado, protocolos inteligentes e uma equipe dedicada ao seu bem-estar.
+                    </p>
+                </div>
 
-                        <TabsContent value="login">
-                            <LoginForm />
-                        </TabsContent>
+                <div className="relative z-10 mt-12">
+                    <div className="flex flex-col items-center gap-4 text-sm font-medium text-muted-foreground">
+                        <div className="flex -space-x-3">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="h-12 w-12 rounded-full border-4 border-[#F9FAF6] bg-muted flex items-center justify-center text-xs overflow-hidden shadow-sm">
+                                    <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`} alt="Avatar" width={48} height={48} />
+                                </div>
+                            ))}
+                        </div>
+                        <p>Junte-se a mais de 2.000 pacientes</p>
+                    </div>
+                </div>
 
-                        <TabsContent value="register">
-                            <Tabs defaultValue="staff">
-                                <TabsList className="grid w-full grid-cols-2 mt-4">
-                                    <TabsTrigger value="staff">Sou da Equipe</TabsTrigger>
-                                    <TabsTrigger value="patient">Sou Paciente</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="staff">
-                                    <RegisterForm userType="staff" />
-                                </TabsContent>
-                                <TabsContent value="patient">
-                                    <RegisterForm userType="patient" />
-                                </TabsContent>
-                            </Tabs>
-                        </TabsContent>
-                    </Tabs>
-                </CardContent>
-            </Card>
+                {/* Abstract Background Shapes */}
+                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-[#899d5e]/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-[#899d5e]/5 rounded-full blur-3xl" />
+            </div>
+
+            {/* Right Side - Auth Forms */}
+            <div className="flex-1 flex items-center justify-center p-4 lg:p-8 bg-white">
+                <Card className="w-full max-w-md border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
+                    <CardHeader className="text-center lg:text-left space-y-1 pb-2">
+                        <div className="lg:hidden flex justify-center mb-6">
+                            <div className="relative h-14 w-56">
+                                <Image
+                                    src="/logo.svg"
+                                    alt="Cuidar.me Logo"
+                                    fill
+                                    className="object-contain"
+                                    priority
+                                />
+                            </div>
+                        </div>
+                        <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo de volta</CardTitle>
+                        <CardDescription>
+                            Acesse sua conta para gerenciar sua saúde ou acompanhar seus pacientes.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Tabs defaultValue="login" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl bg-muted/30 p-1">
+                                <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Entrar</TabsTrigger>
+                                <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Criar Conta</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="login" className="mt-0">
+                                <LoginForm />
+                            </TabsContent>
+
+                            <TabsContent value="register" className="mt-0">
+                                <Tabs defaultValue="patient" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/30 h-10 rounded-lg p-1">
+                                        <TabsTrigger value="patient" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm">Sou Paciente</TabsTrigger>
+                                        <TabsTrigger value="staff" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm">Sou Profissional</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="staff">
+                                        <RegisterForm userType="staff" />
+                                    </TabsContent>
+                                    <TabsContent value="patient">
+                                        <RegisterForm userType="patient" />
+                                    </TabsContent>
+                                </Tabs>
+                            </TabsContent>
+                        </Tabs>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }

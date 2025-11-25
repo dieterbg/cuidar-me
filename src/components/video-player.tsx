@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { ArrowLeft, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { updateSentVideoFeedback } from '@/ai/actions';
+import { updateSentVideoFeedback } from '@/ai/actions/videos';
 import { useAuth } from '@/hooks/use-auth';
 
 // O vídeo pode ser um Video (do catálogo) ou um SentVideo (com feedback)

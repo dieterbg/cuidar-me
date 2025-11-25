@@ -6,7 +6,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ArrowUp, Bot, Loader2, CheckCircle, MicOff, Sparkles, X } from 'lucide-react';
 
-import { resolvePatientAttention, suggestWhatsappReplies, getPatientDetails, addMessageAndSendWhatsapp } from '@/ai/actions';
+import { resolvePatientAttention, addMessageAndSendWhatsapp } from '@/ai/actions/messages';
+import { suggestWhatsappReplies } from '@/ai/flows/suggest-whatsapp-replies';
+import { getPatientDetails } from '@/ai/actions/patients';
 import type { Message, Patient } from '@/lib/types';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

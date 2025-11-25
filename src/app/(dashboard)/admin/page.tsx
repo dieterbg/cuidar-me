@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { getSystemUsers, updateUserRole, deleteUser } from '@/ai/actions';
+import { getSystemUsers, updateUserRole, deleteUser } from '@/ai/actions/system';
 import type { UserProfile, UserRole } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';

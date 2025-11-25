@@ -115,8 +115,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     toast({
       title: "Login bem-sucedido!",
-      description: "Redirecionando..."
+      description: "Entrando..."
     });
+
+    // Força um recarregamento para garantir que o estado da sessão seja atualizado corretamente
+    // e o redirecionamento ocorra sem falhas.
+    window.location.reload();
   };
 
   const signUp = async (
@@ -124,30 +128,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     metadata: { displayName: string; role: UserRole; phone?: string }
   ) => {
-    // 1. Criar usuário no Supabase Auth
+    // 1. Criar usuário no Supabase Auth (O Trigger do banco criará o perfil automaticamente)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          displayName: metadata.displayName,
+          role: metadata.role,
+          phone: metadata.phone,
+        }
+      }
     });
 
     if (authError) throw authError;
     if (!authData.user) throw new Error('Failed to create user');
 
-    // 2. Criar perfil na tabela profiles
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: authData.user.id,
-        email: authData.user.email,
-        display_name: metadata.displayName,
-        role: metadata.role,
-        phone: metadata.phone,
-      });
+    // 2. Perfil é criado automaticamente pelo Trigger no banco de dados.
+    // Não precisamos inserir manualmente na tabela 'profiles'.
 
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      throw profileError;
-    }
 
     // 3. Se for paciente, criar registro na tabela patients
     if (metadata.role === 'paciente') {

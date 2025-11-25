@@ -6,7 +6,7 @@ import { useState, useEffect, useTransition } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { getTopicDetails, addCommentToTopic } from '@/ai/actions';
+import { getTopicDetails, addCommentToTopic } from '@/ai/actions-extended';
 import type { CommunityTopic, CommunityComment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';

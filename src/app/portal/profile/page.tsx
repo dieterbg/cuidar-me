@@ -1,38 +1,29 @@
-
 "use client";
 
 import { useEffect, useState } from 'react';
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { getPatientDetails } from '@/ai/actions';
-import { Loader2, User } from 'lucide-react';
+import { getPatientProfileByUserId } from '@/ai/actions/patients';
+import { User, ShieldCheck, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { PatientEditForm } from '@/components/patient-edit-form';
 import type { Patient } from '@/lib/types';
-
+import { Badge } from '@/components/ui/badge';
 
 export default function PortalProfilePage() {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [isPageLoading, setIsPageLoading] = useState(true);
-  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
   const [patient, setPatient] = useState<Patient | null>(null);
-
 
   const fetchProfile = async () => {
     if (!user) return;
     setIsPageLoading(true);
     try {
-      const patientDetails = await getPatientDetails(user.id);
-      if (patientDetails.patient) {
-        setPatient(patientDetails.patient);
-        // Check if profile is incomplete
-        if (!patientDetails.patient.height) {
-          setIsProfileIncomplete(true);
-        }
+      const patientData = await getPatientProfileByUserId(user.id);
+      if (patientData) {
+        setPatient(patientData);
       } else {
         throw new Error("Perfil do paciente não encontrado.");
       }
@@ -50,101 +41,93 @@ export default function PortalProfilePage() {
     }
   }, [user, authLoading]);
 
-
   const handleSaveSuccess = () => {
-    // Reload the page to update the layout and access rights
-    if (isProfileIncomplete) {
-      window.location.reload();
-    } else {
-      // Just refetch data without full reload if profile was already complete
-      fetchProfile();
-    }
+    fetchProfile();
+    toast({
+      title: "Perfil Atualizado",
+      description: "Suas informações foram salvas com sucesso.",
+      className: "bg-green-50 border-green-200 text-green-800"
+    });
   }
 
   if (authLoading || isPageLoading) {
     return <ProfileSkeleton />
   }
 
+  const isProfileComplete = !!patient?.height;
+
   return (
-    <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <User className="h-8 w-8 text-primary" />
-            Meu Perfil
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Mantenha seus dados atualizados para que nossa equipe possa oferecer o melhor cuidado possível.
-          </p>
+    <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen">
+      <div className="max-w-4xl mx-auto space-y-8">
+
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <User className="h-8 w-8 text-primary" />
+              Meu Perfil
+            </h1>
+            <p className="text-muted-foreground mt-2 max-w-xl">
+              Mantenha seus dados atualizados para um acompanhamento personalizado.
+            </p>
+          </div>
+
+          <Badge variant={isProfileComplete ? "outline" : "destructive"} className="px-4 py-1.5 text-sm font-medium flex items-center gap-2">
+            {isProfileComplete ? <ShieldCheck className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            {isProfileComplete ? "Perfil Completo" : "Perfil Incompleto"}
+          </Badge>
         </div>
 
-        {isProfileIncomplete && (
-          <Alert className="mb-6 bg-blue-50 border-blue-200 text-blue-900">
-            <AlertTitle className="font-bold">Complete seu Perfil</AlertTitle>
-            <AlertDescription>
-              Por favor, preencha as informações abaixo para liberar o acesso total à plataforma.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Card>
+        {/* MAIN CARD */}
+        <Card className="bg-card/80 backdrop-blur-sm border-border/60 shadow-sm overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-primary/40 via-primary to-primary/40" />
           <CardHeader>
-            <CardTitle>Suas Informações</CardTitle>
+            <CardTitle>Dados Pessoais & Saúde</CardTitle>
             <CardDescription>
-              Essas informações são confidenciais e usadas apenas pela equipe de saúde para personalizar seu acompanhamento.
+              Essas informações são confidenciais e usadas apenas pela equipe médica.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {patient ? (
               <PatientEditForm patient={patient} onSave={handleSaveSuccess} context="patient" />
             ) : (
-              <p>Carregando perfil...</p>
+              <div className="text-center py-12 text-muted-foreground">
+                Não foi possível carregar o formulário.
+              </div>
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   );
 }
 
-
 function ProfileSkeleton() {
   return (
-    <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <Skeleton className="h-9 w-48" />
-          <Skeleton className="h-5 w-full max-w-lg mt-2" />
+    <div className="flex-1 p-8 bg-background/50 min-h-screen">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-6 w-64" />
+          </div>
+          <Skeleton className="h-8 w-32 rounded-full" />
         </div>
         <Card>
           <CardHeader>
-            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-8 w-48" />
             <Skeleton className="h-5 w-full max-w-md mt-2" />
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full" />
-              </div>
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
             </div>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-            <Skeleton className="h-10 w-36" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-12 w-40" />
           </CardContent>
         </Card>
       </div>

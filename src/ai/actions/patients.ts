@@ -1,9 +1,12 @@
 'use server';
-console.log('[DEBUG] actions/patients.ts loaded');
+
 
 import { createClient } from '@/lib/supabase-server';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
-import type { Patient, HealthMetric, SentVideo } from '@/lib/types';
+import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
+
+// Force recompile: 2025-11-25T00:45:00
+// ... (código anterior)
 
 export async function getPatients(): Promise<Patient[]> {
     const supabase = createClient();
@@ -21,10 +24,30 @@ export async function getPatients(): Promise<Patient[]> {
     return (data || []).map(transformPatientFromSupabase);
 }
 
+export async function getPatientProfileByUserId(userId: string): Promise<Patient | null> {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching patient profile by user id:', error);
+        return null;
+    }
+
+    return transformPatientFromSupabase(data);
+}
+
+// ... (código anterior)
+
 export async function getPatientDetails(patientId: string): Promise<{
     patient: Patient | null;
     metrics: HealthMetric[];
-    sentVideos: SentVideo[]
+    sentVideos: SentVideo[];
+    messages: Message[];
 }> {
     const supabase = createClient();
 
@@ -37,32 +60,41 @@ export async function getPatientDetails(patientId: string): Promise<{
 
     if (patientError || !patientData) {
         console.error('Error fetching patient details:', patientError);
-        return { patient: null, metrics: [], sentVideos: [] };
+        return { patient: null, metrics: [], sentVideos: [], messages: [] };
     }
 
     // Fetch health metrics
-    const { data: metricsData, error: metricsError } = await supabase
+    const { data: metricsData } = await supabase
         .from('health_metrics')
         .select('*')
         .eq('patient_id', patientId)
         .order('recorded_at', { ascending: false });
 
     // Fetch sent videos
-    const { data: sentVideosData, error: sentVideosError } = await supabase
+    const { data: sentVideosData } = await supabase
         .from('sent_videos')
         .select('*')
         .eq('patient_id', patientId)
         .order('sent_at', { ascending: false });
 
+    // Fetch messages (NEW)
+    const { data: messagesData } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('timestamp', { ascending: false })
+        .limit(50); // Limit to last 50 messages for performance
+
     const patient = transformPatientFromSupabase(patientData);
+
     const metrics = metricsData?.map(m => ({
         id: m.id,
         date: m.recorded_at,
-        weight: m.weight,
-        glucoseLevel: m.blood_glucose,
-        waistCircumference: m.waist_circumference,
-        sleepDuration: m.sleep_duration,
-        physicalActivity: m.physical_activity,
+        weight: m.weight_kg, // Corrigido mapeamento de weight
+        glucoseLevel: m.glucose_level,
+        waistCircumference: m.waist_circumference_cm,
+        sleepDuration: m.sleep_duration_hours,
+        physicalActivity: m.physical_activity_note,
         mealCheckin: m.meal_checkin,
     })) || [];
 
@@ -74,15 +106,53 @@ export async function getPatientDetails(patientId: string): Promise<{
         feedback: sv.feedback,
     })) || [];
 
-    return { patient, metrics, sentVideos };
+    const messages = messagesData?.map(msg => ({
+        id: msg.id,
+        patientId: msg.patient_id,
+        sender: msg.sender,
+        text: msg.message_content || msg.text, // Fallback
+        timestamp: msg.timestamp,
+        mediaUrl: msg.media_url,
+        mediaType: msg.media_type,
+        isRead: msg.is_read
+    })) || [];
+
+    return { patient, metrics, sentVideos, messages };
 }
 
 export async function updatePatient(patientId: string, updates: Partial<Patient>): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
 
+    // Mapear campos do frontend (camelCase) para o banco (snake_case)
+    // CRITICAL: Create a NEW object to avoid sending any extra fields
+    const dbUpdates: any = {};
+
+    // Explicit mapping
+    if (updates.fullName !== undefined) dbUpdates.full_name = updates.fullName;
+    if (updates.whatsappNumber !== undefined) dbUpdates.whatsapp_number = updates.whatsappNumber;
+    if (updates.birthDate !== undefined) dbUpdates.birth_date = updates.birthDate;
+    if (updates.gender !== undefined) dbUpdates.gender = updates.gender;
+    if (updates.height !== undefined) dbUpdates.height_cm = updates.height;
+    if (updates.initialWeight !== undefined) dbUpdates.initial_weight_kg = updates.initialWeight;
+    if (updates.healthConditions !== undefined) dbUpdates.health_conditions = updates.healthConditions;
+    if (updates.allergies !== undefined) dbUpdates.allergies = updates.allergies;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.riskLevel !== undefined) dbUpdates.risk_level = updates.riskLevel;
+
+    // Handle subscription if present (it's a JSON column usually, but let's check schema)
+    // Assuming subscription is stored in columns or a jsonb column. 
+    // If updates.plan is passed directly:
+    if ((updates as any).plan) dbUpdates.plan = (updates as any).plan;
+
+    console.log("Updating patient:", patientId, "Payload:", dbUpdates);
+
+    if (Object.keys(dbUpdates).length === 0) {
+        return { success: true }; // Nada para atualizar
+    }
+
     const { error } = await supabase
         .from('patients')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', patientId);
 
     if (error) {
@@ -112,9 +182,26 @@ export async function deletePatient(patientId: string): Promise<{ success: boole
 export async function createPatientRecord(patientData: Partial<Patient>): Promise<{ success: boolean; patientId?: string; error?: string }> {
     const supabase = createClient();
 
+    // Mapear para snake_case também na criação
+    const dbInsert: any = {};
+    if (patientData.fullName) dbInsert.full_name = patientData.fullName;
+    if (patientData.email) dbInsert.email = patientData.email;
+    if (patientData.userId) dbInsert.user_id = patientData.userId;
+    if (patientData.whatsappNumber) dbInsert.whatsapp_number = patientData.whatsappNumber;
+    if (patientData.birthDate) dbInsert.birth_date = patientData.birthDate;
+    if (patientData.gender) dbInsert.gender = patientData.gender;
+    if (patientData.height) dbInsert.height_cm = patientData.height;
+    if (patientData.initialWeight) dbInsert.initial_weight_kg = patientData.initialWeight;
+    if (patientData.healthConditions) dbInsert.health_conditions = patientData.healthConditions;
+    if (patientData.allergies) dbInsert.allergies = patientData.allergies;
+    if (patientData.status) dbInsert.status = patientData.status;
+
+    // Default gamification if needed
+    if (patientData.gamification) dbInsert.gamification = patientData.gamification;
+
     const { data, error } = await supabase
         .from('patients')
-        .insert(patientData)
+        .insert(dbInsert)
         .select()
         .single();
 

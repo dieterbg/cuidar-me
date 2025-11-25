@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getPatientDetails } from '../firestore-admin';
+import { getPatientDetails } from '@/ai/actions/patients';
 import type { Patient, Message, HealthMetric } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { GeneratePatientSummaryInputSchema, PatientSummarySchema, type GeneratePatientSummaryInput, type PatientSummary } from '@/lib/types';
@@ -19,18 +19,20 @@ import { googleAI } from '@genkit-ai/google-genai';
 export type { GeneratePatientSummaryInput, PatientSummary };
 
 export async function generatePatientSummary(input: GeneratePatientSummaryInput): Promise<PatientSummary> {
-  return generatePatientSummaryFlow(input);
+    return generatePatientSummaryFlow(input);
 }
 
 const prompt = ai.definePrompt({
-  name: 'generatePatientSummaryPrompt',
-  input: { schema: z.object({
-    patient: z.custom<Patient>(),
-    conversation: z.custom<Message[]>(),
-    metrics: z.custom<HealthMetric[]>(),
-  })},
-  output: { schema: PatientSummarySchema },
-  prompt: `Você é um assistente de endocrinologia especialista em análise de dados de pacientes em programas de emagrecimento. Sua tarefa é analisar TODAS as informações fornecidas sobre um paciente e gerar um resumo conciso e acionável para a equipe de saúde.
+    name: 'generatePatientSummaryPrompt',
+    input: {
+        schema: z.object({
+            patient: z.custom<Patient>(),
+            conversation: z.custom<Message[]>(),
+            metrics: z.custom<HealthMetric[]>(),
+        })
+    },
+    output: { schema: PatientSummarySchema },
+    prompt: `Você é um assistente de endocrinologia especialista em análise de dados de pacientes em programas de emagrecimento. Sua tarefa é analisar TODAS as informações fornecidas sobre um paciente e gerar um resumo conciso e acionável para a equipe de saúde.
 
   **Dados do Paciente:**
   - Nome: {{patient.name}}
@@ -66,77 +68,77 @@ const prompt = ai.definePrompt({
 });
 
 const generatePatientSummaryFlow = ai.defineFlow(
-  {
-    name: 'generatePatientSummaryFlow',
-    inputSchema: GeneratePatientSummaryInputSchema,
-    outputSchema: PatientSummarySchema,
-  },
-  async (input) => {
-    // 1. Fetch all patient data
-    const { patient, conversation, metrics } = await getPatientDetails(input.patientId);
+    {
+        name: 'generatePatientSummaryFlow',
+        inputSchema: GeneratePatientSummaryInputSchema,
+        outputSchema: PatientSummarySchema,
+    },
+    async (input) => {
+        // 1. Fetch all patient data
+        const { patient, messages: conversation, metrics } = await getPatientDetails(input.patientId);
 
-    if (!patient) {
-        throw new Error(`Patient with ID ${input.patientId} not found.`);
-    }
+        if (!patient) {
+            throw new Error(`Patient with ID ${input.patientId} not found.`);
+        }
 
-    // 2. Format and prepare data for the prompt
-    const formattedConversation = conversation.slice(-10).map(m => ({
-        ...m,
-        timestamp: format(parseISO(m.timestamp as string), "dd/MM/yyyy HH:mm")
-    }));
+        // 2. Format and prepare data for the prompt
+        const formattedConversation = conversation.slice(-10).map(m => ({
+            ...m,
+            timestamp: format(parseISO(m.timestamp as string), "dd/MM/yyyy HH:mm")
+        }));
 
-     const formattedMetrics = metrics.map(m => ({
-        ...m,
-        date: format(parseISO(m.date as string), "dd/MM/yyyy")
-    }));
+        const formattedMetrics = metrics.map(m => ({
+            ...m,
+            date: format(parseISO(m.date as string), "dd/MM/yyyy")
+        }));
 
-    // 3. Call the LLM with fallback logic for this high-value, low-frequency task.
-    try {
-        let response;
-        const promptInput = {
-            patient,
-            conversation: formattedConversation,
-            metrics: formattedMetrics
-        };
-        const isRateLimitOrOverloaded = (e: any) => e instanceof Error && (e.message.includes('503') || e.message.includes('429'));
-
+        // 3. Call the LLM with fallback logic for this high-value, low-frequency task.
         try {
-            // 1. Try with the primary (most powerful) model as this is a high-value task.
-            response = await prompt(promptInput, { model: googleAI.model('gemini-2.5-flash') });
-        } catch (e: any) {
-            if (isRateLimitOrOverloaded(e)) {
-                console.warn("Flash model unavailable for summary, falling back to pro model.");
-                 try {
-                    // 2. Fallback to pro model.
-                    response = await prompt(promptInput, { model: googleAI.model('gemini-pro-latest') });
-                } catch (e2: any) {
-                    if (isRateLimitOrOverloaded(e2)) {
-                        console.warn("Pro model also unavailable for summary, falling back to 1.0-pro.");
-                        // 3. Last resort fallback.
-                        response = await prompt(promptInput, { model: googleAI.model('gemini-1.0-pro') });
-                    } else {
-                        throw e2; // Re-throw other errors from flash model
+            let response;
+            const promptInput = {
+                patient,
+                conversation: formattedConversation,
+                metrics: formattedMetrics
+            };
+            const isRateLimitOrOverloaded = (e: any) => e instanceof Error && (e.message.includes('503') || e.message.includes('429'));
+
+            try {
+                // 1. Try with the primary (most powerful) model as this is a high-value task.
+                response = await prompt(promptInput, { model: googleAI.model('gemini-2.5-flash') });
+            } catch (e: any) {
+                if (isRateLimitOrOverloaded(e)) {
+                    console.warn("Flash model unavailable for summary, falling back to pro model.");
+                    try {
+                        // 2. Fallback to pro model.
+                        response = await prompt(promptInput, { model: googleAI.model('gemini-pro-latest') });
+                    } catch (e2: any) {
+                        if (isRateLimitOrOverloaded(e2)) {
+                            console.warn("Pro model also unavailable for summary, falling back to 1.0-pro.");
+                            // 3. Last resort fallback.
+                            response = await prompt(promptInput, { model: googleAI.model('gemini-1.0-pro') });
+                        } else {
+                            throw e2; // Re-throw other errors from flash model
+                        }
                     }
+                } else {
+                    throw e; // Re-throw other errors from primary model
                 }
-            } else {
-                throw e; // Re-throw other errors from primary model
             }
-        }
 
-        const { output } = response;
+            const { output } = response;
 
-        if (!output) {
-            throw new Error("Failed to generate patient summary from AI.");
-        }
-        
-        return output;
+            if (!output) {
+                throw new Error("Failed to generate patient summary from AI.");
+            }
 
-    } catch (error) {
-         if (error instanceof Error && (error.message.includes('503') || error.message.includes('429'))) {
-            throw new Error("Nossos modelos de IA estão indisponíveis no momento. Por favor, tente novamente mais tarde.");
+            return output;
+
+        } catch (error) {
+            if (error instanceof Error && (error.message.includes('503') || error.message.includes('429'))) {
+                throw new Error("Nossos modelos de IA estão indisponíveis no momento. Por favor, tente novamente mais tarde.");
+            }
+            // Re-throw other types of errors
+            throw error;
         }
-        // Re-throw other types of errors
-        throw error;
     }
-  }
 );

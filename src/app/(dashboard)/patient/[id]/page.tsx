@@ -1,10 +1,8 @@
-
-
 "use client";
 
 import { notFound, useRouter, useParams } from 'next/navigation';
 import { useMemo, useState, useEffect, useCallback, useTransition } from 'react';
-import { ArrowLeft, MessageSquare, Video, Calendar, Send, ClipboardList, PlayCircle, StopCircle, Loader2, ShieldOff, ThumbsUp, ThumbsDown, UserCog, ShieldAlert, Star, Target, Pencil, Save, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Video, Calendar, Send, ClipboardList, PlayCircle, StopCircle, Loader2, ShieldOff, ThumbsUp, ThumbsDown, UserCog, ShieldAlert, Star, Target, Pencil, Save, Clock, CheckCircle, AlertTriangle, Activity } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { format, formatDistanceToNow, differenceInDays, parseISO } from 'date-fns';
@@ -16,7 +14,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChatPanel } from '@/components/chat-panel';
 import type { Patient, Protocol, SentVideo, Message, HealthMetric, PatientPlan, ScheduledMessage, Video as VideoType } from '@/lib/types';
-import { assignProtocolToPatient, unassignProtocolFromPatient, getPatientDetails, getProtocols, getScheduledMessagesForPatient, updateScheduledMessage, updateSentVideoFeedback } from '@/ai/actions';
+import { assignProtocolToPatient, unassignProtocolFromPatient, getProtocols } from '@/ai/actions/protocols';
+import { getPatientDetails } from '@/ai/actions/patients';
+import { getScheduledMessagesForPatient, updateScheduledMessage } from '@/ai/actions/messages';
+import { updateSentVideoFeedback, getVideos } from '@/ai/actions/videos';
 import { HealthMetricsChart } from '@/components/health-metrics-chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -41,13 +42,13 @@ import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getVideos } from '@/ai/actions';
 
 
-const statusConfig: { [key in ScheduledMessage['status']]: { icon: React.ElementType, color: string, label: string } } = {
-    pending: { icon: Clock, color: 'text-amber-500', label: 'Pendente' },
-    sent: { icon: CheckCircle, color: 'text-green-500', label: 'Enviada' },
-    error: { icon: AlertTriangle, color: 'text-red-500', label: 'Erro' },
+
+const statusConfig: { [key in ScheduledMessage['status']]: { icon: React.ElementType, color: string, label: string, bg: string } } = {
+    pending: { icon: Clock, color: 'text-amber-600', label: 'Pendente', bg: 'bg-amber-100' },
+    sent: { icon: CheckCircle, color: 'text-emerald-600', label: 'Enviada', bg: 'bg-emerald-100' },
+    error: { icon: AlertTriangle, color: 'text-rose-600', label: 'Erro', bg: 'bg-rose-100' },
 };
 
 
@@ -70,7 +71,7 @@ function EditMessagePopover({ message, onSave, isSaving }: { message: ScheduledM
     return (
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
                     <Pencil className="h-4 w-4" />
                 </Button>
             </PopoverTrigger>
@@ -180,23 +181,19 @@ export default function PatientProfilePage() {
 
         const supabase = createClient();
 
-        // Buscar mensagens iniciais
-        const fetchMessages = async () => {
-            const { data, error } = await supabase
-                .from('messages')
-                .select('*')
-                .eq('patient_id', patientId)
-                .order('timestamp', { ascending: true });
-
-            if (error) {
-                console.error("Error fetching messages:", error);
-                toast({ variant: 'destructive', title: 'Erro de conexão', description: 'Não foi possível carregar as mensagens.' });
-            } else if (data) {
-                setConversation(data as Message[]);
+        // Buscar mensagens iniciais via Server Action
+        const loadMessages = async () => {
+            try {
+                if (!patientId) return;
+                const msgs = await getMessages(patientId);
+                setConversation(msgs);
+            } catch (error) {
+                console.error("Failed to load messages:", error);
+                // Não mostrar toast aqui para evitar spam se for um erro recorrente de renderização
             }
         };
 
-        fetchMessages();
+        loadMessages();
 
         // Configurar listener em tempo real para mensagens
         const channel = supabase
@@ -329,7 +326,14 @@ export default function PatientProfilePage() {
     }
 
     if (loading || authLoading) {
-        return <div className="flex h-screen items-center justify-center">Carregando dados do paciente...</div>;
+        return (
+            <div className="flex h-screen items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <p className="text-muted-foreground animate-pulse">Carregando prontuário...</p>
+                </div>
+            </div>
+        );
     }
 
     if (!patient) {
@@ -347,336 +351,419 @@ export default function PatientProfilePage() {
     const canEditPatient = profile && profile.role !== 'paciente';
 
     return (
-        <div className="flex-1 bg-muted/40 p-4 sm:p-6 lg:p-8">
-            <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex-1 bg-background/50 min-h-screen p-4 sm:p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto space-y-8">
                 {error && (
-                    <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                        <div className="flex">
-                            <AlertTriangle className="h-5 w-5 text-red-400 mr-2" />
-                            <p className="text-red-700 text-sm">{error}</p>
-                        </div>
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center gap-3 text-rose-700">
+                        <AlertTriangle className="h-5 w-5" />
+                        <p className="text-sm font-medium">{error}</p>
                     </div>
                 )}
 
                 <div>
-                    <Button variant="ghost" onClick={() => router.push('/patients')} className="px-0 hover:bg-transparent">
+                    <Button variant="ghost" onClick={() => router.push('/patients')} className="px-0 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Voltar para Pacientes
+                        Voltar para Lista de Pacientes
                     </Button>
                 </div>
 
-                <div className="flex flex-col lg:flex-row items-start gap-8">
-                    <Avatar className="h-24 w-24 border-4 border-background">
+                {/* Patient Header */}
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6 bg-card p-6 rounded-2xl border shadow-sm">
+                    <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
                         <AvatarImage src={patient.avatar} alt={patient.name} />
-                        <AvatarFallback>{patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">{patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
-                    <div className="pt-2 flex-grow">
-                        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-                            {patient.name}
-                            {patient.subscription.priority === 3 && <div title="Paciente VIP"><Star className="h-6 w-6 text-amber-400 fill-amber-400" /></div>}
-                        </h1>
-                        <p className="text-muted-foreground">ID do Paciente: {patient.id}</p>
-                        {patient.subscription.plan ? <Badge className="mt-2" variant={patient.subscription.plan === 'freemium' ? 'secondary' : 'default'}>{planLabels[patient.subscription.plan]}</Badge> : <Badge className="mt-2" variant="outline">Sem Plano</Badge>}
-                        {patient.status === 'pending' && <Badge className="mt-2 ml-2" variant="destructive">Pendente</Badge>}
+                    <div className="flex-grow space-y-2">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <h1 className="text-3xl font-bold text-foreground">
+                                {patient.name}
+                            </h1>
+                            {patient.subscription.priority === 3 && (
+                                <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200 gap-1">
+                                    <Star className="h-3 w-3 fill-current" /> VIP
+                                </Badge>
+                            )}
+                            {patient.status === 'pending' && <Badge variant="destructive">Cadastro Pendente</Badge>}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">ID: <code className="bg-muted px-1 py-0.5 rounded text-xs">{patient.id.slice(0, 8)}</code></span>
+                            <span className="w-1 h-1 rounded-full bg-border" />
+                            <Badge variant="outline" className="font-normal">{planLabels[patient.subscription.plan]}</Badge>
+                            {patient.protocol && (
+                                <>
+                                    <span className="w-1 h-1 rounded-full bg-border" />
+                                    <span className="flex items-center gap-1 text-primary font-medium">
+                                        <Activity className="h-4 w-4" />
+                                        Em Protocolo (Dia {dayInProtocol})
+                                    </span>
+                                </>
+                            )}
+                        </div>
                     </div>
                     {canEditPatient && (
-                        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline">
-                                    <UserCog className="mr-2 h-4 w-4" />
-                                    Editar Paciente
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>
-                                        {patient.status === 'pending' ? 'Ativar Cadastro do Paciente' : 'Editar Paciente'}
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        {patient.status === 'pending'
-                                            ? 'Altere o status para "Ativo" para aprovar o cadastro e permitir que o paciente acesse o portal.'
-                                            : 'Atualize as informações do paciente abaixo.'
-                                        }
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <PatientEditForm patient={patient} onSave={handleSaveSuccess} context="admin" />
-                            </DialogContent>
-                        </Dialog>
+                        <div className="flex gap-3 w-full lg:w-auto">
+                            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" className="flex-1 lg:flex-none">
+                                        <UserCog className="mr-2 h-4 w-4" />
+                                        Gerenciar Cadastro
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[600px]">
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            {patient.status === 'pending' ? 'Ativar Cadastro do Paciente' : 'Editar Dados do Paciente'}
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            {patient.status === 'pending'
+                                                ? 'Revise os dados e ative o cadastro para liberar o acesso.'
+                                                : 'Atualize as informações clínicas e de contato.'
+                                            }
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <PatientEditForm patient={patient} onSave={handleSaveSuccess} context="admin" />
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                     )}
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                    <div className="xl:col-span-2">
+                    {/* Left Column: Charts & Protocol Management */}
+                    <div className="xl:col-span-2 space-y-8">
                         {isPremiumOrVip ? (
                             <HealthMetricsChart metrics={metrics} patientHeight={patient.height} />
                         ) : (
-                            <Card className="flex items-center justify-center h-full min-h-[300px]">
-                                <div className="text-center p-4">
-                                    <ShieldOff className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                    <h3 className="font-semibold text-lg">Funcionalidade Indisponível</h3>
-                                    <p className="text-muted-foreground">
-                                        Gráficos e análise de IA não estão disponíveis para este plano.
+                            <Card className="flex items-center justify-center h-[300px] border-dashed bg-muted/30">
+                                <div className="text-center p-6 max-w-sm">
+                                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <ShieldOff className="h-8 w-8 text-muted-foreground" />
+                                    </div>
+                                    <h3 className="font-semibold text-lg mb-2">Análise Avançada Indisponível</h3>
+                                    <p className="text-muted-foreground text-sm">
+                                        O plano atual deste paciente não inclui gráficos de evolução e análise de IA. Faça um upgrade para visualizar.
                                     </p>
                                 </div>
                             </Card>
                         )}
-                    </div>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <ClipboardList className="h-5 w-5 text-primary" />
-                                Gerenciar Protocolo
-                            </CardTitle>
-                            <CardDescription>Atribua ou altere o protocolo para este paciente.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {!isPremiumOrVip && (
-                                <div className="p-3 rounded-md border bg-amber-50 text-amber-900 text-sm">
-                                    Protocolos só podem ser atribuídos a pacientes dos planos Premium ou VIP.
-                                </div>
-                            )}
-                            {patient.status === 'pending' && (
-                                <div className="p-3 rounded-md border bg-blue-50 text-blue-900 text-sm">
-                                    Ative o cadastro do paciente para atribuir um protocolo.
-                                </div>
-                            )}
-                            <div className="space-y-2">
-                                <Label htmlFor="protocol-select">Protocolo de Acompanhamento</Label>
-                                <Select onValueChange={setSelectedProtocol} value={selectedProtocol} disabled={!!activeProtocol || !isPremiumOrVip || patient.status === 'pending'}>
-                                    <SelectTrigger id="protocol-select">
-                                        <SelectValue placeholder="Nenhum protocolo atribuído" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {availableProtocols.map(protocol => (
-                                            <SelectItem key={protocol.id} value={protocol.id}>{protocol.name}</SelectItem>
-                                        ))}
-                                        {availableProtocols.length === 0 && isPremiumOrVip && (
-                                            <div className="p-4 text-center text-sm text-muted-foreground">
-                                                Nenhum protocolo disponível para o plano {patient.subscription.plan}.
+
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <TabsList className="w-full justify-start h-auto p-1 bg-muted/50 rounded-xl mb-6 overflow-x-auto">
+                                <TabsTrigger value="conversation" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    Conversa
+                                </TabsTrigger>
+                                {isPremiumOrVip && (
+                                    <TabsTrigger value="protocol" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                        <ClipboardList className="mr-2 h-4 w-4" />
+                                        Protocolo
+                                    </TabsTrigger>
+                                )}
+                                <TabsTrigger value="schedules" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Agendamentos
+                                </TabsTrigger>
+                                <TabsTrigger value="content" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                    <Video className="mr-2 h-4 w-4" />
+                                    Conteúdo
+                                </TabsTrigger>
+                                {showAnalysisPanel && (
+                                    <TabsTrigger value="analysis" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-amber-600 data-[state=active]:text-amber-700">
+                                        <ShieldAlert className="mr-2 h-4 w-4" />
+                                        IA Insights
+                                    </TabsTrigger>
+                                )}
+                            </TabsList>
+
+                            <TabsContent value="conversation" className="mt-0">
+                                <ChatPanel
+                                    patient={patient}
+                                    conversation={conversation}
+                                    onNewMessage={(newMessages) => setConversation(newMessages)}
+                                    onPatientUpdate={(updatedPatient) => setPatient(updatedPatient)}
+                                    showAnalysis={showAnalysisPanel}
+                                />
+                            </TabsContent>
+
+                            <TabsContent value="protocol" className="mt-0">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Jornada do Protocolo: {activeProtocol?.name || 'Nenhum'}</CardTitle>
+                                        <CardDescription>Acompanhe o progresso diário e as mensagens programadas.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {activeProtocol ? (
+                                            <div className="space-y-4 relative before:absolute before:left-4 before:top-4 before:bottom-4 before:w-0.5 before:bg-border">
+                                                {activeProtocol.messages.sort((a, b) => a.day - b.day).map((step, index) => {
+                                                    const isCompleted = dayInProtocol > step.day;
+                                                    const isPending = dayInProtocol === step.day;
+                                                    const isScheduled = dayInProtocol < step.day;
+
+                                                    return (
+                                                        <div key={index} className={cn("relative pl-12 py-2 transition-all duration-300", {
+                                                            "opacity-50 hover:opacity-100": isScheduled
+                                                        })}>
+                                                            <div className={cn("absolute left-0 top-3 h-8 w-8 rounded-full border-2 flex items-center justify-center z-10 bg-background transition-colors", {
+                                                                "border-emerald-500 text-emerald-600": isCompleted,
+                                                                "border-blue-500 text-blue-600 ring-4 ring-blue-100": isPending,
+                                                                "border-muted text-muted-foreground": isScheduled
+                                                            })}>
+                                                                {isCompleted ? <CheckCircle className="h-4 w-4" /> : <span className="text-xs font-bold">{step.day}</span>}
+                                                            </div>
+
+                                                            <div className={cn("p-4 rounded-xl border transition-all", {
+                                                                "bg-emerald-50/50 border-emerald-100": isCompleted,
+                                                                "bg-blue-50/50 border-blue-200 shadow-sm": isPending,
+                                                                "bg-card border-border": isScheduled
+                                                            })}>
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <h4 className="font-semibold text-sm">{step.title}</h4>
+                                                                    {isCompleted ? (
+                                                                        <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200">Concluído</Badge>
+                                                                    ) : isPending ? (
+                                                                        <Badge className="bg-blue-600 hover:bg-blue-700">Em Andamento</Badge>
+                                                                    ) : (
+                                                                        <Badge variant="outline">Dia {step.day}</Badge>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-sm text-muted-foreground">{step.message}</p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12">
+                                                <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                                                <p className="text-muted-foreground">Nenhum protocolo ativo no momento.</p>
                                             </div>
                                         )}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="weight-goal">Meta de Peso (kg)</Label>
-                                <Input
-                                    id="weight-goal"
-                                    type="number"
-                                    placeholder="Ex: 85.5"
-                                    value={weightGoal}
-                                    onChange={(e) => setWeightGoal(e.target.value)}
-                                    disabled={!!activeProtocol || !isPremiumOrVip || patient.status === 'pending'}
-                                />
-                            </div>
-                            {activeProtocol && patient.protocol && isPremiumOrVip && (
-                                <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md border space-y-2">
-                                    <p>Iniciado em: <strong className="text-foreground">{format(parseISO(patient.protocol.startDate as string), 'dd/MM/yyyy')}</strong></p>
-                                    <p>Hoje é o <strong className="text-foreground">Dia {dayInProtocol}</strong> do protocolo.</p>
-                                    {patient.protocol.weightGoal && (
-                                        <p className="flex items-center gap-2">
-                                            <Target className="h-4 w-4 text-primary" /> Meta de Peso: <strong className="text-foreground">{patient.protocol.weightGoal} kg</strong>
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </CardContent>
-                        <CardFooter>
-                            {!activeProtocol ? (
-                                <Button onClick={handleAssignProtocol} disabled={isAssigning || !selectedProtocol || !isPremiumOrVip || patient.status === 'pending'} className="w-full">
-                                    {isAssigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    <PlayCircle className="mr-2 h-4 w-4" />
-                                    Iniciar Protocolo Selecionado
-                                </Button>
-                            ) : (
-                                <Button onClick={handleUnassignProtocol} disabled={isAssigning || !isPremiumOrVip} className="w-full" variant="destructive">
-                                    {isAssigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    <StopCircle className="mr-2 h-4 w-4" />
-                                    Parar Protocolo Atual
-                                </Button>
-                            )}
-                        </CardFooter>
-                    </Card>
-                </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
 
-
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList>
-                        <TabsTrigger value="conversation"><MessageSquare className="mr-2 h-4 w-4" />Conversa</TabsTrigger>
-                        {isPremiumOrVip && <TabsTrigger value="protocol"><ClipboardList className="mr-2 h-4 w-4" />Etapas do Protocolo</TabsTrigger>}
-                        <TabsTrigger value="schedules"><Calendar className="mr-2 h-4 w-4" />Agendamentos</TabsTrigger>
-                        <TabsTrigger value="content"><Video className="mr-2 h-4 w-4" />Conteúdo Enviado</TabsTrigger>
-                        {showAnalysisPanel && <TabsTrigger value="analysis"><ShieldAlert className="mr-2 h-4 w-4" />Análise de IA</TabsTrigger>}
-                    </TabsList>
-                    <TabsContent value="conversation">
-                        <ChatPanel
-                            patient={patient}
-                            conversation={conversation}
-                            onNewMessage={(newMessages) => setConversation(newMessages)}
-                            onPatientUpdate={(updatedPatient) => setPatient(updatedPatient)}
-                            showAnalysis={showAnalysisPanel}
-                        />
-                    </TabsContent>
-                    <TabsContent value="protocol">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Etapas do Protocolo: {activeProtocol?.name || 'Nenhum'}</CardTitle>
-                                <CardDescription>Acompanhe as mensagens automáticas programadas.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {activeProtocol ? (
-                                    <div className="space-y-4">
-                                        {activeProtocol.messages.sort((a, b) => a.day - b.day).map((step, index) => {
-                                            const isCompleted = dayInProtocol > step.day;
-                                            const isPending = dayInProtocol === step.day;
-                                            const isScheduled = dayInProtocol < step.day;
-
-                                            return (
-                                                <div key={index} className={cn("flex items-start p-3 rounded-md border group", {
-                                                    "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800": isCompleted,
-                                                    "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800": isPending,
-                                                    "bg-muted/50": isScheduled
-                                                })}>
-                                                    <div className={cn("flex items-center justify-center h-8 w-8 rounded-full mr-4 shrink-0", {
-                                                        "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300": isCompleted,
-                                                        "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300": isPending,
-                                                        "bg-primary/10": isScheduled
-                                                    })}>
-                                                        <span className="font-bold">{step.day}</span>
-                                                    </div>
-                                                    <div className="flex-grow">
-                                                        <p className="font-medium text-sm">{step.message}</p>
-                                                        <p className="text-sm text-muted-foreground">{step.title}</p>
-                                                    </div>
-                                                    {isCompleted ? (
-                                                        <Badge variant="secondary" className="bg-green-600 text-white">Enviada</Badge>
-                                                    ) : isPending ? (
-                                                        <Badge>Pendente</Badge>
-                                                    ) : (
-                                                        <Badge variant='outline'>Agendada</Badge>
-                                                    )}
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                ) : (
-                                    <p className="text-muted-foreground text-center py-8">Nenhum protocolo ativo para este paciente.</p>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="schedules">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Mensagens Agendadas</CardTitle>
-                                <CardDescription>Visualize e edite as próximas mensagens automáticas para este paciente.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {loading ? (
-                                    <Skeleton className="h-40 w-full" />
-                                ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead>Mensagem</TableHead>
-                                                <TableHead>Enviar Em</TableHead>
-                                                <TableHead className="text-right">Ações</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {scheduledMessages.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell colSpan={4} className="h-24 text-center">Nenhuma mensagem agendada para este paciente.</TableCell>
-                                                </TableRow>
-                                            ) : (
-                                                scheduledMessages.map(msg => {
-                                                    const config = statusConfig[msg.status];
-                                                    return (
-                                                        <TableRow key={msg.id}>
-                                                            <TableCell>
-                                                                <div className={cn("flex items-center gap-2 font-medium", config.color)}>
-                                                                    <config.icon className="h-4 w-4" />
-                                                                    {config.label}
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell><p className="truncate max-w-[300px]">{msg.messageContent}</p></TableCell>
-                                                            <TableCell className="whitespace-nowrap">{format(new Date(msg.sendAt as string), "dd/MM/yy 'às' HH:mm")}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                {msg.status === 'pending' && (
-                                                                    <EditMessagePopover
-                                                                        message={msg}
-                                                                        onSave={handleSaveMessage}
-                                                                        isSaving={isSavingMessage}
-                                                                    />
-                                                                )}
-                                                            </TableCell>
+                            <TabsContent value="schedules" className="mt-0">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Fila de Mensagens</CardTitle>
+                                        <CardDescription>Gerencie os disparos automáticos para este paciente.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {loading ? (
+                                            <Skeleton className="h-40 w-full" />
+                                        ) : (
+                                            <div className="rounded-md border">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Status</TableHead>
+                                                            <TableHead>Conteúdo</TableHead>
+                                                            <TableHead>Programação</TableHead>
+                                                            <TableHead className="text-right">Ações</TableHead>
                                                         </TableRow>
-                                                    );
-                                                })
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="content">
-                        <Card>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {scheduledMessages.length === 0 ? (
+                                                            <TableRow>
+                                                                <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                                                                    Nenhuma mensagem na fila de envio.
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ) : (
+                                                            scheduledMessages.map(msg => {
+                                                                const config = statusConfig[msg.status];
+                                                                return (
+                                                                    <TableRow key={msg.id}>
+                                                                        <TableCell>
+                                                                            <Badge variant="outline" className={cn("gap-1 border-0", config.bg, config.color)}>
+                                                                                <config.icon className="h-3 w-3" />
+                                                                                {config.label}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell>
+                                                                            <p className="truncate max-w-[250px] text-sm" title={msg.messageContent}>
+                                                                                {msg.messageContent}
+                                                                            </p>
+                                                                        </TableCell>
+                                                                        <TableCell className="text-sm">
+                                                                            {format(new Date(msg.sendAt as string), "dd/MM 'às' HH:mm")}
+                                                                        </TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            {msg.status === 'pending' && (
+                                                                                <EditMessagePopover
+                                                                                    message={msg}
+                                                                                    onSave={handleSaveMessage}
+                                                                                    isSaving={isSavingMessage}
+                                                                                />
+                                                                            )}
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="content" className="mt-0">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Biblioteca Enviada</CardTitle>
+                                        <CardDescription>Vídeos educativos compartilhados com o paciente.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {patientSentVideos.length > 0 ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {patientSentVideos.map((video) => (
+                                                    <div key={video.id} className="group overflow-hidden rounded-xl border bg-card hover:shadow-md transition-all">
+                                                        <div className="aspect-video relative">
+                                                            <Image src={video.thumbnailUrl!} alt={video.title!} fill className="object-cover transition-transform group-hover:scale-105" />
+                                                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                                                            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm">
+                                                                {formatDistanceToNow(new Date(video.sentAt as string), { addSuffix: true, locale: ptBR })}
+                                                            </div>
+                                                        </div>
+                                                        <div className="p-4">
+                                                            <h3 className="font-semibold line-clamp-1 mb-1">{video.title}</h3>
+
+                                                            <div className="mt-4 flex items-center justify-between">
+                                                                <span className="text-xs text-muted-foreground">Feedback:</span>
+                                                                <div className="flex gap-2">
+                                                                    <Button
+                                                                        variant={video.feedback === 'liked' ? 'default' : 'ghost'}
+                                                                        size="icon"
+                                                                        className={cn("h-8 w-8 rounded-full", video.feedback === 'liked' && "bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800")}
+                                                                        onClick={() => handleUpdateFeedback(video.id, 'liked')}
+                                                                    >
+                                                                        <ThumbsUp className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant={video.feedback === 'disliked' ? 'destructive' : 'ghost'}
+                                                                        size="icon"
+                                                                        className={cn("h-8 w-8 rounded-full", video.feedback === 'disliked' && "bg-rose-100 text-rose-700 hover:bg-rose-200 hover:text-rose-800")}
+                                                                        onClick={() => handleUpdateFeedback(video.id, 'disliked')}
+                                                                    >
+                                                                        <ThumbsDown className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12">
+                                                <Video className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                                                <p className="text-muted-foreground">Nenhum vídeo enviado ainda.</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="analysis" className="mt-0">
+                                <PatientAnalysisPanel patientId={patientId} />
+                            </TabsContent>
+                        </Tabs>
+                    </div>
+
+                    {/* Right Column: Actions */}
+                    <div className="space-y-6">
+                        <Card className="border-none shadow-lg bg-gradient-to-br from-primary/5 to-transparent">
                             <CardHeader>
-                                <CardTitle>Histórico de Conteúdo Educativo</CardTitle>
-                                <CardDescription>Vídeos enviados para este paciente e seu feedback.</CardDescription>
+                                <CardTitle className="flex items-center gap-2">
+                                    <ClipboardList className="h-5 w-5 text-primary" />
+                                    Gestão de Protocolo
+                                </CardTitle>
+                                <CardDescription>Controle o tratamento ativo.</CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                {patientSentVideos.length > 0 ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {patientSentVideos.map((video) => (
-                                            <Card key={video.id} className="overflow-hidden flex flex-col">
-                                                <div className="aspect-video relative">
-                                                    <Image src={video.thumbnailUrl!} alt={video.title!} fill className="object-cover" />
-                                                </div>
-                                                <div className="p-4 flex-grow">
-                                                    <h3 className="font-semibold mb-1">{video.title}</h3>
-                                                    <div className="text-xs text-muted-foreground flex items-center">
-                                                        <Calendar className="mr-2 h-3 w-3" />
-                                                        <span>Enviado {formatDistanceToNow(new Date(video.sentAt as string), { addSuffix: true, locale: ptBR })}</span>
-                                                    </div>
-                                                </div>
-                                                <CardFooter className="p-2 border-t flex-col items-start gap-2">
-                                                    <p className="text-xs text-muted-foreground px-2">Feedback do paciente:</p>
-                                                    <div className="w-full grid grid-cols-2 gap-2">
-                                                        <Button
-                                                            variant={video.feedback === 'liked' ? 'default' : 'outline'}
-                                                            size="sm"
-                                                            onClick={() => handleUpdateFeedback(video.id, 'liked')}
-                                                            className={cn("w-full", video.feedback === 'liked' && "bg-green-600 hover:bg-green-700")}
-                                                        >
-                                                            <ThumbsUp className="mr-2 h-4 w-4" />
-                                                            Gostei
-                                                        </Button>
-                                                        <Button
-                                                            variant={video.feedback === 'disliked' ? 'destructive' : 'outline'}
-                                                            size="sm"
-                                                            onClick={() => handleUpdateFeedback(video.id, 'disliked')}
-                                                        >
-                                                            <ThumbsDown className="mr-2 h-4 w-4" />
-                                                            Não Gostei
-                                                        </Button>
-                                                    </div>
-                                                </CardFooter>
-                                            </Card>
-                                        ))}
+                            <CardContent className="space-y-4">
+                                {!isPremiumOrVip && (
+                                    <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm flex items-start gap-2">
+                                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                                        <p>Protocolos exclusivos para planos Premium/VIP.</p>
                                     </div>
-                                ) : (
-                                    <p className="text-muted-foreground text-center py-8">Nenhum conteúdo foi enviado para este paciente ainda.</p>
+                                )}
+                                {patient.status === 'pending' && (
+                                    <div className="p-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 text-sm flex items-start gap-2">
+                                        <UserCog className="h-4 w-4 mt-0.5 shrink-0" />
+                                        <p>Ative o cadastro para iniciar protocolos.</p>
+                                    </div>
+                                )}
+
+                                <div className="space-y-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="protocol-select" className="text-xs font-semibold uppercase text-muted-foreground">Selecione o Protocolo</Label>
+                                        <Select onValueChange={setSelectedProtocol} value={selectedProtocol} disabled={!!activeProtocol || !isPremiumOrVip || patient.status === 'pending'}>
+                                            <SelectTrigger id="protocol-select" className="bg-background">
+                                                <SelectValue placeholder="Selecione..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {availableProtocols.map(protocol => (
+                                                    <SelectItem key={protocol.id} value={protocol.id}>{protocol.name}</SelectItem>
+                                                ))}
+                                                {availableProtocols.length === 0 && isPremiumOrVip && (
+                                                    <div className="p-2 text-center text-xs text-muted-foreground">
+                                                        Sem protocolos disponíveis.
+                                                    </div>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="weight-goal" className="text-xs font-semibold uppercase text-muted-foreground">Meta de Peso (kg)</Label>
+                                        <Input
+                                            id="weight-goal"
+                                            type="number"
+                                            placeholder="Ex: 85.5"
+                                            value={weightGoal}
+                                            onChange={(e) => setWeightGoal(e.target.value)}
+                                            disabled={!!activeProtocol || !isPremiumOrVip || patient.status === 'pending'}
+                                            className="bg-background"
+                                        />
+                                    </div>
+                                </div>
+
+                                {activeProtocol && patient.protocol && isPremiumOrVip && (
+                                    <div className="text-sm p-4 bg-background/50 rounded-xl border space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-muted-foreground">Início:</span>
+                                            <span className="font-medium">{format(parseISO(patient.protocol.startDate as string), 'dd/MM/yyyy')}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-muted-foreground">Progresso:</span>
+                                            <Badge variant="outline" className="bg-primary/5">Dia {dayInProtocol}</Badge>
+                                        </div>
+                                        {patient.protocol.weightGoal && (
+                                            <div className="flex justify-between items-center pt-2 border-t">
+                                                <span className="text-muted-foreground flex items-center gap-1"><Target className="h-3 w-3" /> Meta:</span>
+                                                <span className="font-bold text-primary">{patient.protocol.weightGoal} kg</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </CardContent>
+                            <CardFooter>
+                                {!activeProtocol ? (
+                                    <Button onClick={handleAssignProtocol} disabled={isAssigning || !selectedProtocol || !isPremiumOrVip || patient.status === 'pending'} className="w-full shadow-lg shadow-primary/20">
+                                        {isAssigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlayCircle className="mr-2 h-4 w-4" />}
+                                        Iniciar Protocolo
+                                    </Button>
+                                ) : (
+                                    <Button onClick={handleUnassignProtocol} disabled={isAssigning || !isPremiumOrVip} className="w-full" variant="destructive">
+                                        {isAssigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <StopCircle className="mr-2 h-4 w-4" />}
+                                        Encerrar Protocolo
+                                    </Button>
+                                )}
+                            </CardFooter>
                         </Card>
-                    </TabsContent>
-                    <TabsContent value="analysis">
-                        <PatientAnalysisPanel patientId={patientId} />
-                    </TabsContent>
-                </Tabs>
+                    </div>
+                </div>
             </div>
         </div>
     );

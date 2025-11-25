@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { getPatients as getPatientsAction } from '@/ai/actions';
+import { getPatients as getPatientsAction } from '@/ai/actions/patients';
 import type { Patient } from '@/lib/types';
 
 export function usePatients() {
@@ -14,19 +14,19 @@ export function usePatients() {
   const { patientsUpdateCount } = useAuth();
 
   const fetchPatients = useCallback(async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const fetchedPatients = await getPatientsAction();
-        setPatients(fetchedPatients);
+    try {
+      setLoading(true);
+      setError(null);
 
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch patients');
-        console.error('Error fetching patients:', err);
-      } finally {
-        setLoading(false);
-      }
+      const fetchedPatients = await getPatientsAction();
+      setPatients(fetchedPatients);
+
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch patients');
+      console.error('Error fetching patients:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 
 import twilio from 'twilio';
 import { NextRequest } from 'next/server';
-import { getTwilioCredentials } from '@/ai/actions-extended';
+import { getTwilioCredentials } from '@/ai/actions/system';
 
 // This function dynamically gets the Twilio client.
 async function getTwilioClient() {

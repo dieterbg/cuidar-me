@@ -14,7 +14,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { updatePatient, deletePatient as deletePatientAction, unassignProtocolFromPatient } from '@/ai/actions';
+import { updatePatient, deletePatient as deletePatientAction } from '@/ai/actions/patients';
+import { unassignProtocolFromPatient } from '@/ai/actions/protocols';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -145,7 +146,7 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
             <FormItem>
               <FormLabel>Nome Completo</FormLabel>
               <FormControl>
-                <Input placeholder="Nome completo" {...field} />
+                <Input placeholder="Nome completo" {...field} className="rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -161,7 +162,7 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                 <FormItem>
                   <FormLabel>WhatsApp (DDD + Número)</FormLabel>
                   <FormControl>
-                    <Input placeholder="11999998888" {...field} value={field.value ?? ''} />
+                    <Input placeholder="11999998888" {...field} value={field.value ?? ''} className="rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
                   </FormControl>
                   <FormDescription>
                     O sistema adicionará o código do Brasil (+55) automaticamente.
@@ -178,7 +179,7 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                   <FormLabel>Plano</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl border-input/60 focus:ring-[#899d5e]/20">
                         <SelectValue placeholder="Selecione um plano" />
                       </SelectTrigger>
                     </FormControl>
@@ -200,7 +201,7 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                   <FormLabel>Status do Cadastro</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl border-input/60 focus:ring-[#899d5e]/20">
                         <SelectValue placeholder="Selecione um status" />
                       </SelectTrigger>
                     </FormControl>
@@ -336,7 +337,7 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
 
 
         <div className="flex flex-col sm:flex-row gap-2 pt-4">
-          <Button type="submit" disabled={isSaving || isDeleting} className="w-full">
+          <Button type="submit" disabled={isSaving || isDeleting} className="w-full bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 rounded-xl">
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSaving ? 'Salvando...' : 'Salvar Alterações'}
           </Button>

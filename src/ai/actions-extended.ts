@@ -224,43 +224,11 @@ export async function getScheduledMessages(): Promise<ScheduledMessage[]> {
     return data || [];
 }
 
-export async function getScheduledMessagesForPatient(patientId: string): Promise<ScheduledMessage[]> {
-    const supabase = createClient();
 
-    const { data, error } = await supabase
-        .from('scheduled_messages')
-        .select('*')
-        .eq('patient_id', patientId)
-        .order('send_at', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching patient scheduled messages:', error);
-        return [];
-    }
-
-    return data || [];
-}
 
 // scheduleReminder moved to actions/messages.ts
 
-export async function updateScheduledMessage(
-    messageId: string,
-    updates: Partial<ScheduledMessage>
-): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
 
-    const { error } = await supabase
-        .from('scheduled_messages')
-        .update(updates)
-        .eq('id', messageId);
-
-    if (error) {
-        console.error('Error updating scheduled message:', error);
-        return { success: false, error: error.message };
-    }
-
-    return { success: true };
-}
 
 export async function sendCampaignMessage(
     patientIds: string[],
@@ -328,58 +296,7 @@ export async function updateGamificationProgress(
     }
 }
 
-// =====================================================
-// USER MANAGEMENT ACTIONS
-// =====================================================
 
-export async function getSystemUsers(): Promise<UserProfile[]> {
-    const supabase = createClient();
-
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching system users:', error);
-        return [];
-    }
-
-    return data || [];
-}
-
-export async function updateUserRole(
-    userId: string,
-    role: 'admin' | 'equipe_saude' | 'assistente' | 'paciente' | 'pendente'
-): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
-
-    const { error } = await supabase
-        .from('profiles')
-        .update({ role })
-        .eq('id', userId);
-
-    if (error) {
-        console.error('Error updating user role:', error);
-        return { success: false, error: error.message };
-    }
-
-    return { success: true };
-}
-
-export async function deleteUser(userId: string): Promise<{ success: boolean; error?: string }> {
-    const supabase = createServiceRoleClient();
-
-    // Deletar usuário do Auth (cascade vai deletar profile)
-    const { error } = await supabase.auth.admin.deleteUser(userId);
-
-    if (error) {
-        console.error('Error deleting user:', error);
-        return { success: false, error: error.message };
-    }
-
-    return { success: true };
-}
 
 export async function deleteAllUsers(): Promise<{ success: boolean; error?: string }> {
     // Esta função é perigosa e deve ser usada apenas em desenvolvimento
@@ -406,46 +323,7 @@ export async function deleteAllUsers(): Promise<{ success: boolean; error?: stri
 // ATTENTION REQUESTS ACTIONS
 // =====================================================
 
-export async function resolvePatientAttention(
-    patientId: string
-): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
 
-    // Get current user for resolvedBy field
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        return { success: false, error: 'User not authenticated' };
-    }
-
-    // Update patient to clear attention flag
-    const { error: patientError } = await supabase
-        .from('patients')
-        .update({ needs_attention: false })
-        .eq('id', patientId);
-
-    if (patientError) {
-        console.error('Error resolving patient attention:', patientError);
-        return { success: false, error: patientError.message };
-    }
-
-    // Mark any active attention requests as resolved
-    const { error: requestError } = await supabase
-        .from('attention_requests')
-        .update({
-            is_resolved: true,
-            resolved_by: user.id,
-            resolved_at: new Date().toISOString(),
-        })
-        .eq('patient_id', patientId)
-        .eq('is_resolved', false);
-
-    if (requestError) {
-        console.error('Error updating attention requests:', requestError);
-        // Don't fail the whole operation if just the request update fails
-    }
-
-    return { success: true };
-}
 
 // =====================================================
 // HEALTH METRICS ACTIONS
@@ -457,36 +335,4 @@ export async function resolvePatientAttention(
 // SYSTEM CONFIG ACTIONS
 // =====================================================
 
-export async function saveTwilioCredentials(credentials: { accountSid: string; authToken: string; phoneNumber: string }): Promise<{ success: boolean; error?: string }> {
-    const supabase = createServiceRoleClient();
 
-    const { error } = await supabase
-        .from('system_config')
-        .upsert({
-            key: 'twilio_credentials',
-            value: credentials,
-        });
-
-    if (error) {
-        console.error('Error saving Twilio credentials:', error);
-        return { success: false, error: error.message };
-    }
-
-    return { success: true };
-}
-
-export async function getTwilioCredentials(): Promise<{ accountSid: string; authToken: string; phoneNumber: string } | null> {
-    const supabase = createServiceRoleClient();
-
-    const { data, error } = await supabase
-        .from('system_config')
-        .select('value')
-        .eq('key', 'twilio_credentials')
-        .single();
-
-    if (error || !data) {
-        return null;
-    }
-
-    return data.value as any;
-}
