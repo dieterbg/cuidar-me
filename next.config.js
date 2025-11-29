@@ -17,6 +17,7 @@ const nextConfig = {
     CRON_SECRET: process.env.CRON_SECRET || 'CuidarMeCronSecret123',
   },
   images: {
+    dangerouslyAllowSVG: true,
     remotePatterns: [
       {
         protocol: 'https',

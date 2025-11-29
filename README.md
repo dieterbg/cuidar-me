@@ -1,127 +1,323 @@
-# Firebase Studio
+# Cuidar.me - Plataforma de Gestão de Pacientes com IA
 
-This is a NextJS starter in Firebase Studio.
+Plataforma completa de acompanhamento de pacientes com protocolo clínico personalizado, gamificação, comunicação via WhatsApp e análise por IA.
 
-To get started, take a look at src/app/page.tsx.
+## 🚀 Stack Tecnológico
 
-## Application Configuration
+- **Framework:** Next.js 14 (App Router)
+- **Linguagem:** TypeScript
+- **Database:** Supabase (PostgreSQL + Realtime)
+- **Autenticação:** Supabase Auth
+- **IA/ML:** Google Genkit + Gemini AI
+- **Mensagens:** Twilio (WhatsApp)
+- **UI:** Tailwind CSS + shadcn/ui
+- **Forms:** React Hook Form + Zod
 
-To run and deploy this application, you need to configure your Firebase credentials.
+---
 
-### 1. Set Up Environment Variables
+## 📋 Pré-requisitos
 
-For the application to start, you must configure your Firebase Admin credentials. Open the `.env` file in the root of this project and add them:
+- Node.js 20+ e npm
+- Conta Supabase (gratuita)
+- Conta Twilio (para WhatsApp)
+- Google AI API Key (para Gemini)
 
+---
+
+## 🛠️ Configuração do Ambiente
+
+### 1. Clonar o Repositório e Instalar Dependências
+
+```bash
+git clone <seu-repositorio>
+cd Cuidar-me
+npm install
 ```
-# Firebase Admin SDK Credentials
-# https://firebase.google.com/docs/admin/setup#initialize-sdk
-FIREBASE_PROJECT_ID=your-firebase-project-id
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
-```
 
-Replace the placeholder values with your actual credentials. The application also uses a secret for the Cron Job endpoint, which is pre-configured in the code but can be overridden here if needed.
+### 2. Configurar Variáveis de Ambiente
 
-### 2. Set Up Twilio for WhatsApp
+Crie um arquivo `.env` na raiz do projeto com base no `.env.example`:
 
-You have two options for configuring Twilio: via the application's UI (recommended) or via environment variables.
+```env
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon
+SUPABASE_SERVICE_ROLE_KEY=sua-chave-service-role
 
-#### Option A: Via the Admin Interface (Recommended)
+# Google Gemini AI
+GOOGLE_GENAI_API_KEY=sua-chave-google-ai
 
-1.  Navigate to the **Admin > Credenciais** page in your running application.
-2.  Enter your **Account SID**, **Auth Token**, and **Twilio Phone Number**.
-3.  Save the credentials.
-
-This is the recommended approach as it allows you to manage credentials without restarting the application. The system will always prioritize credentials saved in the UI over those in the `.env` file.
-
-#### Option B: Via Environment Variables (Fallback)
-
-If you do not configure Twilio via the UI, you can add the credentials to your `.env` file. These will be used as a fallback if no credentials are found in the application's database.
-
-```
-# Twilio Credentials for WhatsApp (Optional Fallback)
-# https://www.twilio.com/console
+# Twilio (WhatsApp) - Opcional, pode ser configurado pela UI
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_AUTH_TOKEN=seu_auth_token
+TWILIO_PHONE_NUMBER=+14155238886
+
+# Application
+NEXT_PUBLIC_APP_URL=http://localhost:9002
+```
+
+### 3. Configurar Supabase
+
+#### 3.1 Criar Projeto no Supabase
+
+1. Acesse [supabase.com](https://supabase.com) e crie um novo projeto
+2. Anote a **URL** e as **API Keys** (estão em Project Settings > API)
+
+#### 3.2 Executar Migrações
+
+Execute as migrações SQL na ordem:
+
+```bash
+# No dashboard do Supabase, vá em SQL Editor e execute os arquivos em:
+supabase/migrations/001_initial_schema.sql
+supabase/migrations/002_manual_fix.sql
+supabase/migrations/20251126_add_patient_profile_fields.sql
+supabase/migrations/20251126_add_preferred_time.sql
+supabase/migrations/20251126_daily_checkins.sql
+supabase/migrations/20251126_lab_results.sql
+supabase/migrations/20251126_onboarding_states.sql
+```
+
+#### 3.3 Configurar Row Level Security (RLS)
+
+As migrações já incluem as políticas RLS necessárias. Verifique se estão ativas em:
+- Database > Tables > Selecione cada tabela > RLS deve estar **Enabled**
+
+---
+
+## 📱 Configurar Twilio (WhatsApp)
+
+### Opção A: Via Interface Admin (Recomendado)
+
+1. Rode a aplicação: `npm run dev`
+2. Faça login como admin
+3. Navegue para **Admin > Credenciais**
+4. Insira: Account SID, Auth Token e Phone Number
+5. Salve (credenciais ficam criptografadas no Supabase)
+
+### Opção B: Via Variáveis de Ambiente
+
+Adicione ao `.env` (usado como fallback):
+
+```env
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=seu_auth_token
 TWILIO_PHONE_NUMBER=+14155238886
 ```
 
-### 3. Configure the Twilio Webhook
+### Configurar Webhook do Twilio
 
-You need to tell Twilio where to send incoming messages. This is done in two different places depending on whether you are using the free "Sandbox" for testing or a purchased Twilio phone number for production.
+**Para Desenvolvimento (Sandbox):**
 
-#### a) For Development (Using the Twilio Sandbox)
+1. Acesse [Twilio Console](https://console.twilio.com)
+2. Vá em **Messaging > Try it out > Send a WhatsApp message**
+3. Clique em **Sandbox Settings**
+4. Em "When a message comes in", insira: `https://seu-ngrok-url/api/whatsapp`
+5. Método: `HTTP POST`
+6. Salve
 
-1. Go to the [Twilio Console](https://console.twilio.com) and navigate to **Messaging > Try it out > Send a WhatsApp message**.
-2. Click on the **"Sandbox Settings"** tab.
-3. In the field for **"When a message comes in"**, enter the URL of your development server (e.g., from ngrok) followed by `/api/whatsapp`.
-4. Make sure the method is `HTTP POST`.
-5. Leave the "Status callback URL" field blank.
-6. Click **Save**.
+**Para Produção (Número Comprado):**
 
-It should look like this:
+1. Vá em **Phone Numbers > Manage > Active numbers**
+2. Selecione seu número
+3. Em "Messaging Configuration", campo "A MESSAGE COMES IN":
+   - URL: `https://seu-dominio.com/api/whatsapp`
+   - Método: `HTTP POST`
+4. Salve
 
-![Twilio Sandbox Configuration](https://picsum.photos/seed/sandbox-config/800/350)
+---
 
-#### b) For Production (Using a Purchased Phone Number)
+## 🏃 Executar a Aplicação
 
-1.  Go to your active phone numbers in the Twilio Console.
-2.  Select the number you are using for this project.
-3.  Scroll down to the "Messaging" configuration section.
-4.  In the field for **"A MESSAGE COMES IN"**, enter the URL of your deployed application followed by `/api/whatsapp`.
-    *   Example: `https://your-app-name.web.app/api/whatsapp`
-5.  Make sure the request method is set to `HTTP POST`.
-6.  Save the configuration.
+### Modo Desenvolvimento
 
-### 4. How to Add a New Brazilian Number for WhatsApp
+```bash
+npm run dev
+```
 
-The Twilio console does not allow the direct purchase of Brazilian mobile numbers. The correct and official process is to use a number you already own. This is known as "Bring Your Own Number" (BYON).
+Acesse: `http://localhost:9002`
 
-**Summary of Steps:**
+### Build de Produção
 
-1.  **Acquire a Brazilian Mobile Number:** Purchase a new SIM card (pre-paid or post-paid) from any Brazilian carrier (Vivo, Claro, TIM, etc.).
-2.  **Ensure the Number is "Clean":**
-    *   The number **must not** be associated with any active WhatsApp account (personal or Business app).
-    *   To guarantee this, activate the SIM card in a phone, install WhatsApp, and if an account already exists, go to **Settings > Account > Delete my account**. This is a mandatory step.
-3.  **Start the Registration on Twilio:**
-    *   In the Twilio Console, navigate to **Messaging > Senders > WhatsApp Senders**.
-    *   Follow the on-screen instructions to add a new sender. You will be guided through the "Self-Sign-Up" process.
-    *   You will need to connect your Meta Business Manager account and provide the Brazilian number you prepared.
-4.  **Verify Ownership:**
-    *   During the process, Twilio/Meta will send a 6-digit code via **SMS or a voice call** to your new number.
-    *   Keep the phone with the new SIM card nearby to receive this code and enter it in the Twilio panel to prove you own the number.
-5.  **Configure Webhook:** Once approved and added to your senders, configure the webhook for incoming messages for this new number to point to your application's API endpoint (`/api/whatsapp`), just as you did for the original number.
+```bash
+npm run build
+npm start
+```
 
-**Important:** This application is currently configured to send outgoing messages from a single phone number. To send messages from multiple different numbers, the application code would require modifications to manage which number to use for each outgoing message.
+---
 
-### 5. (Production Only) Configure Automated Message Sending (Cron Job)
+## 👤 Criar Primeiro Usuário Admin
 
-The application uses a queue to send scheduled messages (from protocols, reminders, etc.). In production, this queue needs to be processed automatically by a "Cron Job". This job periodically calls a secure API endpoint to trigger the message sending process.
+### Opção 1: Via Supabase Dashboard
 
-We have created a secure API endpoint for this: `/api/cron`. You need to set up an external service to call this endpoint on a regular schedule.
+1. Acesse o dashboard do Supabase
+2. Vá em **Authentication > Users**
+3. Clique em **Add user > Create new user**
+4. Adicione email e senha
+5. Vá na tabela `users` e defina `role = 'admin'` para esse usuário
 
-#### Using Google Cloud Scheduler (Free and Recommended)
+### Opção 2: Via Script
 
-Google Cloud Scheduler offers a generous free tier of **3 free jobs per month**, which is more than enough for our needs. You will not be charged for this setup.
+```bash
+npx tsx src/scripts/set-admin.ts seu-email@exemplo.com
+```
 
-1.  **Go to the Google Cloud Scheduler** in your Google Cloud console for the same project as your Firebase project.
-2.  Click **"Create Job"**.
-3.  **Define the job:**
-    *   **Name:** `process-message-queue`
-    *   **Frequency:** `*/10 * * * *` (This runs the job every 10 minutes, which is recommended for timely messages. You can also use `0 */1 * * *` for every hour if you prefer, and it will still be free).
-    *   **Timezone:** Select your desired timezone.
-4.  **Configure the execution:**
-    *   **Target type:** `HTTP`
-    *   **URL:** Enter the full URL of your deployed application followed by `/api/cron`.
-        *   Example: `https://your-app-name.web.app/api/cron`
-    *   **HTTP method:** `GET`
-5.  **Configure Authentication (Crucial Step):**
-    *   Expand the advanced settings to show **"Headers"**.
-    *   Click **"Add Header"**.
-    *   **Header name:** `Authorization`
-    *   **Header value:** `Bearer CuidarMeCronSecret123` (Use this exact value).
-    *   **Authentication header:** Ensure this is set to `No Auth`.
+---
 
-6.  **Click "Create"**.
+## 📊 Seed do Banco de Dados (Opcional)
 
-Your scheduled messages will now be sent automatically!
+Para popular o banco com dados de teste:
+
+```bash
+npx tsx src/ai/seed-database.ts
+```
+
+Isso criará:
+- Protocolos clínicos
+- Configurações de gamificação
+- Vídeos educacionais
+- Tópicos da comunidade
+
+---
+
+## 🔐 Roles de Usuário
+
+A aplicação suporta 4 tipos de usuários:
+
+- **admin**: Acesso total ao sistema
+- **equipe_saude**: Profissionais de saúde (visualização de pacientes)
+- **assistente**: Suporte administrativo
+- **paciente**: Pacientes do programa
+- **pendente**: Usuário aguardando aprovação
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+Cuidar-me/
+├── src/
+│   ├── app/              # Rotas Next.js (App Router)
+│   ├── components/       # Componentes React
+│   ├── lib/              # Utilitários e configurações
+│   ├── ai/               # Flows e Actions do Genkit
+│   ├── hooks/            # React Hooks customizados
+│   └── scripts/          # Scripts de manutenção
+├── supabase/
+│   └── migrations/       # Migrações SQL
+├── docs/                 # Documentação do projeto
+└── public/               # Arquivos estáticos
+```
+
+---
+
+## 🎮 Funcionalidades Principais
+
+### Para Pacientes
+- ✅ Portal de cadastro e perfil
+- ✅ Recebimento de mensagens via WhatsApp
+- ✅ Sistema de gamificação (pontos, níveis, badges)
+- ✅ Check-ins diários (alimentação, hidratação, exercícios)
+- ✅ Comunidade anônima
+- ✅ Vídeos educacionais
+
+### Para Profissionais de Saúde
+- ✅ Dashboard de pacientes
+- ✅ Chat individual com histórico
+- ✅ Análise de risco por IA
+- ✅ Protocolos clínicos personalizados
+- ✅ Sistema de tarefas e alertas
+- ✅ Métricas e gráficos de progresso
+
+### IA e Automação
+- ✅ Chatbot inteligente (Gemini AI)
+- ✅ Análise de conversas
+- ✅ Extração automática de dados (peso, glicemia, etc.)
+- ✅ Mensagens programadas
+- ✅ Escalonamento automático para humanos
+
+---
+
+## 🔄 Como Adicionar Número Brasileiro para WhatsApp
+
+O Twilio não permite compra direta de números móveis brasileiros. Use o processo **"Bring Your Own Number" (BYON)**:
+
+### Passos:
+
+1. **Adquira um número móvel brasileiro** (Vivo, Claro, TIM, etc.)
+2. **Garantir que o número está "limpo":**
+   - Não pode ter WhatsApp ativo
+   - Se tiver, delete a conta: WhatsApp > Configurações > Conta > Deletar minha conta
+3. **Registre no Twilio:**
+   - Console Twilio > Messaging > WhatsApp Senders
+   - Siga o processo de "Self-Sign-Up"
+   - Conecte sua conta Meta Business Manager
+4. **Verifique propriedade:**
+   - Twilio enviará código via SMS/ligação
+   - Insira o código recebido
+5. **Configure webhook:**
+   - Após aprovação, configure a URL: `https://seu-app.com/api/whatsapp`
+
+---
+
+## 🤖 Mensagens Automáticas (Cron Job)
+
+A aplicação usa uma fila para enviar mensagens programadas. Configure um job periódico para processar a fila:
+
+### Usando Google Cloud Scheduler (Grátis)
+
+1. Acesse **Google Cloud Scheduler** no seu projeto
+2. Clique em **Create Job**
+3. Configure:
+   - **Nome:** `process-message-queue`
+   - **Frequência:** `*/10 * * * *` (a cada 10 minutos)
+   - **Timezone:** Seu timezone
+   - **Target:** HTTP
+   - **URL:** `https://seu-app.com/api/cron`
+   - **Método:** GET
+   - **Header:** `Authorization: Bearer CuidarMeCronSecret123`
+4. Salve
+
+---
+
+## 📚 Documentação Adicional
+
+- [GAMIFICATION_ANALYSIS.md](./GAMIFICATION_ANALYSIS.md) - Análise completa do sistema de gamificação
+- [PROTOCOL_CLINICAL_ANALYSIS.md](./PROTOCOL_CLINICAL_ANALYSIS.md) - Detalhes dos protocolos clínicos
+- [CREDENCIAIS_SUPABASE.md](./CREDENCIAIS_SUPABASE.md) - Guia de configuração Supabase
+
+---
+
+## 🐛 Troubleshooting
+
+### Build Errors
+
+```bash
+# Limpar cache do Next.js
+rm -rf .next
+npm run build
+```
+
+### Supabase Connection Issues
+
+1. Verifique se as URL e Keys estão corretas no `.env`
+2. Confirme que o projeto Supabase está ativo
+3. Verifique se as tabelas foram criadas (migrações executadas)
+
+### WhatsApp não recebe mensagens
+
+1. Verifique webhook configurado corretamente no Twilio
+2. Confirme que as credenciais estão salvas (Admin > Credenciais)
+3. Verifique logs do Twilio Console
+
+---
+
+## 📄 Licença
+
+Propriedade privada. Todos os direitos reservados.
+
+---
+
+## 💬 Suporte
+
+Para dúvidas ou problemas, consulte a documentação em `/docs` ou entre em contato com a equipe de desenvolvimento.

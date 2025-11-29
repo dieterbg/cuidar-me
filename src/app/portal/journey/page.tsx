@@ -8,12 +8,15 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from "@/components/ui/progress";
-import { Check, Droplet, ForkKnife, HeartPulse, Brain, Zap, Sparkles, Trophy, Lock, Star } from 'lucide-react';
+import { Check, Droplet, ForkKnife, HeartPulse, Brain, Zap, Sparkles, Trophy, Lock, Star, UtensilsCrossed, Target } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from 'recharts';
 import { GamificationPointsDisplay, PerspectiveProgress } from '@/components/gamification-display';
 import { Badge } from '@/components/ui/badge';
+import { HydrationButton } from '@/components/hydration-button';
+import { QuickActionButton } from '@/components/quick-action-button';
+import { getLevelTier, getLevelName } from '@/lib/level-system';
 
 const levelConfig: { [key: string]: { nextLevel: string, goal: number } } = {
     'Iniciante': { nextLevel: 'Praticante', goal: 500 },
@@ -136,7 +139,11 @@ export default function JourneyPage() {
         return <JourneySkeleton />;
     }
 
-    const currentLevelInfo = levelConfig[patient.gamification.level] || levelConfig['Mestre'];
+    // Buscar tier do nível (Iniciante, Praticante, etc.)
+    const levelTier = typeof patient.gamification.level === 'number'
+        ? getLevelTier(patient.gamification.level)
+        : patient.gamification.level;
+    const currentLevelInfo = levelConfig[levelTier] || levelConfig['Mestre'];
     const levelProgressPercentage = (patient.gamification.totalPoints / currentLevelInfo.goal) * 100;
     const weeklyPerspectives = patient.gamification.weeklyProgress.perspectives;
     const perspectivesCompleted = Object.values(weeklyPerspectives).filter(p => p.isComplete).length;
@@ -160,7 +167,11 @@ export default function JourneyPage() {
                     {/* LEVEL CAPSULE */}
                     <div className="bg-card border shadow-sm rounded-2xl p-4 min-w-[240px]">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-muted-foreground">Nível {patient.gamification.level}</span>
+                            <span className="text-sm font-medium text-muted-foreground">
+                                {typeof patient.gamification.level === 'number'
+                                    ? getLevelName(patient.gamification.level)
+                                    : `Nível ${patient.gamification.level}`}
+                            </span>
                             <span className="text-xs font-bold text-primary">{patient.gamification.totalPoints} / {currentLevelInfo.goal} pts</span>
                         </div>
                         <Progress value={levelProgressPercentage} className="h-2" />
@@ -207,6 +218,64 @@ export default function JourneyPage() {
 
                     {/* BADGES & STATS */}
                     <div className="lg:col-span-5 space-y-6">
+                        {/* AÇÕES RÁPIDAS */}
+                        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Zap className="h-5 w-5 text-primary" />
+                                    Ações Rápidas
+                                </CardTitle>
+                                <CardDescription>Registre suas atividades e ganhe pontos!</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* Hidratação */}
+                                    <HydrationButton userId={user!.id} />
+
+                                    {/* Alimentação */}
+                                    <QuickActionButton
+                                        userId={user!.id}
+                                        type="mood"
+                                        perspective="alimentacao"
+                                        icon={UtensilsCrossed}
+                                        label="Refeição Saudável"
+                                        color="green"
+                                    />
+
+                                    {/* Movimento */}
+                                    <QuickActionButton
+                                        userId={user!.id}
+                                        type="mood"
+                                        perspective="movimento"
+                                        icon={HeartPulse}
+                                        label="Atividade Física"
+                                        color="red"
+                                    />
+
+                                    {/* Disciplina */}
+                                    <QuickActionButton
+                                        userId={user!.id}
+                                        type="mood"
+                                        perspective="disciplina"
+                                        icon={Target}
+                                        label="Tarefa Cumprida"
+                                        color="purple"
+                                    />
+
+                                    {/* Bem-Estar */}
+                                    <QuickActionButton
+                                        userId={user!.id}
+                                        type="mood"
+                                        perspective="bemEstar"
+                                        icon={Brain}
+                                        label="Momento Zen"
+                                        color="orange"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* CONQUISTAS */}
                         <Card className="h-full bg-card/80 backdrop-blur-sm border-border/60 shadow-sm flex flex-col">
                             <CardHeader>
                                 <CardTitle>Conquistas</CardTitle>
@@ -273,7 +342,6 @@ export default function JourneyPage() {
                                             <Progress
                                                 value={(perspectiveData.current / perspectiveData.goal) * 100}
                                                 className="h-1.5"
-                                                indicatorClassName={isComplete ? "bg-green-500" : "bg-primary"}
                                             />
                                         </div>
                                     </CardContent>

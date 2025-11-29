@@ -29,6 +29,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 
 const riskLevelConfig: { [key in Patient['riskLevel'] & string]: { icon: React.ElementType, color: string, label: string, bg: string } } = {
@@ -107,6 +114,7 @@ export default function PatientsListPage() {
   const [isSeeding, startSeedingTransition] = useTransition();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('attention');
   const [patients, setPatients] = useState<Patient[]>([]);
 
@@ -156,8 +164,12 @@ export default function PatientsListPage() {
       })
       .filter(patient =>
         patient.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-  }, [patients, activeTab, searchTerm]);
+      )
+      .filter(patient => {
+        if (selectedPlan === 'all') return true;
+        return patient.subscription.plan === selectedPlan;
+      });
+  }, [patients, activeTab, searchTerm, selectedPlan]);
 
   const handleSeedDatabase = () => {
     startSeedingTransition(async () => {
@@ -325,14 +337,28 @@ export default function PatientsListPage() {
             <TabsTrigger value="all" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">Todos</TabsTrigger>
           </TabsList>
 
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar paciente..."
-              className="pl-10 bg-background border-border/50 rounded-xl focus-visible:ring-primary/20"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+              <SelectTrigger className="w-full sm:w-[180px] bg-background border-border/50 rounded-xl h-10">
+                <SelectValue placeholder="Filtrar por plano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Planos</SelectItem>
+                <SelectItem value="freemium">Freemium</SelectItem>
+                <SelectItem value="premium">Premium</SelectItem>
+                <SelectItem value="vip">VIP</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar paciente..."
+                className="pl-10 bg-background border-border/50 rounded-xl focus-visible:ring-primary/20 h-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 

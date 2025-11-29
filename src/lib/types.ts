@@ -1,6 +1,5 @@
 
 
-import type { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
 // import type { Patient as PatientType } from '@/lib/types';
 import { ExtractPatientDataOutputSchema } from './schemas';
@@ -24,7 +23,7 @@ const AttentionRequestSchema = z.object({
     // The following fields will be added by the code, not the AI
     triggerMessage: z.string().optional(),
     priority: z.number().optional(),
-    createdAt: z.custom<Date | Timestamp>(() => new Date()).optional(),
+    createdAt: z.custom<Date | string>(() => new Date()).optional(),
 });
 
 export const GenerateChatbotReplyOutputSchema = z.object({
@@ -97,11 +96,20 @@ export interface WeeklyProgress {
     perspectives: Record<Perspective, GamificationPerspective>;
 }
 
+export interface StreakData {
+    currentStreak: number;        // Dias consecutivos atuais
+    longestStreak: number;        // Recorde pessoal
+    lastActivityDate: string;     // ISO string da última atividade
+    streakFreezes: number;        // Proteções disponíveis (max 2)
+    freezesUsedThisMonth: number; // Resetado mensalmente
+}
+
 export interface GamificationState {
     totalPoints: number;
     level: string;
     badges: string[];
     weeklyProgress: WeeklyProgress;
+    streak?: StreakData;          // Sistema de sequências
 }
 
 
@@ -111,12 +119,12 @@ export interface AttentionRequest {
     aiSummary: string;
     aiSuggestedReply: string;
     priority: 1 | 2 | 3;
-    createdAt: string | Date | Timestamp;
+    createdAt: string | Date;
 }
 
 export interface ActiveCheckin {
     perspective: Perspective;
-    sentAt: Date | string | Timestamp;
+    sentAt: Date | string;
 }
 
 export interface Patient {
@@ -133,6 +141,7 @@ export interface Patient {
     name: string; // Keep for compatibility with existing components
     avatar: string;
     email?: string;
+    userId?: string; // Added for compatibility with createPatientRecord
     lastMessage: string;
     lastMessageTimestamp: Date | string;
     riskLevel?: 'low' | 'medium' | 'high';
@@ -194,7 +203,7 @@ export interface ScheduledMessage {
     patientId: string;
     patientWhatsappNumber: string;
     messageContent: string;
-    sendAt: string | Date | Timestamp;
+    sendAt: string | Date;
     status: 'pending' | 'sent' | 'error';
     source: 'protocol' | 'dynamic_reminder';
     createdAt: string | Date;

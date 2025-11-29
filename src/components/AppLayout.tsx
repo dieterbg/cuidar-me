@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { Home, Users, Video as VideoIcon, LogOut, ClipboardList, Megaphone, UserCog, MessageSquareText, HandCoins, LayoutDashboard, Settings, Sparkles } from 'lucide-react';
+import { Home, Users, Video as VideoIcon, LogOut, ClipboardList, Megaphone, UserCog, MessageSquareText, HandCoins, LayoutDashboard, Settings, Sparkles, Trophy, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 
 import {
@@ -44,6 +44,8 @@ const allMenuItems = [
   { href: '/community', label: 'Comunidade', icon: Users, roles: ['admin', 'equipe_saude'] },
   { href: '/campaigns', label: 'Campanhas', icon: Megaphone, roles: ['admin', 'assistente'] },
   { href: '/plans', label: 'Planos', icon: HandCoins, roles: ['admin', 'equipe_saude'] },
+  { href: '/portal/achievements', label: 'Conquistas', icon: Trophy, roles: ['admin', 'equipe_saude', 'assistente', 'paciente'] },
+  { href: '/portal/store', label: 'Loja', icon: ShoppingBag, roles: ['admin', 'equipe_saude', 'assistente', 'paciente'] },
 ];
 
 const adminMenuItems = [
@@ -108,7 +110,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
             <div className="space-y-1">
-              <Progress value={isAdmin ? 100 : 30} className="h-1.5 bg-black/5" indicatorClassName="bg-[#899d5e]" />
+              <Progress value={isAdmin ? 100 : 30} className="h-1.5 bg-black/5" />
               <div className="flex justify-end">
                 <span className="text-[10px] font-medium text-muted-foreground">
                   {isAdmin ? 'Acesso Total' : 'Nível 1'}

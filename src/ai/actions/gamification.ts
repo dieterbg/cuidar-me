@@ -3,8 +3,14 @@
 import { createClient } from '@/lib/supabase-server';
 import { revalidatePath } from 'next/cache';
 import type { Patient, Perspective } from '@/lib/types';
+import { calculateLevel, getLevelName } from '@/lib/level-system';
 
-export async function registerQuickAction(userId: string, type: 'hydration' | 'mood'): Promise<{ success: boolean; message: string; pointsEarned: number }> {
+export async function registerQuickAction(
+    userId: string,
+    type: 'hydration' | 'mood',
+    perspectiveOverride?: Perspective
+): Promise<{ success: boolean; message: string; pointsEarned: number }> {
+    console.log(`[GAMIFICATION] registerQuickAction called for user ${userId} type ${type} perspective ${perspectiveOverride || 'auto'}`);
     const supabase = createClient();
 
     // 1. Buscar dados atuais do paciente
@@ -24,19 +30,28 @@ export async function registerQuickAction(userId: string, type: 'hydration' | 'm
     let message = '';
 
     // Inicializar estrutura se não existir (segurança)
-    if (!patient.gamification) patient.gamification = { totalPoints: 0, level: 'Iniciante', badges: [], weeklyProgress: { perspectives: {} } };
+    // NOTA: level agora é number (1-20), mas compatível com string antiga
+    if (!patient.gamification) patient.gamification = { totalPoints: 0, level: 1, badges: [], weeklyProgress: { perspectives: {} } };
 
     // 2. Definir qual perspectiva atualizar
     let perspectiveKey: Perspective | null = null;
 
-    if (type === 'hydration') {
-        perspectiveKey = 'hidratacao';
-        pointsEarned = 10;
-        message = 'Hidratação registrada! +10 pontos 💧';
-    } else if (type === 'mood') {
-        perspectiveKey = 'bemEstar';
-        pointsEarned = 15;
-        message = 'Humor registrado! +15 pontos ☀️';
+    // Se foi fornecida uma perspectiva específica, usar ela
+    if (perspectiveOverride) {
+        perspectiveKey = perspectiveOverride;
+        pointsEarned = type === 'hydration' ? 10 : 15;
+        message = `Ação registrada! +${pointsEarned} pontos`;
+    } else {
+        // Lógica padrão (retrocompatibilidade)
+        if (type === 'hydration') {
+            perspectiveKey = 'hidratacao';
+            pointsEarned = 10;
+            message = 'Hidratação registrada! +10 pontos 💧';
+        } else if (type === 'mood') {
+            perspectiveKey = 'bemEstar';
+            pointsEarned = 15;
+            message = 'Humor registrado! +15 pontos ☀️';
+        }
     }
 
     if (perspectiveKey) {
@@ -60,14 +75,16 @@ export async function registerQuickAction(userId: string, type: 'hydration' | 'm
     // 3. Atualizar pontos totais e nível
     patient.gamification.totalPoints = (patient.gamification.totalPoints || 0) + pointsEarned;
 
-    // Lógica simples de nível
+    // ✨ NOVO SISTEMA DE 20 NÍVEIS ✨
     const oldLevel = patient.gamification.level;
-    if (patient.gamification.totalPoints >= 2000) patient.gamification.level = 'Mestre';
-    else if (patient.gamification.totalPoints >= 1000) patient.gamification.level = 'Veterano';
-    else if (patient.gamification.totalPoints >= 500) patient.gamification.level = 'Praticante';
+    const newLevel = calculateLevel(patient.gamification.totalPoints);
+    patient.gamification.level = newLevel;
 
-    if (patient.gamification.level !== oldLevel) {
-        message = `PARABÉNS! Você subiu para o nível ${patient.gamification.level}! 🎉`;
+    // Verificar se subiu de nível
+    const oldLevelNum = typeof oldLevel === 'number' ? oldLevel : 1;
+    if (newLevel !== oldLevelNum) {
+        const levelName = getLevelName(newLevel);
+        message = `PARABÉNS! Você subiu para ${levelName}! 🎉`;
     }
 
     // 4. Salvar no banco
@@ -84,6 +101,15 @@ export async function registerQuickAction(userId: string, type: 'hydration' | 'm
     if (updateError) {
         console.error('Error updating gamification:', updateError);
         return { success: false, message: 'Erro ao salvar progresso.', pointsEarned: 0 };
+    }
+
+    // 5. Verificar Badges (Assíncrono, mas aguardamos para retornar mensagem se houver)
+    // Import dinâmico para evitar dependência circular se houver, ou import normal no topo
+    const { awardNewBadges } = await import('./badges');
+    const badgeResult = await awardNewBadges(userId);
+
+    if (badgeResult.success && badgeResult.newBadges.length > 0) {
+        message += `\n${badgeResult.message}`;
     }
 
     revalidatePath('/portal/welcome');

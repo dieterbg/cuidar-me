@@ -41,13 +41,54 @@ export default function PortalProfilePage() {
     }
   }, [user, authLoading]);
 
-  const handleSaveSuccess = () => {
-    fetchProfile();
-    toast({
-      title: "Perfil Atualizado",
-      description: "Suas informações foram salvas com sucesso.",
-      className: "bg-green-50 border-green-200 text-green-800"
-    });
+  const handleSaveSuccess = async () => {
+    await fetchProfile();
+
+    // Check if profile is now complete and initiate WhatsApp onboarding
+    if (patient) {
+      // Re-fetch patient data to ensure we have latest values
+      const updatedPatient = await getPatientProfileByUserId(user!.id);
+
+      if (updatedPatient) {
+        const isComplete = !!(
+          updatedPatient.height &&
+          updatedPatient.initialWeight &&
+          updatedPatient.birthDate &&
+          updatedPatient.gender &&
+          (updatedPatient as any).goal
+        );
+
+        if (isComplete) {
+          // Initiate WhatsApp onboarding
+          try {
+            fetch('/api/onboarding/initiate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ patientId: updatedPatient.id }),
+            }).catch(err => console.error('Failed to initiate onboarding:', err));
+
+            toast({
+              title: "✅ Perfil Completo!",
+              description: "Enviamos uma mensagem no WhatsApp para começar sua jornada! 📱",
+              className: "bg-green-50 border-green-200 text-green-800"
+            });
+          } catch (error) {
+            console.error('Error initiating onboarding:', error);
+          }
+        } else {
+          toast({
+            title: "✅ Perfil Atualizado!",
+            description: "Redirecionando para a página inicial...",
+            className: "bg-green-50 border-green-200 text-green-800"
+          });
+        }
+      }
+    }
+
+    // Redirect to welcome page after successful save
+    setTimeout(() => {
+      window.location.href = '/portal/welcome';
+    }, 1500);
   }
 
   if (authLoading || isPageLoading) {

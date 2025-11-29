@@ -120,6 +120,8 @@ function getOverloadFallbackResponse(input: z.infer<typeof GenerateChatbotReplyI
   });
 }
 
+// 🎉 ONDA 1: IA Conversacional ATIVADA!
+// Usando padrão correto do Genkit descoberto em suggest-whatsapp-replies.ts
 const generateChatbotReplyFlow = ai.defineFlow(
   {
     name: 'generateChatbotReplyFlow',
@@ -127,19 +129,21 @@ const generateChatbotReplyFlow = ai.defineFlow(
     outputSchema: GenerateChatbotReplyOutputSchema,
   },
   async (input) => {
-    // Implementação básica temporária - SEM conflitos de tipos
-    const result = {
-      decision: "escalate" as const, // Type assertion para garantir o tipo literal
-      chatbotReply: "Sua mensagem foi recebida. Nossa equipe entrará em contato em breve.",
-      attentionRequest: {
-        reason: "Mensagem do paciente",
-        triggerMessage: input.patientMessage,
-        aiSummary: "Paciente enviou uma mensagem que precisa de atenção humana.",
-        aiSuggestedReply: "Responder manualmente.",
-        priority: 1,
-      }
-    };
+    try {
+      console.log('[generateChatbotReplyFlow] Processing message:', input.patientMessage);
 
-    return result;
+      // Padrão correto: destructure {output} from await prompt(input)
+      const { output } = await prompt(input);
+
+      console.log('[generateChatbotReplyFlow] AI Decision:', output?.decision);
+
+      // Retornar output (com null assertion operator)
+      return output!;
+    } catch (error: any) {
+      console.error('[generateChatbotReplyFlow] Error:', error);
+
+      // Fallback se IA falhar - escalar para segurança
+      return getOverloadFallbackResponse(input, error);
+    }
   }
 );

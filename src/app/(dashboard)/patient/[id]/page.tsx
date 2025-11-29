@@ -16,7 +16,7 @@ import { ChatPanel } from '@/components/chat-panel';
 import type { Patient, Protocol, SentVideo, Message, HealthMetric, PatientPlan, ScheduledMessage, Video as VideoType } from '@/lib/types';
 import { assignProtocolToPatient, unassignProtocolFromPatient, getProtocols } from '@/ai/actions/protocols';
 import { getPatientDetails } from '@/ai/actions/patients';
-import { getScheduledMessagesForPatient, updateScheduledMessage } from '@/ai/actions/messages';
+import { getScheduledMessagesForPatient, updateScheduledMessage, getMessages } from '@/ai/actions/messages';
 import { updateSentVideoFeedback, getVideos } from '@/ai/actions/videos';
 import { HealthMetricsChart } from '@/components/health-metrics-chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

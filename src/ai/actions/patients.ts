@@ -2,6 +2,7 @@
 
 
 import { createClient } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
 
@@ -11,10 +12,24 @@ import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
 export async function getPatients(): Promise<Patient[]> {
     const supabase = createClient();
 
-    const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('created_at', { ascending: false });
+    // Check if user is admin/staff to use admin client
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let queryBuilder;
+
+    if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (profile?.role === 'admin' || profile?.role === 'equipe_saude' || profile?.role === 'assistente') {
+            const adminSupabase = createAdminClient();
+            queryBuilder = adminSupabase.from('patients').select('*');
+        } else {
+            queryBuilder = supabase.from('patients').select('*');
+        }
+    } else {
+        queryBuilder = supabase.from('patients').select('*');
+    }
+
+    const { data, error } = await queryBuilder.order('created_at', { ascending: false });
 
     if (error) {
         console.error('Error fetching patients:', error);
@@ -150,10 +165,23 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
         return { success: true }; // Nada para atualizar
     }
 
-    const { error } = await supabase
-        .from('patients')
-        .update(dbUpdates)
-        .eq('id', patientId);
+    // Check permissions
+    const { data: { user } } = await supabase.auth.getUser();
+    let updateBuilder;
+
+    if (user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+        if (profile?.role === 'admin' || profile?.role === 'equipe_saude') {
+            const adminSupabase = createAdminClient();
+            updateBuilder = adminSupabase.from('patients').update(dbUpdates).eq('id', patientId);
+        } else {
+            updateBuilder = supabase.from('patients').update(dbUpdates).eq('id', patientId);
+        }
+    } else {
+        updateBuilder = supabase.from('patients').update(dbUpdates).eq('id', patientId);
+    }
+
+    const { error } = await updateBuilder;
 
     if (error) {
         console.error('Error updating patient:', error);
@@ -180,7 +208,52 @@ export async function deletePatient(patientId: string): Promise<{ success: boole
 }
 
 export async function createPatientRecord(patientData: Partial<Patient>): Promise<{ success: boolean; patientId?: string; error?: string }> {
+    console.log('createPatientRecord called with:', patientData);
     const supabase = createClient();
+
+    // Verify if user exists in auth.users using admin client
+    if (patientData.userId) {
+        try {
+            const adminSupabase = createAdminClient();
+            const { data: user, error: userError } = await adminSupabase.auth.admin.getUserById(patientData.userId);
+            if (userError || !user) {
+                console.error('User not found in auth.users:', patientData.userId, userError);
+                return { success: false, error: `User not found: ${patientData.userId}` };
+            }
+            console.log('User verified in auth.users:', user);
+
+            // Check if profile exists
+            const { data: profile, error: profileError } = await adminSupabase
+                .from('profiles')
+                .select('*')
+                .eq('id', patientData.userId)
+                .single();
+
+            if (profileError || !profile) {
+                console.error('Profile not found for user:', patientData.userId, profileError);
+                // If profile is missing, try to create it manually (fallback)
+                console.log('Attempting to create missing profile...');
+                const { error: createProfileError } = await adminSupabase.from('profiles').insert({
+                    id: patientData.userId,
+                    email: patientData.email,
+                    role: 'paciente', // Default role
+                    display_name: patientData.fullName || '',
+                    phone: patientData.whatsappNumber || ''
+                });
+
+                if (createProfileError) {
+                    console.error('Failed to create fallback profile:', createProfileError);
+                    return { success: false, error: `Profile missing and creation failed: ${createProfileError.message}` };
+                }
+                console.log('Fallback profile created successfully.');
+            } else {
+                console.log('Profile verified:', profile);
+            }
+
+        } catch (err) {
+            console.error('Error verifying user/profile:', err);
+        }
+    }
 
     // Mapear para snake_case também na criação
     const dbInsert: any = {};

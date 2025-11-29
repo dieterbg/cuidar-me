@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { updatePatient, deletePatient as deletePatientAction } from '@/ai/actions/patients';
 import { unassignProtocolFromPatient } from '@/ai/actions/protocols';
@@ -47,6 +47,16 @@ const formSchema = z.object({
   gender: z.enum(['masculino', 'feminino', 'outro', '']).optional().nullable(),
   healthConditions: z.string().optional().nullable(),
   allergies: z.string().optional().nullable(),
+  goal: z.enum(['lose_weight', 'gain_muscle', 'maintain', '']).optional().nullable(),
+  targetWeight: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
+    z.number().positive().optional().nullable()
+  ),
+  waist: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
+    z.number().positive().optional().nullable()
+  ),
+  medications: z.string().optional().nullable(),
 });
 
 
@@ -96,11 +106,27 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
           throw new Error(updateResult.error || 'Erro desconhecido ao atualizar paciente.');
         }
 
-        toast({
-          title: isPatientContext ? "Perfil Atualizado!" : "Paciente Atualizado!",
-          description: "Os dados foram salvos com sucesso.",
-        });
+        // If patient context and profile is now complete, initiate WhatsApp onboarding
+        if (isPatientContext) {
+          const isComplete = !!(
+            values.height &&
+            values.initialWeight &&
+            values.birthDate &&
+            values.gender &&
+            values.goal
+          );
 
+          if (isComplete) {
+            // Call API to initiate onboarding (fire and forget - don't block UI)
+            fetch('/api/onboarding/initiate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ patientId: patient.id }),
+            }).catch(err => console.error('Failed to initiate onboarding:', err));
+          }
+        }
+
+        // Parent component will handle success notification and redirect
         onSave();
       } catch (error: any) {
         toast({
@@ -332,6 +358,116 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="goal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Objetivo Principal <span className="text-red-600">*</span></FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="lose_weight">Perder Peso</SelectItem>
+                        <SelectItem value="gain_muscle">Ganhar Massa</SelectItem>
+                        <SelectItem value="maintain">Manter Peso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="targetWeight"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Meta de Peso (kg)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 70.0"
+                        step="0.1"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="waist"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cintura (cm)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 80"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="medications"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Medicamentos em uso</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Ex: Losartana 50mg, Metformina 850mg"
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Exam Upload Section */}
+            <div className="space-y-4 pt-4 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium">Exames Recentes</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Envie fotos ou PDFs dos seus exames mais recentes (Opcional)
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <FormLabel htmlFor="exam-upload">Upload de Arquivo</FormLabel>
+                <div className="flex items-center gap-2">
+                  <Input id="exam-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" className="cursor-pointer" />
+                  <Button type="button" variant="outline" size="icon">
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Formatos aceitos: PDF, JPG, PNG. Máx: 10MB.
+                </p>
+              </div>
+            </div>
           </>
         )}
 

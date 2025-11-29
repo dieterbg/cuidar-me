@@ -22,9 +22,13 @@ import {
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-client';
 import type { Patient } from '@/lib/types';
+import { createPatientRecord } from '@/ai/actions/patients';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { getLevelName } from '@/lib/level-system';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -34,6 +38,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isStatusLoading, setIsStatusLoading] = useState(true);
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
+  const [activationName, setActivationName] = useState('');
+  const [activationPhone, setActivationPhone] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,7 +78,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             },
             gamification: {
               totalPoints: data.total_points || 0,
-              level: data.level || 'Iniciante',
+              level: data.level || 1, // Garantir que seja número
               badges: data.badges || [],
               weeklyProgress: { weekStartDate: new Date(), perspectives: {} as any }
             }
@@ -115,25 +121,57 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }, [user]);
 
   const createPatientDocument = async () => {
-    if (!user) return;
+    if (!user) {
+      console.error("createPatientDocument called but user is null");
+      return;
+    }
+
+    console.log("createPatientDocument called for user:", user.id, user.email);
+
+    if (!activationName.trim()) {
+      toast({ variant: "destructive", title: "Nome obrigatório", description: "Por favor, preencha seu nome completo." });
+      return;
+    }
+
+    if (!activationPhone.trim()) {
+      toast({ variant: "destructive", title: "WhatsApp obrigatório", description: "Por favor, preencha seu WhatsApp." });
+      return;
+    }
+
     setIsCreatingPatient(true);
-    const supabase = createClient();
 
     try {
-      const { error } = await supabase
-        .from('patients')
-        .upsert({
-          user_id: user.id,
-          email: user.email,
-          full_name: user.user_metadata.displayName || 'Paciente',
-          status: 'pending',
-          gamification: { totalPoints: 0, level: 'Iniciante', badges: [], weeklyProgress: { perspectives: {} } }
-        }, { onConflict: 'user_id' });
+      const result = await createPatientRecord({
+        userId: user.id,
+        email: user.email || '',
+        fullName: activationName,
+        whatsappNumber: activationPhone,
+        status: 'pending',
+      });
 
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao criar registro de paciente');
+      }
 
-      toast({ title: "Perfil criado!", description: "Agora complete seus dados." });
-      window.location.reload();
+      // Update local state to reflect the new patient immediately
+      setPatient({
+        id: result.patientId || 'temp-id',
+        userId: user.id,
+        email: user.email || '',
+        fullName: activationName,
+        phone: activationPhone,
+        status: 'pending',
+        gamification: {
+          level: 1, // Novo usuário começa no nível 1
+          totalPoints: 0,
+          badges: [],
+          weeklyProgress: { weekStartDate: new Date(), perspectives: {} as any }
+        },
+        subscription: { plan: 'freemium', priority: 1 }
+      } as any);
+
+      toast({ title: "Conta Ativada!", description: "Bem-vindo ao portal!" });
+      // router.push('/portal/welcome'); // No need to push if we update state, layout will render children
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
     } finally {
@@ -160,10 +198,35 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               Vamos configurar seu espaço pessoal de saúde.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-6">
-              Clique abaixo para ativar sua conta de paciente e começar sua jornada.
+          <CardContent className="space-y-4 text-left">
+            <p className="text-muted-foreground mb-2 text-center">
+              Para ativar sua conta, precisamos de mais alguns dados.
             </p>
+            <div className="space-y-2">
+              <Label htmlFor="activation-name">Nome Completo</Label>
+              <Input
+                id="activation-name"
+                placeholder="Seu nome completo"
+                value={activationName}
+                onChange={(e) => setActivationName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="activation-phone">WhatsApp</Label>
+              <Input
+                id="activation-phone"
+                placeholder="(11) 99999-9999"
+                value={activationPhone}
+                onChange={(e) => {
+                  // Simple mask
+                  let v = e.target.value.replace(/\D/g, '');
+                  if (v.length > 11) v = v.slice(0, 11);
+                  if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+                  if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
+                  setActivationPhone(v);
+                }}
+              />
+            </div>
           </CardContent>
           <CardFooter className="flex-col gap-3">
             <Button
@@ -171,7 +234,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               disabled={isCreatingPatient}
               className="w-full rounded-full h-12 text-base shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
             >
-              {isCreatingPatient ? 'Ativando...' : 'Ativar Minha Conta'}
+              {isCreatingPatient ? 'Ativando...' : 'Salvar e Ativar Conta'}
             </Button>
             <Button variant="ghost" onClick={signOut} className="w-full rounded-full text-muted-foreground hover:text-destructive">
               Sair
@@ -182,13 +245,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  const menuItems = [
+  const allMenuItems = [
     { href: '/portal/welcome', label: 'Início', icon: LayoutDashboard },
     { href: '/portal/journey', label: 'Minha Jornada', icon: Trophy },
     { href: '/portal/profile', label: 'Meu Perfil', icon: User },
     { href: '/portal/community', label: 'Comunidade', icon: Users },
     { href: '/portal/education', label: 'Educação', icon: BookOpen },
   ];
+
+  const menuItems = patient?.status === 'pending'
+    ? allMenuItems.filter(item => item.href === '/portal/welcome')
+    : allMenuItems;
 
   return (
     <div className="flex min-h-screen bg-[#F5F3F0] dark:bg-zinc-950">
@@ -234,7 +301,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </Avatar>
               <div className="overflow-hidden">
                 <p className="text-sm font-bold truncate">{patient.fullName?.split(' ')[0]}</p>
-                <p className="text-xs text-muted-foreground truncate capitalize">{patient.gamification.level}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {typeof patient.gamification.level === 'number'
+                    ? getLevelName(patient.gamification.level)
+                    : patient.gamification.level}
+                </p>
               </div>
             </div>
             <div className="w-full bg-background/50 rounded-full h-1.5 overflow-hidden">
@@ -287,7 +358,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-0">
         {/* MOBILE HEADER */}
         <header className="lg:hidden h-16 border-b border-border/40 bg-background/80 backdrop-blur-md flex items-center justify-between px-4 sticky top-0 z-30">
           <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)}>

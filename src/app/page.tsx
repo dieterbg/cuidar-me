@@ -1,34 +1,31 @@
-"use client";
+'use client';
 
-import { useState, FormEvent, FC, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, FormEvent, useEffect, FC } from 'react';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Mail, Lock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
 
-const handleAuthError = (error: any, toast: ReturnType<typeof useToast>['toast']) => {
-    let title = "Erro de autenticação";
-    let description = "Ocorreu um erro inesperado.";
+const handleAuthError = (error: any, toast: any) => {
+    let title = "Erro na autenticação";
+    let description = "Ocorreu um erro inesperado. Tente novamente.";
 
     if (error.message) {
-        if (error.message.includes('Invalid login credentials')) {
-            title = "Credenciais Inválidas";
-            description = "Email ou senha incorretos. Por favor, tente novamente.";
-        } else if (error.message.includes('User already registered')) {
+        if (error.message.includes("Invalid login credentials")) {
+            title = "Credenciais inválidas";
+            description = "Email ou senha incorretos. Verifique e tente novamente.";
+        } else if (error.message.includes("Email not confirmed")) {
+            title = "Email não confirmado";
+            description = "Por favor, verifique seu email para confirmar sua conta antes de fazer login.";
+        } else if (error.message.includes("User already registered")) {
             title = "Email já cadastrado";
             description = "Este email já possui uma conta. Tente fazer login.";
-        } else if (error.message.includes('Password should be at least 6 characters')) {
-            title = "Senha Fraca";
-            description = "A senha deve ter pelo menos 6 caracteres.";
-        } else if (error.message.includes('Email not confirmed')) {
-            title = "Email não confirmado";
-            description = "Por favor, confirme seu email antes de fazer login.";
         } else {
             description = error.message;
         }
@@ -37,7 +34,6 @@ const handleAuthError = (error: any, toast: ReturnType<typeof useToast>['toast']
     console.error("Authentication Error:", error);
     toast({ variant: "destructive", title, description });
 };
-
 
 const LoginForm: FC = () => {
     const [email, setEmail] = useState('');
@@ -62,28 +58,34 @@ const LoginForm: FC = () => {
         <form onSubmit={handleLogin} className="space-y-4 pt-4">
             <div className="space-y-2">
                 <Label htmlFor="login-email">Email</Label>
-                <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isPending}
-                    className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20"
-                />
+                <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={isPending}
+                        className="pl-9 h-12 bg-white/50"
+                    />
+                </div>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="login-password">Senha</Label>
-                <Input
-                    id="login-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={isPending}
-                    className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20"
-                />
+                <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="login-password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={isPending}
+                        className="pl-9 h-12 bg-white/50"
+                    />
+                </div>
             </div>
             <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar na Plataforma'}
@@ -95,49 +97,21 @@ const LoginForm: FC = () => {
 const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
     const [isPending, setIsPending] = useState(false);
     const { toast } = useToast();
     const { signUp } = useAuth();
 
-    const formatPhoneNumber = (value: string) => {
-        if (!value) return value;
-        const phoneNumber = value.replace(/\D/g, '');
-        const phoneNumberLength = phoneNumber.length;
-
-        if (phoneNumberLength < 3) return `(${phoneNumber}`;
-        if (phoneNumberLength < 8) return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}`;
-        return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2, 7)}-${phoneNumber.slice(7, 11)}`;
-    };
-
-    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const formattedPhoneNumber = formatPhoneNumber(e.target.value);
-        setPhone(formattedPhoneNumber);
-    };
-
     const handleRegister = async (e: FormEvent) => {
         e.preventDefault();
-        if (!name) {
-            toast({ variant: 'destructive', title: 'Nome é obrigatório' });
-            return;
-        }
-
-        const rawPhone = phone.replace(/\D/g, '');
-
-        if (userType === 'patient' && (rawPhone.length < 10 || rawPhone.length > 11)) {
-            toast({ variant: 'destructive', title: 'WhatsApp inválido', description: 'O número deve ter 10 ou 11 dígitos, incluindo o DDD.' });
-            return;
-        }
 
         setIsPending(true);
         try {
             const roleToAssign = userType === 'patient' ? 'paciente' : 'pendente';
 
             await signUp(email.toLowerCase().trim(), password, {
-                displayName: name,
+                displayName: '', // Será preenchido na ativação
                 role: roleToAssign,
-                phone: rawPhone,
+                phone: '', // Será preenchido na ativação
             });
 
         } catch (error: any) {
@@ -149,34 +123,44 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
 
     return (
         <form onSubmit={handleRegister} className="space-y-4 pt-4">
-            <div className="space-y-2 pt-2">
-                <Label htmlFor="register-name">Nome Completo</Label>
-                <Input id="register-name" type="text" placeholder="Seu nome completo" value={name} onChange={(e) => setName(e.target.value)} required disabled={isPending} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
-            </div>
-            {userType === 'patient' && (
-                <>
-                    <div className="space-y-2">
-                        <Label htmlFor="register-phone">WhatsApp (com DDD)</Label>
-                        <Input id="register-phone" type="tel" placeholder="(11) 99999-9999" value={phone} onChange={handlePhoneChange} required disabled={isPending} maxLength={15} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
-                    </div>
-                </>
-            )}
             <div className="space-y-2">
                 <Label htmlFor="register-email">Email</Label>
-                <Input id="register-email" type="email" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isPending} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
+                <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="register-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        disabled={isPending}
+                        className="pl-9 h-12 bg-white/50"
+                    />
+                </div>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="register-password">Senha</Label>
-                <Input id="register-password" type="password" placeholder="Mínimo de 6 caracteres" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isPending} className="h-12 bg-background/50 rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
+                <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="register-password"
+                        type="password"
+                        placeholder="Mínimo de 6 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={isPending}
+                        className="pl-9 h-12 bg-white/50"
+                    />
+                </div>
             </div>
             <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Criar Conta Gratuita'}
             </Button>
         </form>
     );
-}
-
-
+};
 
 export default function RootPage() {
     const { user, profile, loading } = useAuth();
@@ -229,7 +213,7 @@ export default function RootPage() {
                         <div className="flex -space-x-3">
                             {[1, 2, 3, 4].map(i => (
                                 <div key={i} className="h-12 w-12 rounded-full border-4 border-[#F9FAF6] bg-muted flex items-center justify-center text-xs overflow-hidden shadow-sm">
-                                    <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`} alt="Avatar" width={48} height={48} />
+                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`} alt="Avatar" width={48} height={48} className="h-full w-full object-cover" />
                                 </div>
                             ))}
                         </div>

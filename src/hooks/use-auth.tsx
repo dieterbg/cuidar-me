@@ -126,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (
     email: string,
     password: string,
-    metadata: { displayName: string; role: UserRole; phone?: string }
+    metadata: { displayName?: string; role: UserRole; phone?: string }
   ) => {
     // 1. Criar usuário no Supabase Auth (O Trigger do banco criará o perfil automaticamente)
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -134,9 +134,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       password,
       options: {
         data: {
-          displayName: metadata.displayName,
+          displayName: metadata.displayName || '',
           role: metadata.role,
-          phone: metadata.phone,
+          phone: metadata.phone || '',
         }
       }
     });
@@ -144,34 +144,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (authError) throw authError;
     if (!authData.user) throw new Error('Failed to create user');
 
-    // 2. Perfil é criado automaticamente pelo Trigger no banco de dados.
-    // Não precisamos inserir manualmente na tabela 'profiles'.
+    // Perfil é criado automaticamente pelo Trigger no banco de dados.
+    // O registro de paciente será criado no primeiro acesso ao portal.
 
-
-    // 3. Se for paciente, criar registro na tabela patients
-    if (metadata.role === 'paciente') {
-      const { error: patientError } = await supabase
-        .from('patients')
-        .insert({
-          user_id: authData.user.id,
-          full_name: metadata.displayName,
-          whatsapp_number: metadata.phone || '',
-          email: authData.user.email,
-          status: 'active',
-        });
-
-      if (patientError) {
-        console.error('Error creating patient record:', patientError);
-        // Não lançar erro aqui, o perfil já foi criado
-      }
+    // Verificar se a sessão foi criada (email confirmation desabilitada)
+    if (!authData.session) {
+      toast({
+        title: "Confirme seu email",
+        description: "Enviamos um email de confirmação. Por favor, verifique sua caixa de entrada.",
+      });
+      return;
     }
 
     toast({
       title: "Cadastro realizado!",
-      description: metadata.role === 'paciente'
-        ? "Sua conta foi criada com sucesso! Redirecionando..."
-        : "Sua conta foi criada e está aguardando aprovação. Redirecionando...",
+      description: "Bem-vindo ao Cuidar.me!",
     });
+
+    // Redirecionar usando window.location para garantir que funciona
+    setTimeout(() => {
+      window.location.href = '/portal/welcome';
+    }, 800);
   };
 
   const signOut = async () => {

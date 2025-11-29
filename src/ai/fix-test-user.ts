@@ -12,7 +12,7 @@ async function checkAndFixProfile() {
 
     // 1. Buscar usuário
     const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
-    const user = users.find(u => u.email === email);
+    const user = users.find((u: any) => u.email === email);
 
     if (!user) {
         console.error('❌ Usuário não encontrado no Auth!');
