@@ -1,19 +1,16 @@
 {
-```json
-{
-        "crons": [
-            {
-                "path": "/api/cron/schedule-protocol-messages",
-                "schedule": "0 6 * * *"
-            },
-            {
-                "path": "/api/cron/process-message-queue",
-                "schedule": "0 * * * *"
-            },
-            {
-                "path": "/api/cron/send-daily-checkins",
-                "schedule": "0 * * * *"
-            }
-        ]
-    }
-```
+    "crons": [
+        {
+            "path": "/api/cron/schedule-protocol-messages",
+            "schedule": "0 6 * * *"
+        },
+        {
+            "path": "/api/cron/process-message-queue",
+            "schedule": "0 * * * *"
+        },
+        {
+            "path": "/api/cron/send-daily-checkins",
+            "schedule": "0 * * * *"
+        }
+    ]
+}
