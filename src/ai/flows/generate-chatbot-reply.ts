@@ -12,7 +12,6 @@ import { scheduleReminder } from '@/ai/actions/messages';
 import { z } from 'zod';
 import type { Patient } from '@/lib/types';
 import { GenerateChatbotReplyInputSchema, GenerateChatbotReplyOutputSchema } from '@/lib/types';
-import { Timestamp } from 'firebase-admin/firestore';
 import { googleAI } from '@genkit-ai/google-genai';
 
 
@@ -115,7 +114,7 @@ function getOverloadFallbackResponse(input: z.infer<typeof GenerateChatbotReplyI
       aiSummary: `Todos os modelos de IA falharam em processar a mensagem. Erro: ${error.message}`,
       aiSuggestedReply: "A IA está indisponível. Por favor, verifique a conversa e responda manualmente ao paciente.",
       priority: input.patient.subscription.priority,
-      createdAt: Timestamp.now().toDate(),
+      createdAt: new Date(),
     }
   });
 }
