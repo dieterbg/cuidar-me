@@ -191,15 +191,9 @@ export default function RootPage() {
             {/* Left Side - Hero/Branding */}
             <div className="hidden lg:flex lg:w-1/2 bg-[#F9FAF6] relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-[#EBECE8]">
                 <div className="relative z-10 flex flex-col items-center">
-                    <div className="relative h-24 w-72 mb-8">
-                        <Image
-                            src="/logo.svg"
-                            alt="Cuidar.me Logo"
-                            fill
-                            className="object-contain mix-blend-multiply"
-                            priority
-                        />
-                    </div>
+                    <h1 className="mb-8 text-5xl font-bold text-[#899d5e]">
+                        cuidar<span className="text-foreground">.me</span>
+                    </h1>
                     <h1 className="text-4xl font-bold tracking-tight text-foreground max-w-lg leading-tight">
                         Transformando o cuidado com a saúde através da tecnologia e empatia.
                     </h1>
@@ -231,15 +225,9 @@ export default function RootPage() {
                 <Card className="w-full max-w-md border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
                     <CardHeader className="text-center lg:text-left space-y-1 pb-2">
                         <div className="lg:hidden flex justify-center mb-6">
-                            <div className="relative h-14 w-56">
-                                <Image
-                                    src="/logo.svg"
-                                    alt="Cuidar.me Logo"
-                                    fill
-                                    className="object-contain"
-                                    priority
-                                />
-                            </div>
+                            <h1 className="text-4xl font-bold text-[#899d5e]">
+                                cuidar<span className="text-foreground">.me</span>
+                            </h1>
                         </div>
                         <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo de volta</CardTitle>
                         <CardDescription>
