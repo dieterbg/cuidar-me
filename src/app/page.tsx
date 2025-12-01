@@ -193,7 +193,7 @@ export default function RootPage() {
                 <div className="relative z-10 flex flex-col items-center">
                     <div className="relative h-24 w-72 mb-8">
                         <Image
-                            src="/sem fundo.png"
+                            src="/logo_transparent.png"
                             alt="Cuidar.me Logo"
                             fill
                             className="object-contain"
@@ -233,7 +233,7 @@ export default function RootPage() {
                         <div className="lg:hidden flex justify-center mb-6">
                             <div className="relative h-14 w-56">
                                 <Image
-                                    src="/sem fundo.png"
+                                    src="/logo_transparent.png"
                                     alt="Cuidar.me Logo"
                                     fill
                                     className="object-contain"
