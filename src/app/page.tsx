@@ -191,9 +191,9 @@ export default function RootPage() {
             {/* Left Side - Hero/Branding */}
             <div className="hidden lg:flex lg:w-1/2 bg-[#F9FAF6] relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-[#EBECE8]">
                 <div className="relative z-10 flex flex-col items-center">
-                    <div className="relative h-24 w-72 mb-8">
+                    <div className="relative h-72 w-full max-w-[50rem] mb-12">
                         <Image
-                            src="/logo_transparent.png"
+                            src="/logo_v2.svg"
                             alt="Cuidar.me Logo"
                             fill
                             className="object-contain"
@@ -231,9 +231,9 @@ export default function RootPage() {
                 <Card className="w-full max-w-md border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
                     <CardHeader className="text-center lg:text-left space-y-1 pb-2">
                         <div className="lg:hidden flex justify-center mb-6">
-                            <div className="relative h-14 w-56">
+                            <div className="relative h-48 w-full max-w-[20rem]">
                                 <Image
-                                    src="/logo_transparent.png"
+                                    src="/logo_v2.svg"
                                     alt="Cuidar.me Logo"
                                     fill
                                     className="object-contain"
