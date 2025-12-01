@@ -189,11 +189,17 @@ export default function RootPage() {
     return (
         <div className="flex min-h-screen bg-background">
             {/* Left Side - Hero/Branding */}
-            <div className="hidden lg:flex lg:w-1/2 bg-[#F9FAF6] relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-[#EBECE8]">
+            <div className="hidden lg:flex lg:w-1/2 bg-white relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-gray-200">
                 <div className="relative z-10 flex flex-col items-center">
-                    <h1 className="mb-8 text-5xl font-bold text-[#899d5e]">
-                        cuidar<span className="text-foreground">.me</span>
-                    </h1>
+                    <div className="relative h-24 w-72 mb-8">
+                        <Image
+                            src="/logo.svg"
+                            alt="Cuidar.me Logo"
+                            fill
+                            className="object-contain"
+                            priority
+                        />
+                    </div>
                     <h1 className="text-4xl font-bold tracking-tight text-foreground max-w-lg leading-tight">
                         Transformando o cuidado com a saúde através da tecnologia e empatia.
                     </h1>
@@ -216,18 +222,24 @@ export default function RootPage() {
                 </div>
 
                 {/* Abstract Background Shapes */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-[#899d5e]/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-[#899d5e]/5 rounded-full blur-3xl" />
+                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-[#899d5e]/5 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-[#899d5e]/3 rounded-full blur-3xl" />
             </div>
 
             {/* Right Side - Auth Forms */}
-            <div className="flex-1 flex items-center justify-center p-4 lg:p-8 bg-white">
-                <Card className="w-full max-w-md border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
+            <div className="flex-1 flex items-center justify-center p-4 lg:p-8 bg-[#899d5e]">
+                <Card className="w-full max-w-md border-none shadow-none lg:shadow-2xl lg:shadow-black/10 lg:border lg:border-white/20 bg-white rounded-3xl">
                     <CardHeader className="text-center lg:text-left space-y-1 pb-2">
                         <div className="lg:hidden flex justify-center mb-6">
-                            <h1 className="text-4xl font-bold text-[#899d5e]">
-                                cuidar<span className="text-foreground">.me</span>
-                            </h1>
+                            <div className="relative h-14 w-56">
+                                <Image
+                                    src="/logo.svg"
+                                    alt="Cuidar.me Logo"
+                                    fill
+                                    className="object-contain"
+                                    priority
+                                />
+                            </div>
                         </div>
                         <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo de volta</CardTitle>
                         <CardDescription>
