@@ -44,8 +44,8 @@ const allMenuItems = [
   { href: '/community', label: 'Comunidade', icon: Users, roles: ['admin', 'equipe_saude'] },
   { href: '/campaigns', label: 'Campanhas', icon: Megaphone, roles: ['admin', 'assistente'] },
   { href: '/plans', label: 'Planos', icon: HandCoins, roles: ['admin', 'equipe_saude'] },
-  { href: '/portal/achievements', label: 'Conquistas', icon: Trophy, roles: ['admin', 'equipe_saude', 'assistente', 'paciente'] },
-  { href: '/portal/store', label: 'Loja', icon: ShoppingBag, roles: ['admin', 'equipe_saude', 'assistente', 'paciente'] },
+  { href: '/portal/achievements', label: 'Conquistas', icon: Trophy, roles: ['paciente'] },
+  { href: '/portal/store', label: 'Loja', icon: ShoppingBag, roles: ['paciente'] },
 ];
 
 const adminMenuItems = [
