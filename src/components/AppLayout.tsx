@@ -96,7 +96,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
                 <AvatarImage src={profile?.photo_url ?? undefined} alt={profile?.display_name ?? 'Usuário'} />
-                <AvatarFallback className="bg-[#899d5e] text-white font-bold text-lg">
+                <AvatarFallback className="bg-[#B49C7E] text-white font-bold text-lg">
                   {profile?.display_name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>

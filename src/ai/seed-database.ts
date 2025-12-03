@@ -20,17 +20,24 @@ export async function seedDatabase(): Promise<{ success: boolean; error?: string
 
         const protocols = [
             {
-                name: 'Protocolo Fundamentos (30 Dias)',
-                description: 'Protocolo básico focado em criar hábitos saudáveis de alimentação e hidratação',
-                duration_days: 30,
-                eligible_plans: ['freemium', 'premium', 'vip'],
+                name: 'Protocolo Fundamentos (90 Dias)',
+                description: 'Focado em criar hábitos básicos como hidratação, caminhadas leves e um dia de pesagem na semana. Ideal para quem precisa de estrutura para começar e manter a consistência.',
+                duration_days: 90,
+                eligible_plans: ['premium', 'vip'],
+                is_active: true,
+            },
+            {
+                name: 'Protocolo Evolução (90 Dias)',
+                description: 'Adiciona uma camada de interação e educação, com envio de fotos de pratos e sugestão de vídeos educativos para aprofundar o conhecimento ao longo de 90 dias.',
+                duration_days: 90,
+                eligible_plans: ['premium', 'vip'],
                 is_active: true,
             },
             {
                 name: 'Protocolo Performance (90 Dias)',
-                description: 'Protocolo avançado com foco em performance e resultados acelerados',
+                description: 'Acompanhamento intensivo com check-ins mais frequentes e metas de macronutrientes, para quem busca otimizar os resultados em um programa de 90 dias.',
                 duration_days: 90,
-                eligible_plans: ['premium', 'vip'],
+                eligible_plans: ['vip'],
                 is_active: true,
             },
         ];
