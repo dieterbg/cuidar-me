@@ -95,9 +95,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="bg-[#F9FAF6] rounded-3xl p-4 border border-[#EBECE8] shadow-sm mx-2 mt-2">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                <AvatarImage src={profile?.photo_url ?? undefined} alt={profile?.display_name ?? 'Usuário'} />
+                {/* <AvatarImage src={profile?.photo_url ?? undefined} alt={profile?.display_name ?? 'Usuário'} /> */}
                 <AvatarFallback className="bg-[#B49C7E] text-white font-bold text-lg">
-                  {profile?.display_name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase()}
+                  {(() => {
+                    const name = profile?.display_name ?? user?.email ?? 'U';
+                    const parts = name.trim().split(' ');
+                    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+                    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                  })()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
