@@ -51,9 +51,9 @@ export function HealthMetricsChart({ metrics, patientHeight }: HealthMetricsChar
 
     const hasBmiData = useMemo(() => formattedData.some(d => d.bmi), [formattedData]);
     const hasData = formattedData.length > 0;
-    
+
     if (!hasData) {
-         return (
+        return (
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -62,7 +62,15 @@ export function HealthMetricsChart({ metrics, patientHeight }: HealthMetricsChar
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[350px] flex items-center justify-center">
-                    <p className="text-muted-foreground">Nenhuma métrica registrada para este paciente ainda.</p>
+                    <div className="text-center py-10 bg-muted/20 rounded-xl border border-dashed w-full max-w-md mx-auto">
+                        <div className="w-16 h-16 bg-background rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                            <Activity className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                        <h3 className="font-medium text-foreground mb-1">Sem Dados Clínicos</h3>
+                        <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                            Ainda não há registros de peso ou glicemia para gerar o gráfico evolutivo.
+                        </p>
+                    </div>
                 </CardContent>
             </Card>
         );
@@ -89,7 +97,7 @@ export function HealthMetricsChart({ metrics, patientHeight }: HealthMetricsChar
                             tickMargin={8}
                             tickFormatter={(value) => value}
                         />
-                         <ChartTooltip
+                        <ChartTooltip
                             cursor={false}
                             content={
                                 <ChartTooltipContent
@@ -102,14 +110,14 @@ export function HealthMetricsChart({ metrics, patientHeight }: HealthMetricsChar
                             }
                         />
                         <Legend />
-                        
+
                         {visibility.weight && (
-                             <Line dataKey="weight" type="monotone" stroke="var(--color-weight)" strokeWidth={2} dot={{ fill: "var(--color-weight)" }} activeDot={{ r: 6 }} yAxisId="weight-axis" />
+                            <Line dataKey="weight" type="monotone" stroke="var(--color-weight)" strokeWidth={2} dot={{ fill: "var(--color-weight)" }} activeDot={{ r: 6 }} yAxisId="weight-axis" />
                         )}
                         {hasBmiData && visibility.bmi && (
-                             <Line dataKey="bmi" type="monotone" stroke="var(--color-bmi)" strokeWidth={2} dot={{ fill: "var(--color-bmi)" }} activeDot={{ r: 6 }} yAxisId="bmi-axis" />
+                            <Line dataKey="bmi" type="monotone" stroke="var(--color-bmi)" strokeWidth={2} dot={{ fill: "var(--color-bmi)" }} activeDot={{ r: 6 }} yAxisId="bmi-axis" />
                         )}
-                        
+
                         <YAxis yAxisId="weight-axis" domain={['dataMin - 2', 'dataMax + 2']} hide={!visibility.weight} />
                         <YAxis yAxisId="bmi-axis" orientation="right" domain={['dataMin - 2', 'dataMax + 2']} hide={!visibility.bmi} />
 
@@ -117,14 +125,14 @@ export function HealthMetricsChart({ metrics, patientHeight }: HealthMetricsChar
                 </ChartContainer>
             </CardContent>
             <CardFooter className="flex flex-wrap gap-x-6 gap-y-2 items-center justify-center">
-                 <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setVisibility(v => ({...v, weight: !v.weight}))}>
+                <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setVisibility(v => ({ ...v, weight: !v.weight }))}>
                     <Checkbox id="weight" checked={visibility.weight} />
                     <Label htmlFor="weight" className="text-sm font-medium cursor-pointer" style={{ color: "hsl(var(--chart-2))" }}>
                         Peso (kg)
                     </Label>
                 </div>
-                 {hasBmiData && (
-                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setVisibility(v => ({...v, bmi: !v.bmi}))}>
+                {hasBmiData && (
+                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setVisibility(v => ({ ...v, bmi: !v.bmi }))}>
                         <Checkbox id="bmi" checked={visibility.bmi} />
                         <Label htmlFor="bmi" className="text-sm font-medium cursor-pointer" style={{ color: "hsl(var(--chart-4))" }}>
                             IMC
@@ -136,4 +144,4 @@ export function HealthMetricsChart({ metrics, patientHeight }: HealthMetricsChar
     );
 }
 
-    
+

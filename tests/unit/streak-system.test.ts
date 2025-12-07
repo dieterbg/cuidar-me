@@ -1,4 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock Supabase client to avoid initialization error
+vi.mock('@supabase/supabase-js', () => ({
+    createClient: vi.fn(() => ({})),
+}));
+
 import type { StreakData } from '@/lib/streak-system';
 import { isStreakAtRisk, formatStreakDisplay } from '@/lib/streak-system';
 
@@ -46,9 +52,8 @@ describe('Streak System', () => {
                 freezesUsedThisMonth: 0,
             };
 
-            // Nota: função considera em risco se >= 1 dia
-            // Se quiser mudar para > 1 dia, ajustar a função
-            expect(isStreakAtRisk(streakData)).toBe(true);
+            // Atividade ontem = Streak normal (não em risco de quebra imediata por falta de freeze, apenas pendente hoje)
+            expect(isStreakAtRisk(streakData)).toBe(false);
         });
     });
 

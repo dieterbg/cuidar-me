@@ -29,7 +29,7 @@ export const gamificationConfig: GamificationConfig = {
         { actionId: 'checkin_bem_estar', perspective: 'bemEstar', points: 15, checkinTriggerText: 'Check-in de Bem-Estar' },
         // Hidratação
         { actionId: 'checkin_hidratacao', perspective: 'hidratacao', points: 15, checkinTriggerText: 'Check-in de Hidratação' },
-         // Onboarding Actions (don't directly contribute to weekly perspectives but give points)
+        // Onboarding Actions (don't directly contribute to weekly perspectives but give points)
         { actionId: 'completar_perfil', perspective: 'disciplina', points: 150 },
         { actionId: 'assistir_video_boas_vindas', perspective: 'bemEstar', points: 30 },
         { actionId: 'assistir_video_nutricao', perspective: 'alimentacao', points: 20 },
@@ -42,19 +42,19 @@ export const gamificationConfig: GamificationConfig = {
 // They follow a weekly cadence for the first 13 weeks (approx. 90 days).
 export const mandatoryGamificationSteps: (ProtocolStep & { perspective: Perspective })[] = [
     // Weekly weigh-ins (every Monday for 13 weeks)
-    ...Array.from({ length: 13 }, (_, i) => ({ 
+    ...Array.from({ length: 13 }, (_, i) => ({
         day: (i * 7) + 1, // Days 1, 8, 15, 22...
-        title: `[GAMIFICAÇÃO] Check-in Semanal de Peso (Semana ${i + 1})`, 
-        message: i === 0 
+        title: `[GAMIFICAÇÃO] Check-in Semanal de Peso (Semana ${i + 1})`,
+        message: i === 0
             ? "Bem-vindo(a) ao seu novo protocolo! Para nosso ponto de partida, por favor, me informe seu peso de hoje."
             : `Olá! Chegou o dia do nosso check-in semanal. Por favor, me informe seu peso de hoje em jejum.`,
         perspective: 'disciplina' as Perspective
     })),
-     // Weekly planning (every Monday for 13 weeks)
+    // Weekly planning (every Monday for 13 weeks)
     ...Array.from({ length: 13 }, (_, i) => ({
         day: (i * 7) + 1, // Days 1, 8, 15...
         title: `[GAMIFICAÇÃO] Planejamento Semanal (Semana ${i + 1})`,
-        message: 'Vamos começar a semana com o pé direito! Você já planejou suas atividades físicas e refeições principais para os próximos dias? Responda com SIM ou NÃO.',
+        message: 'Vamos começar a semana com o pé direito! Você já planejou suas atividades físicas e refeições principais para os próximos dias? Responda apenas com a letra:\n\nA) Sim, tudo planejado!\nB) Não, ainda não parei para isso.',
         perspective: 'disciplina' as Perspective
     })),
     // Hydration check-ins (every day for 13 weeks)
@@ -74,10 +74,10 @@ export const mandatoryGamificationSteps: (ProtocolStep & { perspective: Perspect
     ...Array.from({ length: 13 }, (_, i) => ({
         day: (i * 7) + 7, // Days 7, 14, 21...
         title: `[GAMIFICAÇÃO] Check-in de Bem-Estar (Semana ${i + 1})`,
-        message: 'Fim de semana é para relaxar! Como você está se sentindo hoje, mental e fisicamente? Me conte em uma ou duas palavras.',
+        message: 'Fim de semana é para relaxar! Como você está se sentindo hoje? Responda apenas com a letra:\n\nA) Ótimo(a), energias recarregadas!\nB) Bem, mas poderia ser melhor.\nC) Cansado(a) ou estressado(a).',
         perspective: 'bemEstar' as Perspective
     })),
-     // Meal check-ins (every Tuesday and Friday for 13 weeks)
+    // Meal check-ins (every Tuesday and Friday for 13 weeks)
     ...Array.from({ length: 13 }, (_, i) => ({
         day: (i * 7) + 2, // Days 2, 9, 16...
         title: `[GAMIFICAÇÃO] Check-in de Almoço (Semana ${i + 1})`,
@@ -94,13 +94,13 @@ export const mandatoryGamificationSteps: (ProtocolStep & { perspective: Perspect
     ...Array.from({ length: 13 }, (_, i) => ({
         day: (i * 7) + 3, // Days 3, 10, 17...
         title: `[GAMIFICAÇÃO] Check-in de Atividade Física (Semana ${i + 1})`,
-        message: 'É dia de movimento! Você praticou alguma atividade física hoje? Se sim, me conte o que você fez e por quanto tempo!',
+        message: 'É dia de movimento! Você praticou alguma atividade física hoje? Responda apenas com a letra:\n\nA) Sim, treino feito! 💪\nB) Não consegui hoje.',
         perspective: 'movimento' as Perspective
     })),
     ...Array.from({ length: 13 }, (_, i) => ({
         day: (i * 7) + 6, // Days 6, 13, 20...
         title: `[GAMIFICAÇÃO] Check-in de Atividade Física (Semana ${i + 1})`,
-        message: 'Sabadou com movimento? Conte pra gente se você fez algum exercício hoje!',
+        message: 'Sabadou com movimento? Responda apenas com a letra:\n\nA) Sim, me movimentei!\nB) Hoje foi dia de descanso.',
         perspective: 'movimento' as Perspective
     })),
 ];
@@ -131,35 +131,35 @@ export const protocols: Protocol[] = [
             { day: 25, title: 'Benefícios da Caminhada', message: "Uma caminhada de 30 minutos pode melhorar seu humor, sua circulação e ajudar no controle do peso. Que tal encaixar uma no seu dia hoje?" },
             { day: 28, title: 'Pequenas Vitórias', message: "Conseguiu beber mais água? Comeu mais salada? Comemore as pequenas vitórias! Elas são o combustível para as grandes conquistas." },
             { day: 30, title: 'Revisão do Mês 1', message: "Parabéns, você completou o primeiro mês! 🎉 Você construiu uma base sólida. Vamos continuar firmes para o próximo nível." },
-            
+
             // Month 2: Consistency
-            { day: 32, title: 'Variando a Atividade Física', message: 'Que tal variar a caminhada de hoje? Tente um caminho novo ou ouça um podcast. Manter a mente engajada ajuda a criar o hábito.'},
-            { day: 34, title: 'O Poder das Fibras', message: 'Alimentos ricos em fibras (aveia, feijão, maçã) ajudam na saciedade. Sua meta hoje é incluir uma fonte de fibra em seu café da manhã.'},
-            { day: 37, title: 'Escala da Fome', message: 'Antes de comer, se pergunte de 0 a 10, qual o seu nível de fome? Isso te ajuda a diferenciar fome física de vontade de comer.'},
-            { day: 39, title: 'Planejando as Refeições', message: 'Planejar as refeições da semana no domingo pode economizar tempo e evitar decisões ruins de última hora. Que tal tentar planejar 3 dias?'},
-            { day: 42, title: 'Bebidas Calóricas', message: 'Fique de olho nas calorias líquidas! Refrigerantes, sucos industrializados e cafés adoçados podem sabotar seu progresso. Prefira água, chás e café sem açúcar.'},
-            { day: 44, title: 'Lidando com o Estresse', message: 'O estresse pode aumentar o cortisol e a vontade de comer. Encontre uma válvula de escape saudável: meditação, um hobby, ou uma conversa com um amigo.'},
-            { day: 46, title: 'Revisão de Meio de Percurso', message: 'Metade do caminho! Como você se sente em relação ao início? O que está mais fácil agora?'},
-            { day: 49, title: 'O Mito do "Pode Tudo"', message: 'Cuidado com o pensamento "já que saí da dieta, vou chutar o balde". Uma refeição fora do plano não anula seu progresso. Apenas retome na próxima.'},
+            { day: 32, title: 'Variando a Atividade Física', message: 'Que tal variar a caminhada de hoje? Tente um caminho novo ou ouça um podcast. Manter a mente engajada ajuda a criar o hábito.' },
+            { day: 34, title: 'O Poder das Fibras', message: 'Alimentos ricos em fibras (aveia, feijão, maçã) ajudam na saciedade. Sua meta hoje é incluir uma fonte de fibra em seu café da manhã.' },
+            { day: 37, title: 'Escala da Fome', message: 'Antes de comer, se pergunte de 0 a 10, qual o seu nível de fome? Isso te ajuda a diferenciar fome física de vontade de comer.' },
+            { day: 39, title: 'Planejando as Refeições', message: 'Planejar as refeições da semana no domingo pode economizar tempo e evitar decisões ruins de última hora. Que tal tentar planejar 3 dias?' },
+            { day: 42, title: 'Bebidas Calóricas', message: 'Fique de olho nas calorias líquidas! Refrigerantes, sucos industrializados e cafés adoçados podem sabotar seu progresso. Prefira água, chás e café sem açúcar.' },
+            { day: 44, title: 'Lidando com o Estresse', message: 'O estresse pode aumentar o cortisol e a vontade de comer. Encontre uma válvula de escape saudável: meditação, um hobby, ou uma conversa com um amigo.' },
+            { day: 46, title: 'Revisão de Meio de Percurso', message: 'Metade do caminho! Como você se sente em relação ao início? O que está mais fácil agora?' },
+            { day: 49, title: 'O Mito do "Pode Tudo"', message: 'Cuidado com o pensamento "já que saí da dieta, vou chutar o balde". Uma refeição fora do plano não anula seu progresso. Apenas retome na próxima.' },
             { day: 51, title: 'Proteína no Café da Manhã', message: 'Incluir uma fonte de proteína como ovos ou iogurte no café da manhã ajuda a manter a saciedade por mais tempo. Experimente amanhã!' },
             { day: 53, title: 'A Importância do Descanso', message: 'O descanso é tão importante quanto o treino. É durante o sono que seu corpo se recupera e constrói músculos. Priorize seu sono!' },
             { day: 56, title: 'Coma Devagar', message: 'Seu cérebro leva cerca de 20 minutos para registrar que você está satisfeito. Comer devagar é uma ferramenta poderosa para controlar as porções.' },
             { day: 58, title: 'Organizando a Geladeira', message: 'Deixe frutas e vegetais lavados e picados em potes transparentes na altura dos olhos. Deixe os alimentos menos saudáveis menos visíveis.' },
-            { day: 60, title: 'Fim do Mês 2', message: 'Dois meses de dedicação! Você está cada vez mais perto de consolidar esses hábitos para a vida toda. Sinta orgulho da sua jornada!'},
+            { day: 60, title: 'Fim do Mês 2', message: 'Dois meses de dedicação! Você está cada vez mais perto de consolidar esses hábitos para a vida toda. Sinta orgulho da sua jornada!' },
 
             // Month 3: Lifestyle
-            { day: 62, title: 'Cozinhando em Casa', message: 'Cozinhar em casa te dá total controle sobre os ingredientes. Desafio: prepare uma refeição hoje que você normalmente pediria por delivery.'},
-            { day: 64, title: 'Comunidade de Apoio', message: 'Lembre-se da nossa comunidade no portal. Compartilhar uma dificuldade ou uma vitória pode te dar um novo ânimo!'},
-            { day: 67, title: 'Visualizando o Futuro', message: 'Feche os olhos e se imagine daqui a 1 ano com seus novos hábitos. Como você se sente? Use essa visão como combustível.'},
-            { day: 70, title: 'Reconhecendo Gatilhos', message: 'Qual situação te faz sair do plano? Tédio? Cansaço? Identificar os gatilhos é o primeiro passo para criar um plano de ação.'},
-            { day: 72, title: 'Coma até 80% Satisfeito', message: 'Experimente parar de comer quando se sentir 80% satisfeito, em vez de completamente cheio. É uma prática oriental que ajuda muito no controle de peso.'},
-            { day: 74, title: 'Planejamento para Viagens', message: 'Vai viajar? Leve lanches saudáveis (castanhas, frutas secas), pesquise restaurantes com opções leves no seu destino e mantenha-se hidratado.'},
-            { day: 77, title: 'Amigo do Movimento', message: 'Convide um amigo ou familiar para uma caminhada. Ter companhia torna o exercício mais prazeroso e aumenta o compromisso.'},
-            { day: 80, title: 'Recompensas não alimentares', message: 'Cumpriu suas metas da semana? Se recompense com algo que não seja comida: um banho relaxante, um episódio da sua série favorita, um novo livro.'},
-            { day: 83, title: 'Mantendo a Motivação', message: 'Releia o motivo pelo qual você começou esta jornada. Conectar-se com seu "porquê" é uma fonte poderosa de motivação.'},
-            { day: 85, title: 'O Hábito Angular', message: 'Muitas vezes, um único hábito (como se exercitar de manhã) desencadeia uma série de outras boas decisões ao longo do dia. Qual é o seu?'},
-            { day: 88, title: 'Véspera da Conclusão', message: 'Amanhã completamos 90 dias. Reflita sobre o hábito mais importante que você construiu e que irá levar para o resto da sua vida.'},
-            { day: 90, title: 'Conclusão do Protocolo!', message: 'PARABÉNS! Você completou os 90 dias do Protocolo Fundamentos. Você provou para si mesmo que é capaz de construir hábitos saudáveis e duradouros. A jornada continua e estamos aqui para te apoiar!'},
+            { day: 62, title: 'Cozinhando em Casa', message: 'Cozinhar em casa te dá total controle sobre os ingredientes. Desafio: prepare uma refeição hoje que você normalmente pediria por delivery.' },
+            { day: 64, title: 'Comunidade de Apoio', message: 'Lembre-se da nossa comunidade no portal. Compartilhar uma dificuldade ou uma vitória pode te dar um novo ânimo!' },
+            { day: 67, title: 'Visualizando o Futuro', message: 'Feche os olhos e se imagine daqui a 1 ano com seus novos hábitos. Como você se sente? Use essa visão como combustível.' },
+            { day: 70, title: 'Reconhecendo Gatilhos', message: 'Qual situação te faz sair do plano? Tédio? Cansaço? Identificar os gatilhos é o primeiro passo para criar um plano de ação.' },
+            { day: 72, title: 'Coma até 80% Satisfeito', message: 'Experimente parar de comer quando se sentir 80% satisfeito, em vez de completamente cheio. É uma prática oriental que ajuda muito no controle de peso.' },
+            { day: 74, title: 'Planejamento para Viagens', message: 'Vai viajar? Leve lanches saudáveis (castanhas, frutas secas), pesquise restaurantes com opções leves no seu destino e mantenha-se hidratado.' },
+            { day: 77, title: 'Amigo do Movimento', message: 'Convide um amigo ou familiar para uma caminhada. Ter companhia torna o exercício mais prazeroso e aumenta o compromisso.' },
+            { day: 80, title: 'Recompensas não alimentares', message: 'Cumpriu suas metas da semana? Se recompense com algo que não seja comida: um banho relaxante, um episódio da sua série favorita, um novo livro.' },
+            { day: 83, title: 'Mantendo a Motivação', message: 'Releia o motivo pelo qual você começou esta jornada. Conectar-se com seu "porquê" é uma fonte poderosa de motivação.' },
+            { day: 85, title: 'O Hábito Angular', message: 'Muitas vezes, um único hábito (como se exercitar de manhã) desencadeia uma série de outras boas decisões ao longo do dia. Qual é o seu?' },
+            { day: 88, title: 'Véspera da Conclusão', message: 'Amanhã completamos 90 dias. Reflita sobre o hábito mais importante que você construiu e que irá levar para o resto da sua vida.' },
+            { day: 90, title: 'Conclusão do Protocolo!', message: 'PARABÉNS! Você completou os 90 dias do Protocolo Fundamentos. Você provou para si mesmo que é capaz de construir hábitos saudáveis e duradouros. A jornada continua e estamos aqui para te apoiar!' },
         ]
     },
     {
@@ -169,7 +169,7 @@ export const protocols: Protocol[] = [
         durationDays: 90,
         eligiblePlans: ['premium', 'vip'],
         messages: [
-             // Month 1
+            // Month 1
             { day: 3, title: 'A Importância das Proteínas', message: "Você sabia que as proteínas são essenciais para a saciedade? Sugiro que assista a este vídeo no seu portal: 'A Importância das Proteínas para Saciedade'. Ele tem dicas ótimas!" },
             { day: 6, title: 'Entendendo os Carboidratos', message: "Carboidratos não são vilões! A chave está na qualidade. Assista ao vídeo 'Carboidratos do bem' no portal para aprender a fazer as melhores escolhas." },
             { day: 9, title: 'Check-in de Hidratação', message: "Como está sua hidratação hoje? Conseguiu bater a meta? Lembre-se que a água é fundamental no processo de emagrecimento." },
@@ -180,7 +180,7 @@ export const protocols: Protocol[] = [
             { day: 23, title: 'Superando o Efeito Platô', message: 'É normal o peso estagnar. Assista ao nosso vídeo "Superando o Platô" para conhecer estratégias como o "zig-zag" calórico.' },
             { day: 26, title: 'Mindful Eating na Prática', message: 'Desafio da semana: faça uma refeição em silêncio, prestando atenção em cada garfada. Anote como se sentiu depois.' },
             { day: 29, title: 'Socializando com Saúde', message: 'Vai a uma festa? Dica: coma uma fruta ou um iogurte antes de sair. Isso ajuda a não chegar com muita fome e fazer escolhas melhores.' },
-            
+
             // Month 2
             { day: 32, title: 'Reflexão sobre o Mês 1', message: "Primeiro mês do Protocolo Evolução completo! Você já aprendeu muito. Qual foi o maior 'click' ou aprendizado que você teve até agora?" },
             { day: 35, title: 'Jejum Intermitente: Mitos e Verdades', message: 'Curioso sobre jejum intermitente? Assista ao vídeo em nosso portal que explica os prós e contras. Lembre-se: sempre fale com a equipe antes de começar.' },
@@ -236,7 +236,7 @@ export const protocols: Protocol[] = [
             { day: 53, title: 'Legado de Performance', message: 'Pense em alguém que você pode inspirar com sua jornada. Compartilhar seu sucesso na comunidade pode motivar dezenas de outros pacientes.' },
             { day: 56, title: 'O Poder da Mente', message: 'Acreditar que você pode atingir seu objetivo é metade da batalha. Afirmações positivas ou meditação podem fortalecer sua mentalidade.' },
             { day: 59, title: 'Reavaliando o "Porquê"', message: 'Seu motivo inicial para começar ainda é o mesmo? Ele evoluiu? Reconectar-se com seu propósito mais profundo pode renovar suas energias.' },
-            
+
             // Month 3
             { day: 62, title: 'Periodização do Treino', message: 'Considere conversar com um profissional para periodizar seu treino, alternando semanas de alta intensidade com semanas de recuperação ativa.' },
             { day: 65, title: 'Ajustando as Calorias', message: 'Com a perda de peso, sua necessidade calórica basal diminui. Pode ser hora de um pequeno ajuste no plano alimentar com a equipe para continuar progredindo.' },
@@ -254,294 +254,294 @@ export const protocols: Protocol[] = [
 
 // --- PATIENT DATA ---
 export const patients: Patient[] = [
-  // 1. Paciente VIP, engajado e em progresso.
-  {
-    id: 'p001',
-    fullName: 'Roberto Andrade',
-    whatsappNumber: 'whatsapp:+5511999990001',
-    needsAttention: false,
-    subscription: { plan: 'vip', priority: 3 },
-    protocol: {
-        protocolId: 'performance_90_dias',
-        startDate: sub(now, { days: 15 }).toISOString(),
-        currentDay: 16,
-        isActive: true,
-        weightGoal: 95,
-    },
-    gamification: {
-        totalPoints: 720,
-        level: 'Praticante',
-        badges: ["pe_direito_badge", "bom_de_garfo_badge"],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 1, goal: 5, isComplete: false },
-                movimento: { current: 2, goal: 5, isComplete: false },
-                hidratacao: { current: 3, goal: 5, isComplete: false },
-                disciplina: { current: 1, goal: 5, isComplete: false },
-                bemEstar: { current: 0, goal: 5, isComplete: false },
+    // 1. Paciente VIP, engajado e em progresso.
+    {
+        id: 'p001',
+        fullName: 'Roberto Andrade',
+        whatsappNumber: 'whatsapp:+5511999990001',
+        needsAttention: false,
+        subscription: { plan: 'vip', priority: 3 },
+        protocol: {
+            protocolId: 'performance_90_dias',
+            startDate: sub(now, { days: 15 }).toISOString(),
+            currentDay: 16,
+            isActive: true,
+            weightGoal: 95,
+        },
+        gamification: {
+            totalPoints: 720,
+            level: 'Praticante',
+            badges: ["pe_direito_badge", "bom_de_garfo_badge"],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 1, goal: 5, isComplete: false },
+                    movimento: { current: 2, goal: 5, isComplete: false },
+                    hidratacao: { current: 3, goal: 5, isComplete: false },
+                    disciplina: { current: 1, goal: 5, isComplete: false },
+                    bemEstar: { current: 0, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Roberto Andrade',
+        avatar: 'https://placehold.co/100x100/A0D2E8/333?text=RA',
+        email: 'roberto.andrade.example@gmail.com',
+        lastMessage: 'Atingi minha meta de proteína nos últimos 3 dias!',
+        lastMessageTimestamp: sub(now, { hours: 18 }).toISOString(),
+        riskLevel: 'low',
+        status: 'active',
+        activeCheckin: null,
     },
-    name: 'Roberto Andrade',
-    avatar: 'https://placehold.co/100x100/A0D2E8/333?text=RA',
-    email: 'roberto.andrade.example@gmail.com',
-    lastMessage: 'Atingi minha meta de proteína nos últimos 3 dias!',
-    lastMessageTimestamp: sub(now, { hours: 18 }).toISOString(),
-    riskLevel: 'low',
-    status: 'active',
-    activeCheckin: null,
-  },
-  // 2. Paciente Premium que requer atenção por relatar sintoma.
-  {
-    id: 'p002',
-    fullName: 'Carla Dias',
-    whatsappNumber: 'whatsapp:+5511999990002',
-    needsAttention: true,
-    attentionRequest: {
-        reason: "Relato de sintoma",
-        triggerMessage: "Estou com uma dor de cabeça estranha desde ontem, devo me preocupar?",
-        aiSummary: "A paciente Carla Dias relata uma dor de cabeça atípica e pergunta se deve se preocupar, o que pode indicar um efeito adverso ou uma nova condição que requer avaliação médica.",
-        aiSuggestedReply: "Olá Carla, obrigado por me avisar sobre a dor de cabeça. Para investigar melhor, você poderia me dizer: a dor é em algum lugar específico? É pulsante ou uma pressão constante? E em uma escala de 0 a 10, qual a intensidade? Isso me ajudará a entender se pode ser algo relacionado ao tratamento ou se precisamos explorar outras causas.",
-        priority: 2,
-        createdAt: sub(now, { hours: 1 }).toISOString(),
-    },
-    subscription: { plan: 'premium', priority: 2 },
-    protocol: {
-        protocolId: 'evolucao_90_dias',
-        startDate: sub(now, { days: 20 }).toISOString(),
-        currentDay: 21,
-        isActive: true,
-        weightGoal: 80,
-    },
-    gamification: {
-        totalPoints: 550, level: 'Praticante',
-        badges: ["pe_direito_badge", "bom_de_garfo_badge"],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 3, goal: 5, isComplete: false },
-                movimento: { current: 1, goal: 5, isComplete: false },
-                hidratacao: { current: 5, goal: 5, isComplete: true },
-                disciplina: { current: 1, goal: 5, isComplete: false },
-                bemEstar: { current: 2, goal: 5, isComplete: false },
+    // 2. Paciente Premium que requer atenção por relatar sintoma.
+    {
+        id: 'p002',
+        fullName: 'Carla Dias',
+        whatsappNumber: 'whatsapp:+5511999990002',
+        needsAttention: true,
+        attentionRequest: {
+            reason: "Relato de sintoma",
+            triggerMessage: "Estou com uma dor de cabeça estranha desde ontem, devo me preocupar?",
+            aiSummary: "A paciente Carla Dias relata uma dor de cabeça atípica e pergunta se deve se preocupar, o que pode indicar um efeito adverso ou uma nova condição que requer avaliação médica.",
+            aiSuggestedReply: "Olá Carla, obrigado por me avisar sobre a dor de cabeça. Para investigar melhor, você poderia me dizer: a dor é em algum lugar específico? É pulsante ou uma pressão constante? E em uma escala de 0 a 10, qual a intensidade? Isso me ajudará a entender se pode ser algo relacionado ao tratamento ou se precisamos explorar outras causas.",
+            priority: 2,
+            createdAt: sub(now, { hours: 1 }).toISOString(),
+        },
+        subscription: { plan: 'premium', priority: 2 },
+        protocol: {
+            protocolId: 'evolucao_90_dias',
+            startDate: sub(now, { days: 20 }).toISOString(),
+            currentDay: 21,
+            isActive: true,
+            weightGoal: 80,
+        },
+        gamification: {
+            totalPoints: 550, level: 'Praticante',
+            badges: ["pe_direito_badge", "bom_de_garfo_badge"],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 3, goal: 5, isComplete: false },
+                    movimento: { current: 1, goal: 5, isComplete: false },
+                    hidratacao: { current: 5, goal: 5, isComplete: true },
+                    disciplina: { current: 1, goal: 5, isComplete: false },
+                    bemEstar: { current: 2, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Carla Dias',
+        avatar: 'https://placehold.co/100x100/f9a8d4/333?text=CD',
+        email: 'carla.dias.example@gmail.com',
+        lastMessage: 'Estou com uma dor de cabeça estranha desde ontem, devo me preocupar?',
+        lastMessageTimestamp: sub(now, { hours: 1 }).toISOString(),
+        riskLevel: 'high',
+        status: 'active',
+        activeCheckin: null,
     },
-    name: 'Carla Dias',
-    avatar: 'https://placehold.co/100x100/f9a8d4/333?text=CD',
-    email: 'carla.dias.example@gmail.com',
-    lastMessage: 'Estou com uma dor de cabeça estranha desde ontem, devo me preocupar?',
-    lastMessageTimestamp: sub(now, { hours: 1 }).toISOString(),
-    riskLevel: 'high',
-    status: 'active',
-    activeCheckin: null,
-  },
-  // 3. Paciente Freemium, novo cadastro pendente.
-  {
-    id: 'p003',
-    fullName: 'Fernando Lima',
-    whatsappNumber: 'whatsapp:+5511999990003',
-    needsAttention: true,
-    subscription: { plan: 'freemium', priority: 1 },
-    protocol: null,
-    gamification: {
-        totalPoints: 0, level: 'Iniciante', badges: [],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 0, goal: 5, isComplete: false },
-                movimento: { current: 0, goal: 5, isComplete: false },
-                hidratacao: { current: 0, goal: 5, isComplete: false },
-                disciplina: { current: 0, goal: 5, isComplete: false },
-                bemEstar: { current: 0, goal: 5, isComplete: false },
+    // 3. Paciente Freemium, novo cadastro pendente.
+    {
+        id: 'p003',
+        fullName: 'Fernando Lima',
+        whatsappNumber: 'whatsapp:+5511999990003',
+        needsAttention: true,
+        subscription: { plan: 'freemium', priority: 1 },
+        protocol: null,
+        gamification: {
+            totalPoints: 0, level: 'Iniciante', badges: [],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 0, goal: 5, isComplete: false },
+                    movimento: { current: 0, goal: 5, isComplete: false },
+                    hidratacao: { current: 0, goal: 5, isComplete: false },
+                    disciplina: { current: 0, goal: 5, isComplete: false },
+                    bemEstar: { current: 0, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Fernando Lima',
+        avatar: 'https://placehold.co/100x100/a5f3fc/333?text=FL',
+        email: 'fernando.lima.example@gmail.com',
+        lastMessage: 'Oi, me cadastrei pelo site. Como funciona?',
+        lastMessageTimestamp: sub(now, { days: 1, hours: 2 }).toISOString(),
+        status: 'pending',
+        activeCheckin: null,
     },
-    name: 'Fernando Lima',
-    avatar: 'https://placehold.co/100x100/a5f3fc/333?text=FL',
-    email: 'fernando.lima.example@gmail.com',
-    lastMessage: 'Oi, me cadastrei pelo site. Como funciona?',
-    lastMessageTimestamp: sub(now, { days: 1, hours: 2 }).toISOString(),
-    status: 'pending',
-    activeCheckin: null,
-  },
-  // 4. Paciente Premium recém-ativado.
-  {
-    id: 'p004',
-    fullName: 'Juliana Moreira',
-    whatsappNumber: 'whatsapp:+5511999990004',
-    needsAttention: false,
-    subscription: { plan: 'premium', priority: 2 },
-    protocol: {
-        protocolId: 'fundamentos_90_dias',
-        startDate: sub(now, { days: 4 }).toISOString(),
-        currentDay: 5,
-        isActive: true,
-        weightGoal: 68,
-    },
-    gamification: {
-        totalPoints: 280, level: 'Iniciante', badges: ["pe_direito_badge"],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 1, goal: 5, isComplete: false },
-                movimento: { current: 0, goal: 5, isComplete: false },
-                hidratacao: { current: 2, goal: 5, isComplete: false },
-                disciplina: { current: 1, goal: 5, isComplete: false },
-                bemEstar: { current: 1, goal: 5, isComplete: false },
+    // 4. Paciente Premium recém-ativado.
+    {
+        id: 'p004',
+        fullName: 'Juliana Moreira',
+        whatsappNumber: 'whatsapp:+5511999990004',
+        needsAttention: false,
+        subscription: { plan: 'premium', priority: 2 },
+        protocol: {
+            protocolId: 'fundamentos_90_dias',
+            startDate: sub(now, { days: 4 }).toISOString(),
+            currentDay: 5,
+            isActive: true,
+            weightGoal: 68,
+        },
+        gamification: {
+            totalPoints: 280, level: 'Iniciante', badges: ["pe_direito_badge"],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 1, goal: 5, isComplete: false },
+                    movimento: { current: 0, goal: 5, isComplete: false },
+                    hidratacao: { current: 2, goal: 5, isComplete: false },
+                    disciplina: { current: 1, goal: 5, isComplete: false },
+                    bemEstar: { current: 1, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Juliana Moreira',
+        avatar: 'https://placehold.co/100x100/c4b5fd/333?text=JM',
+        email: 'juliana.moreira.example@gmail.com',
+        lastMessage: 'Aqui está a foto do meu almoço de hoje!',
+        lastMessageTimestamp: sub(now, { hours: 4 }).toISOString(),
+        riskLevel: 'low',
+        status: 'active',
+        activeCheckin: null,
     },
-    name: 'Juliana Moreira',
-    avatar: 'https://placehold.co/100x100/c4b5fd/333?text=JM',
-    email: 'juliana.moreira.example@gmail.com',
-    lastMessage: 'Aqui está a foto do meu almoço de hoje!',
-    lastMessageTimestamp: sub(now, { hours: 4 }).toISOString(),
-    riskLevel: 'low',
-    status: 'active',
-    activeCheckin: null,
-  },
-  // 5. Paciente VIP em estágio avançado, mas com risco médio.
-  {
-    id: 'p005',
-    fullName: 'Marcos Rocha',
-    whatsappNumber: 'whatsapp:+5511999990005',
-    needsAttention: true,
-    attentionRequest: {
-        reason: "Relato de Dificuldade",
-        triggerMessage: "Essa semana foi difícil, não consegui seguir o plano direito no fim de semana.",
-        aiSummary: "O paciente Marcos, apesar de estar em um protocolo avançado, relatou dificuldades em seguir o plano no fim de semana. Isso pode indicar uma necessidade de ajuste de estratégia ou uma conversa motivacional.",
-        aiSuggestedReply: "Oi, Marcos. Acontece! O importante é não deixar um deslize virar uma desistência. Vamos entender o que aconteceu: foi um evento social, falta de planejamento, ou outra coisa? Saber o gatilho nos ajuda a criar uma estratégia para que o próximo fim de semana seja diferente. Estou aqui para te ajudar a ajustar a rota, sem julgamentos.",
-        priority: 3,
-        createdAt: sub(now, { hours: 3 }).toISOString(),
-    },
-    subscription: { plan: 'vip', priority: 3 },
-    protocol: {
-        protocolId: 'performance_90_dias',
-        startDate: sub(now, { days: 25 }).toISOString(),
-        currentDay: 26,
-        isActive: true,
-        weightGoal: 85,
-    },
-    gamification: {
-        totalPoints: 1200, level: 'Veterano',
-        badges: ["pe_direito_badge", "bom_de_garfo_badge", "pernas_pra_que_te_quero_badge"],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 0, goal: 5, isComplete: false },
-                movimento: { current: 1, goal: 5, isComplete: false },
-                hidratacao: { current: 4, goal: 5, isComplete: false },
-                disciplina: { current: 1, goal: 5, isComplete: false },
-                bemEstar: { current: 3, goal: 5, isComplete: false },
+    // 5. Paciente VIP em estágio avançado, mas com risco médio.
+    {
+        id: 'p005',
+        fullName: 'Marcos Rocha',
+        whatsappNumber: 'whatsapp:+5511999990005',
+        needsAttention: true,
+        attentionRequest: {
+            reason: "Relato de Dificuldade",
+            triggerMessage: "Essa semana foi difícil, não consegui seguir o plano direito no fim de semana.",
+            aiSummary: "O paciente Marcos, apesar de estar em um protocolo avançado, relatou dificuldades em seguir o plano no fim de semana. Isso pode indicar uma necessidade de ajuste de estratégia ou uma conversa motivacional.",
+            aiSuggestedReply: "Oi, Marcos. Acontece! O importante é não deixar um deslize virar uma desistência. Vamos entender o que aconteceu: foi um evento social, falta de planejamento, ou outra coisa? Saber o gatilho nos ajuda a criar uma estratégia para que o próximo fim de semana seja diferente. Estou aqui para te ajudar a ajustar a rota, sem julgamentos.",
+            priority: 3,
+            createdAt: sub(now, { hours: 3 }).toISOString(),
+        },
+        subscription: { plan: 'vip', priority: 3 },
+        protocol: {
+            protocolId: 'performance_90_dias',
+            startDate: sub(now, { days: 25 }).toISOString(),
+            currentDay: 26,
+            isActive: true,
+            weightGoal: 85,
+        },
+        gamification: {
+            totalPoints: 1200, level: 'Veterano',
+            badges: ["pe_direito_badge", "bom_de_garfo_badge", "pernas_pra_que_te_quero_badge"],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 0, goal: 5, isComplete: false },
+                    movimento: { current: 1, goal: 5, isComplete: false },
+                    hidratacao: { current: 4, goal: 5, isComplete: false },
+                    disciplina: { current: 1, goal: 5, isComplete: false },
+                    bemEstar: { current: 3, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Marcos Rocha',
+        avatar: 'https://placehold.co/100x100/fecaca/333?text=MR',
+        email: 'marcos.rocha.example@gmail.com',
+        lastMessage: 'Essa semana foi difícil, não consegui seguir o plano direito no fim de semana.',
+        lastMessageTimestamp: sub(now, { hours: 3 }).toISOString(),
+        riskLevel: 'medium',
+        status: 'active',
+        activeCheckin: null,
     },
-    name: 'Marcos Rocha',
-    avatar: 'https://placehold.co/100x100/fecaca/333?text=MR',
-    email: 'marcos.rocha.example@gmail.com',
-    lastMessage: 'Essa semana foi difícil, não consegui seguir o plano direito no fim de semana.',
-    lastMessageTimestamp: sub(now, { hours: 3 }).toISOString(),
-    riskLevel: 'medium',
-    status: 'active',
-    activeCheckin: null,
-  },
-  // 6. Paciente Freemium, ativo, mas sem protocolo.
-  {
-    id: 'p006',
-    fullName: 'Beatriz Costa',
-    whatsappNumber: 'whatsapp:+5511999990006',
-    needsAttention: false,
-    subscription: { plan: 'freemium', priority: 1 },
-    protocol: null,
-    gamification: {
-        totalPoints: 20, level: 'Iniciante', badges: [],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 0, goal: 5, isComplete: false },
-                movimento: { current: 0, goal: 5, isComplete: false },
-                hidratacao: { current: 0, goal: 5, isComplete: false },
-                disciplina: { current: 0, goal: 5, isComplete: false },
-                bemEstar: { current: 0, goal: 5, isComplete: false },
+    // 6. Paciente Freemium, ativo, mas sem protocolo.
+    {
+        id: 'p006',
+        fullName: 'Beatriz Costa',
+        whatsappNumber: 'whatsapp:+5511999990006',
+        needsAttention: false,
+        subscription: { plan: 'freemium', priority: 1 },
+        protocol: null,
+        gamification: {
+            totalPoints: 20, level: 'Iniciante', badges: [],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 0, goal: 5, isComplete: false },
+                    movimento: { current: 0, goal: 5, isComplete: false },
+                    hidratacao: { current: 0, goal: 5, isComplete: false },
+                    disciplina: { current: 0, goal: 5, isComplete: false },
+                    bemEstar: { current: 0, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Beatriz Costa',
+        avatar: 'https://placehold.co/100x100/d9f99d/333?text=BC',
+        email: 'beatriz.costa.example@gmail.com',
+        lastMessage: 'Obrigada pela dica do vídeo!',
+        lastMessageTimestamp: sub(now, { days: 3 }).toISOString(),
+        status: 'active',
+        activeCheckin: null,
     },
-    name: 'Beatriz Costa',
-    avatar: 'https://placehold.co/100x100/d9f99d/333?text=BC',
-    email: 'beatriz.costa.example@gmail.com',
-    lastMessage: 'Obrigada pela dica do vídeo!',
-    lastMessageTimestamp: sub(now, { days: 3 }).toISOString(),
-    status: 'active',
-    activeCheckin: null,
-  },
-  // 7. Paciente Premium estagnado.
-  {
-    id: 'p007',
-    fullName: 'Tiago Nogueira',
-    whatsappNumber: 'whatsapp:+5511999990007',
-    needsAttention: false,
-    subscription: { plan: 'premium', priority: 2 },
-    protocol: {
-        protocolId: 'fundamentos_90_dias',
-        startDate: sub(now, { days: 18 }).toISOString(),
-        currentDay: 19,
-        isActive: true,
-        weightGoal: 100,
-    },
-    gamification: {
-        totalPoints: 150, level: 'Iniciante',
-        badges: ["pe_direito_badge"],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 0, goal: 5, isComplete: false },
-                movimento: { current: 0, goal: 5, isComplete: false },
-                hidratacao: { current: 1, goal: 5, isComplete: false },
-                disciplina: { current: 1, goal: 5, isComplete: false },
-                bemEstar: { current: 0, goal: 5, isComplete: false },
+    // 7. Paciente Premium estagnado.
+    {
+        id: 'p007',
+        fullName: 'Tiago Nogueira',
+        whatsappNumber: 'whatsapp:+5511999990007',
+        needsAttention: false,
+        subscription: { plan: 'premium', priority: 2 },
+        protocol: {
+            protocolId: 'fundamentos_90_dias',
+            startDate: sub(now, { days: 18 }).toISOString(),
+            currentDay: 19,
+            isActive: true,
+            weightGoal: 100,
+        },
+        gamification: {
+            totalPoints: 150, level: 'Iniciante',
+            badges: ["pe_direito_badge"],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 0, goal: 5, isComplete: false },
+                    movimento: { current: 0, goal: 5, isComplete: false },
+                    hidratacao: { current: 1, goal: 5, isComplete: false },
+                    disciplina: { current: 1, goal: 5, isComplete: false },
+                    bemEstar: { current: 0, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Tiago Nogueira',
+        avatar: 'https://placehold.co/100x100/e9d5ff/333?text=TN',
+        email: 'tiago.nogueira.example@gmail.com',
+        lastMessage: 'Ok',
+        lastMessageTimestamp: sub(now, { days: 6 }).toISOString(),
+        riskLevel: 'medium',
+        status: 'active',
+        activeCheckin: null,
     },
-    name: 'Tiago Nogueira',
-    avatar: 'https://placehold.co/100x100/e9d5ff/333?text=TN',
-    email: 'tiago.nogueira.example@gmail.com',
-    lastMessage: 'Ok',
-    lastMessageTimestamp: sub(now, { days: 6 }).toISOString(),
-    riskLevel: 'medium',
-    status: 'active',
-    activeCheckin: null,
-  },
-  // 8. Novo paciente pendente, sem interação.
-  {
-    id: 'p008',
-    fullName: 'Sofia Almeida',
-    whatsappNumber: 'whatsapp:+5511999990008',
-    needsAttention: true,
-    subscription: { plan: 'freemium', priority: 1 },
-    protocol: null,
-    gamification: {
-        totalPoints: 0, level: 'Iniciante', badges: [],
-        weeklyProgress: {
-            weekStartDate: weekStart.toISOString(),
-            perspectives: {
-                alimentacao: { current: 0, goal: 5, isComplete: false },
-                movimento: { current: 0, goal: 5, isComplete: false },
-                hidratacao: { current: 0, goal: 5, isComplete: false },
-                disciplina: { current: 0, goal: 5, isComplete: false },
-                bemEstar: { current: 0, goal: 5, isComplete: false },
+    // 8. Novo paciente pendente, sem interação.
+    {
+        id: 'p008',
+        fullName: 'Sofia Almeida',
+        whatsappNumber: 'whatsapp:+5511999990008',
+        needsAttention: true,
+        subscription: { plan: 'freemium', priority: 1 },
+        protocol: null,
+        gamification: {
+            totalPoints: 0, level: 'Iniciante', badges: [],
+            weeklyProgress: {
+                weekStartDate: weekStart.toISOString(),
+                perspectives: {
+                    alimentacao: { current: 0, goal: 5, isComplete: false },
+                    movimento: { current: 0, goal: 5, isComplete: false },
+                    hidratacao: { current: 0, goal: 5, isComplete: false },
+                    disciplina: { current: 0, goal: 5, isComplete: false },
+                    bemEstar: { current: 0, goal: 5, isComplete: false },
+                }
             }
-        }
+        },
+        name: 'Sofia Almeida',
+        avatar: 'https://placehold.co/100x100/fde68a/333?text=SA',
+        email: 'sofia.almeida.example@gmail.com',
+        lastMessage: 'Novo contato via WhatsApp.',
+        lastMessageTimestamp: sub(now, { days: 4 }).toISOString(),
+        status: 'pending',
+        activeCheckin: null,
     },
-    name: 'Sofia Almeida',
-    avatar: 'https://placehold.co/100x100/fde68a/333?text=SA',
-    email: 'sofia.almeida.example@gmail.com',
-    lastMessage: 'Novo contato via WhatsApp.',
-    lastMessageTimestamp: sub(now, { days: 4 }).toISOString(),
-    status: 'pending',
-    activeCheckin: null,
-  },
 ];
 
 
@@ -645,78 +645,78 @@ export const healthMetrics: { patientId: string, metrics: HealthMetric[] }[] = [
 ];
 
 export const videos: Video[] = [
-  {
-    id: 'vid01',
-    category: 'Nutrição Inteligente',
-    title: '10 DICAS PARA EMAGRECER DA FORMA CORRETA',
-    description: 'O vídeo apresenta 10 dicas práticas para emagrecer de forma saudável e sustentável, com foco em mudanças de hábitos, como alimentação equilibrada e prática regular de exercícios, evitando dietas extremas.',
-    thumbnailUrl: 'https://img.youtube.com/vi/OiqS2ohM5Jc/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=OiqS2ohM5Jc',
-    plans: ['freemium', 'premium', 'vip'],
-  },
-  {
-    id: 'vid02',
-    category: 'Mentalidade e Comportamento',
-    title: 'Se você NÃO CONSEGUE EMAGRECER, assista isso…',
-    description: 'Um guia detalhado baseado em estudos científicos, explicando por que muitas dietas falham e oferecendo estratégias para perder peso de forma definitiva, com dicas para evitar o efeito sanfona.',
-    thumbnailUrl: 'https://img.youtube.com/vi/Q_2TGWW8XpM/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=Q_2TGWW8XpM',
-    plans: ['premium', 'vip'],
-  },
-  {
-    id: 'vid03',
-    category: 'Mentalidade e Comportamento',
-    title: '4 HÁBITOS PARA EMAGRECER E NÃO ENGORDAR DE NOVO',
-    description: 'O vídeo destaca quatro hábitos simples e eficazes para emagrecer e manter o peso, incluindo ajustes na alimentação, sono de qualidade e rotina de atividades físicas.',
-    thumbnailUrl: 'https://img.youtube.com/vi/ecUQERiCcJ0/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=ecUQERiCcJ0',
-    plans: ['premium', 'vip'],
-  },
-  {
-    id: 'vid04',
-    category: 'Movimento é Vida',
-    title: 'Dicas para EMAGRECIMENTO RÁPIDO!',
-    description: 'Oferece dicas práticas e acessíveis para acelerar a perda de peso, com ênfase em treinos rápidos e escolhas alimentares inteligentes, ideal para quem busca resultados imediatos.',
-    thumbnailUrl: 'https://img.youtube.com/vi/fO3VRnsNcB0/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=fO3VRnsNcB0',
-    plans: ['freemium', 'premium', 'vip'],
-  },
-  {
-    id: 'vid05',
-    category: 'Nutrição Inteligente',
-    title: 'Como emagrecer rápido? 7 técnicas saudáveis!',
-    description: 'Apresenta sete técnicas saudáveis para emagrecer rapidamente, com foco em estratégias práticas como controle de porções, hidratação e exercícios de alta intensidade.',
-    thumbnailUrl: 'https://img.youtube.com/vi/9pXv7YX_AyQ/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=9pXv7YX_AyQ',
-    plans: ['premium', 'vip'],
-  },
-  {
-    id: 'vid06',
-    category: 'Nutrição Inteligente',
-    title: '10 DICAS PARA EMAGRECER RÁPIDO E COM SAÚDE',
-    description: 'Lista 10 passos para emagrecer com saúde, com ênfase na redução de gordura abdominal, incluindo dicas de alimentação, exercícios específicos e hábitos diários.',
-    thumbnailUrl: 'https://img.youtube.com/vi/SXMSSscBklk/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=SXMSSscBklk',
-    plans: ['premium', 'vip'],
-  },
-  {
-    id: 'vid07',
-    category: 'Mentalidade e Comportamento',
-    title: 'Quer emagrecer? Veja essas 5 dicas fáceis! | MARCIO ATALLA',
-    description: 'Márcio Atalla compartilha cinco dicas simples para iniciantes no processo de emagrecimento, com foco em mudanças graduais na alimentação e aumento da atividade física.',
-    thumbnailUrl: 'https://img.youtube.com/vi/NtVrQKurPkw/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=NtVrQKurPkw',
-    plans: ['freemium', 'premium', 'vip'],
-  },
-  {
-    id: 'vid08',
-    category: 'Nutrição Inteligente',
-    title: '10 DICAS para EMAGRECER SEM GASTAR NADA!',
-    description: 'Traz 10 estratégias gratuitas para perder peso, incluindo ajustes na alimentação, treinos caseiros e dicas de motivação para um "glow up" sem custos.',
-    thumbnailUrl: 'https://img.youtube.com/vi/zez6XujoXL8/hqdefault.jpg',
-    videoUrl: 'https://www.youtube.com/watch?v=zez6XujoXL8',
-    plans: ['premium', 'vip'],
-  }
+    {
+        id: 'vid01',
+        category: 'Nutrição Inteligente',
+        title: '10 DICAS PARA EMAGRECER DA FORMA CORRETA',
+        description: 'O vídeo apresenta 10 dicas práticas para emagrecer de forma saudável e sustentável, com foco em mudanças de hábitos, como alimentação equilibrada e prática regular de exercícios, evitando dietas extremas.',
+        thumbnailUrl: 'https://img.youtube.com/vi/OiqS2ohM5Jc/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=OiqS2ohM5Jc',
+        plans: ['freemium', 'premium', 'vip'],
+    },
+    {
+        id: 'vid02',
+        category: 'Mentalidade e Comportamento',
+        title: 'Se você NÃO CONSEGUE EMAGRECER, assista isso…',
+        description: 'Um guia detalhado baseado em estudos científicos, explicando por que muitas dietas falham e oferecendo estratégias para perder peso de forma definitiva, com dicas para evitar o efeito sanfona.',
+        thumbnailUrl: 'https://img.youtube.com/vi/Q_2TGWW8XpM/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=Q_2TGWW8XpM',
+        plans: ['premium', 'vip'],
+    },
+    {
+        id: 'vid03',
+        category: 'Mentalidade e Comportamento',
+        title: '4 HÁBITOS PARA EMAGRECER E NÃO ENGORDAR DE NOVO',
+        description: 'O vídeo destaca quatro hábitos simples e eficazes para emagrecer e manter o peso, incluindo ajustes na alimentação, sono de qualidade e rotina de atividades físicas.',
+        thumbnailUrl: 'https://img.youtube.com/vi/ecUQERiCcJ0/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=ecUQERiCcJ0',
+        plans: ['premium', 'vip'],
+    },
+    {
+        id: 'vid04',
+        category: 'Movimento é Vida',
+        title: 'Dicas para EMAGRECIMENTO RÁPIDO!',
+        description: 'Oferece dicas práticas e acessíveis para acelerar a perda de peso, com ênfase em treinos rápidos e escolhas alimentares inteligentes, ideal para quem busca resultados imediatos.',
+        thumbnailUrl: 'https://img.youtube.com/vi/fO3VRnsNcB0/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=fO3VRnsNcB0',
+        plans: ['freemium', 'premium', 'vip'],
+    },
+    {
+        id: 'vid05',
+        category: 'Nutrição Inteligente',
+        title: 'Como emagrecer rápido? 7 técnicas saudáveis!',
+        description: 'Apresenta sete técnicas saudáveis para emagrecer rapidamente, com foco em estratégias práticas como controle de porções, hidratação e exercícios de alta intensidade.',
+        thumbnailUrl: 'https://img.youtube.com/vi/9pXv7YX_AyQ/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=9pXv7YX_AyQ',
+        plans: ['premium', 'vip'],
+    },
+    {
+        id: 'vid06',
+        category: 'Nutrição Inteligente',
+        title: '10 DICAS PARA EMAGRECER RÁPIDO E COM SAÚDE',
+        description: 'Lista 10 passos para emagrecer com saúde, com ênfase na redução de gordura abdominal, incluindo dicas de alimentação, exercícios específicos e hábitos diários.',
+        thumbnailUrl: 'https://img.youtube.com/vi/SXMSSscBklk/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=SXMSSscBklk',
+        plans: ['premium', 'vip'],
+    },
+    {
+        id: 'vid07',
+        category: 'Mentalidade e Comportamento',
+        title: 'Quer emagrecer? Veja essas 5 dicas fáceis! | MARCIO ATALLA',
+        description: 'Márcio Atalla compartilha cinco dicas simples para iniciantes no processo de emagrecimento, com foco em mudanças graduais na alimentação e aumento da atividade física.',
+        thumbnailUrl: 'https://img.youtube.com/vi/NtVrQKurPkw/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=NtVrQKurPkw',
+        plans: ['freemium', 'premium', 'vip'],
+    },
+    {
+        id: 'vid08',
+        category: 'Nutrição Inteligente',
+        title: '10 DICAS para EMAGRECER SEM GASTAR NADA!',
+        description: 'Traz 10 estratégias gratuitas para perder peso, incluindo ajustes na alimentação, treinos caseiros e dicas de motivação para um "glow up" sem custos.',
+        thumbnailUrl: 'https://img.youtube.com/vi/zez6XujoXL8/hqdefault.jpg',
+        videoUrl: 'https://www.youtube.com/watch?v=zez6XujoXL8',
+        plans: ['premium', 'vip'],
+    }
 ];
 
 export const communityPosts: CommunityTopic[] = [

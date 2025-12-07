@@ -108,15 +108,6 @@ export default function WelcomePage() {
               Vamos cuidar de você hoje?
             </p>
           </div>
-          <div className="flex items-center gap-3 bg-card/50 backdrop-blur-sm p-2 pr-4 rounded-full border shadow-sm">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-              {level[0]}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Nível Atual</span>
-              <span className="text-sm font-bold text-foreground">{level} • {points} pts</span>
-            </div>
-          </div>
         </div>
 
         {/* BENTO GRID */}
@@ -140,7 +131,7 @@ export default function WelcomePage() {
                 </h3>
                 <p className="text-muted-foreground max-w-md">
                   {isProfileComplete
-                    ? "Você está indo muito bem! Que tal registrar sua alimentação de hoje para ganhar pontos?"
+                    ? "Você está indo muito bem! Que tal registrar sua alimentação de hoje?"
                     : "Para personalizarmos seu plano de saúde, precisamos de alguns dados básicos."}
                 </p>
               </div>
@@ -163,75 +154,7 @@ export default function WelcomePage() {
             </CardContent>
           </Card>
 
-          {/* QUICK ACTION: WATER */}
-          <Card
-            className={`bg-blue-50/50 border-blue-100 hover:border-blue-200 hover:bg-blue-50 transition-all cursor-pointer group relative overflow-hidden ${actionLoading === 'hydration' ? 'opacity-70 pointer-events-none' : ''}`}
-            onClick={() => handleQuickAction('hydration')}
-          >
-            {actionLoading === 'hydration' && <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div></div>}
-            <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform shadow-sm">
-                <Droplet className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-blue-900">Hidratação</h4>
-                <p className="text-xs text-blue-700/70 mt-1">Registrar copo (250ml)</p>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* QUICK ACTION: MOOD */}
-          <Card
-            className={`bg-orange-50/50 border-orange-100 hover:border-orange-200 hover:bg-orange-50 transition-all cursor-pointer group relative overflow-hidden ${actionLoading === 'mood' ? 'opacity-70 pointer-events-none' : ''}`}
-            onClick={() => handleQuickAction('mood')}
-          >
-            {actionLoading === 'mood' && <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div></div>}
-            <CardContent className="flex flex-col items-center justify-center h-full p-6 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform shadow-sm">
-                <Sun className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-orange-900">Como se sente?</h4>
-                <p className="text-xs text-orange-700/70 mt-1">Registrar humor</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* COMMUNITY CARD */}
-          <Card className="md:col-span-1 lg:col-span-1 bg-card hover:bg-accent/5 transition-colors border-border/60">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="w-4 h-4 text-secondary" />
-                Comunidade
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Veja o que outros pacientes estão compartilhando hoje.
-              </p>
-              <Button variant="outline" size="sm" className="w-full rounded-full text-xs" asChild>
-                <Link href="/portal/community">Explorar</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* EDUCATION CARD */}
-          <Card className="md:col-span-1 lg:col-span-1 bg-card hover:bg-accent/5 transition-colors border-border/60">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <PlayCircle className="w-4 h-4 text-secondary" />
-                Aprender
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Dicas de saúde e bem-estar selecionadas para você.
-              </p>
-              <Button variant="outline" size="sm" className="w-full rounded-full text-xs" asChild>
-                <Link href="/portal/education">Ver Vídeos</Link>
-              </Button>
-            </CardContent>
-          </Card>
 
           {/* QUOTE CARD (Wide) */}
           <Card className="md:col-span-3 lg:col-span-2 bg-secondary/10 border-secondary/20 flex items-center justify-center p-6">

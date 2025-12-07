@@ -173,7 +173,7 @@ export async function getMessages(patientId: string): Promise<Message[]> {
         .from('messages')
         .select('*')
         .eq('patient_id', patientId)
-        .order('timestamp', { ascending: true });
+        .order('created_at', { ascending: true });
 
     if (error) {
         console.error('Error fetching messages:', error);

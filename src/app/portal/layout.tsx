@@ -146,7 +146,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         email: user.email || '',
         fullName: activationName,
         whatsappNumber: activationPhone,
-        status: 'pending',
+        status: 'active',
       });
 
       if (!result.success) {
@@ -296,25 +296,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
                 <AvatarImage src={patient.avatar} />
                 <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                  {patient.fullName?.charAt(0) || 'P'}
+                  {(patient.fullName || user?.user_metadata?.full_name || user?.email || 'P').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="overflow-hidden">
-                <p className="text-sm font-bold truncate">{patient.fullName?.split(' ')[0]}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {typeof patient.gamification.level === 'number'
-                    ? getLevelName(patient.gamification.level)
-                    : patient.gamification.level}
+                <p className="text-sm font-bold truncate">
+                  {(patient.fullName || user?.user_metadata?.full_name || 'Paciente').split(' ')[0]}
                 </p>
               </div>
             </div>
-            <div className="w-full bg-background/50 rounded-full h-1.5 overflow-hidden">
-              <div
-                className="bg-primary h-full rounded-full"
-                style={{ width: `${Math.min(100, (patient.gamification.totalPoints / 2000) * 100)}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-right text-muted-foreground mt-1">{patient.gamification.totalPoints} pts</p>
           </div>
         </div>
 

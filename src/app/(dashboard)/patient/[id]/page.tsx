@@ -212,7 +212,7 @@ export default function PatientProfilePage() {
                         .from('messages')
                         .select('*')
                         .eq('patient_id', patientId)
-                        .order('timestamp', { ascending: true });
+                        .order('created_at', { ascending: true });
 
                     if (data) {
                         setConversation(data as Message[]);
@@ -369,7 +369,7 @@ export default function PatientProfilePage() {
 
                 {/* Patient Header */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6 bg-card p-6 rounded-2xl border shadow-sm">
-                    <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+                    <Avatar className={cn("h-24 w-24 border-4 border-background shadow-lg", patient.subscription.priority === 3 && "ring-4 ring-amber-400/30 shadow-amber-100")}>
                         <AvatarImage src={patient.avatar} alt={patient.name} />
                         <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">{patient.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
@@ -656,9 +656,14 @@ export default function PatientProfilePage() {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="text-center py-12">
-                                                <Video className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                                                <p className="text-muted-foreground">Nenhum vídeo enviado ainda.</p>
+                                            <div className="text-center py-16 bg-muted/20 rounded-xl border border-dashed">
+                                                <div className="w-16 h-16 bg-background rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                                                    <Video className="h-8 w-8 text-muted-foreground/50" />
+                                                </div>
+                                                <h3 className="font-medium text-foreground mb-1">Biblioteca Vazia</h3>
+                                                <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                                                    Nenhum vídeo educativo foi enviado para este paciente ainda.
+                                                </p>
                                             </div>
                                         )}
                                     </CardContent>

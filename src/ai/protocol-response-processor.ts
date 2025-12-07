@@ -141,20 +141,36 @@ export function calculatePoints(
         return isValid ? 50 : 0;
     }
 
-    // Planejamento semanal
+    // Planejamento semanal (A/B)
     if (checkinTitle.includes('Planejamento')) {
+        const { grade } = processABCResponse(response);
+        if (grade === 'A') return 30; // Sim
+        if (grade === 'B') return 0;  // Não
+
+        // Fallback para Sim/Não antigo (caso responda texto)
         const { isPositive } = processYesNoResponse(response);
         return isPositive ? 30 : 0;
     }
 
-    // Atividade física
+    // Atividade física (A/B)
     if (checkinTitle.includes('Atividade')) {
+        const { grade } = processABCResponse(response);
+        if (grade === 'A') return 40; // Sim
+        if (grade === 'B') return 0;  // Não
+
+        // Fallback para Sim/Não antigo
         const { isPositive } = processYesNoResponse(response);
         return isPositive ? 40 : 0;
     }
 
-    // Bem-estar geral
+    // Bem-estar geral (A/B/C)
     if (checkinTitle.includes('Bem-Estar') && !checkinTitle.includes('sono')) {
+        const { grade } = processABCResponse(response);
+        if (grade === 'A') return 15;
+        if (grade === 'B') return 10;
+        if (grade === 'C') return 5;
+
+        // Fallback para texto livre (qualquer resposta > 0)
         return response.trim().length > 0 ? 15 : 0;
     }
 

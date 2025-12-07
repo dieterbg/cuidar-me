@@ -21,28 +21,18 @@ export async function handlePatientReply(
     try {
         console.log(`[handlePatientReply] Processing: "${messageText}"`);
 
-        // 1. Buscar ou criar paciente
-        let { data: patient } = await supabase
-            .from('patients')
-            .select('*')
-            .eq('whatsapp_number', whatsappNumber)
-            .single();
+        // 1. Buscar paciente (agora APENAS busca, não cria)
+        const { findPatientByPhone } = await import('@/services/patient-service');
+        const patient = await findPatientByPhone(supabase, whatsappNumber);
 
+        // Se não encontrou paciente, envia mensagem de cadastro e encerra
         if (!patient) {
-            const { data: newPatient } = await supabase
-                .from('patients')
-                .insert({
-                    full_name: profileName,
-                    whatsapp_number: whatsappNumber,
-                    status: 'pending',
-                    plan: 'freemium',
-                    priority: 1,
-                    last_message: messageText,
-                    last_message_timestamp: new Date().toISOString(),
-                })
-                .select()
-                .single();
-            patient = newPatient!;
+            console.log(`[HANDLE-REPLY] Unknown number ${whatsappNumber}. Sending registration link.`);
+            await sendWhatsappMessage(
+                whatsappNumber,
+                "Olá! 👋 Para utilizar nossa assistente virtual, você precisa ter um cadastro ativo.\n\nPor favor, cadastre-se gratuitamente em: https://cuidar.me/cadastro"
+            );
+            return { success: true }; // Retorna sucesso pois a mensagem foi enviada
         }
 
         // 2. Salvar mensagem
@@ -58,43 +48,22 @@ export async function handlePatientReply(
         }).eq('id', patient.id);
 
         // =====================================================
-        // 🚀 FLUXO DE ONBOARDING (#8)
-        // Se paciente está pendente, rotear para onboarding
+        // 🚀 FLUXO DE BOAS-VINDAS (PRIMEIRO CONTATO)
+        // Se não houver mensagens anteriores do sistema, enviar boas-vindas
         // =====================================================
-        if (patient.status === 'pending') {
+        const { count: systemMessageCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('patient_id', patient.id)
+            .eq('sender', 'system');
+
+        if (systemMessageCount === 0) {
             const { loggers } = await import('@/lib/logger');
-            const { handleOnboardingReply, startOnboarding, isOnboardingActive } = await import('./actions/onboarding');
+            const { sendWelcomeMessage } = await import('./handlers/welcome-handler');
 
-            loggers.ai.info('Patient is pending, checking onboarding status', { patientId: patient.id });
-
-            const isActive = await isOnboardingActive(patient.id);
-
-            if (!isActive) {
-                // Iniciar onboarding se não estiver ativo
-                loggers.ai.info('Starting onboarding for pending patient', { patientId: patient.id });
-                await startOnboarding(
-                    patient.id,
-                    patient.plan as 'freemium' | 'premium' | 'vip',
-                    whatsappNumber,
-                    patient.full_name
-                );
-                return { success: true };
-            } else {
-                // Processar resposta do onboarding
-                loggers.ai.info('Processing onboarding reply', { patientId: patient.id });
-                const result = await handleOnboardingReply(
-                    patient.id,
-                    whatsappNumber,
-                    messageText,
-                    patient.full_name
-                );
-
-                if (result.success) {
-                    return { success: true };
-                }
-                // Se falhar, continua para fluxo normal (fallback)
-                loggers.ai.warn('Onboarding reply handling failed, falling back to AI', { error: result.error });
-            }
+            loggers.ai.info('First contact detected, sending welcome message', { patientId: patient.id });
+            await sendWelcomeMessage(patient, supabase);
+            return { success: true };
         }
 
         // 3. DETECTAR CHECK-INS ATIVOS
@@ -129,6 +98,7 @@ export async function handlePatientReply(
 
         // 5.1 EMERGÊNCIA - Escala imediatamente
         if (classification.intent === MessageIntent.EMERGENCY) {
+            const { handleEmergency } = await import('./handlers/emergency-handler');
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
@@ -152,6 +122,7 @@ export async function handlePatientReply(
             .single();
 
         if (patientProtocol && classification.intent === MessageIntent.CHECKIN_RESPONSE) {
+            const { handleProtocolGamification } = await import('./handlers/gamification-handler');
             const processed = await handleProtocolGamification(
                 patient,
                 patientProtocol,
@@ -164,161 +135,13 @@ export async function handlePatientReply(
         }
 
         // 5.4 IA CONVERSACIONAL (padrão)
+        const { handleAIConversation } = await import('./handlers/conversation-handler');
         return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
 
     } catch (error: any) {
         console.error('[handlePatientReply] Error:', error);
         return { success: false, error: error.message };
     }
-}
-
-/**
- * Processa emergências - Escala imediatamente
- */
-async function handleEmergency(
-    patient: any,
-    messageText: string,
-    whatsappNumber: string,
-    supabase: any
-): Promise<{ success: boolean }> {
-    console.log('[EMERGENCY] Escalating immediately');
-
-    const transformedPatient = transformPatientFromSupabase(patient);
-    const aiResponse = await generateChatbotReply({
-        patient: transformedPatient,
-        patientMessage: `[EMERGÊNCIA] ${messageText}`,
-        protocolContext: '',
-    });
-
-    // Forçar escalonamento
-    await supabase.from('attention_requests').insert({
-        patient_id: patient.id,
-        reason: 'Emergência Detectada',
-        trigger_message: messageText,
-        ai_summary: `Sistema detectou emergência: ${messageText}`,
-        ai_suggested_reply: 'Entre em contato URGENTEMENTE.',
-        priority: 1,
-    });
-
-    await supabase.from('patients').update({ needs_attention: true }).eq('id', patient.id);
-
-    if (aiResponse.chatbotReply) {
-        await sendWhatsappMessage(whatsappNumber, aiResponse.chatbotReply);
-        await supabase.from('messages').insert({
-            patient_id: patient.id,
-            sender: 'me',
-            text: aiResponse.chatbotReply,
-        });
-    }
-
-    return { success: true };
-}
-
-/**
- * Processa check-ins de protocolo + Gamificação
- */
-async function handleProtocolGamification(
-    patient: any,
-    patientProtocol: any,
-    messageText: string,
-    whatsappNumber: string,
-    supabase: any
-): Promise<boolean> {
-    console.log('[PROTOCOL-GAMIFICATION] Processing protocol check-in');
-
-    const { protocols, mandatoryGamificationSteps } = await import('@/lib/data');
-    const {
-        isGamificationCheckin,
-        extractPerspective,
-        calculatePoints,
-        getActionType,
-        generateConfirmationMessage
-    } = await import('./protocol-response-processor');
-    const { registerQuickAction } = await import('./actions/gamification');
-
-    const currentDay = patientProtocol.current_day;
-    const protocolData = protocols.find(p => p.id === patientProtocol.protocol.id);
-    const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
-    const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
-    const allMessages = [...gamificationMessages, ...contentMessages];
-
-    let totalPointsAwarded = 0;
-    let confirmationMessages: string[] = [];
-
-    for (const protocolStep of allMessages) {
-        if (isGamificationCheckin(protocolStep)) {
-            const perspective = extractPerspective(protocolStep);
-            if (!perspective) continue;
-
-            const points = calculatePoints(protocolStep.title, messageText, perspective);
-
-            if (points > 0 && patient.user_id) {
-                const type = getActionType(perspective);
-                const result = await registerQuickAction(patient.user_id, type, perspective);
-
-                if (result.success) {
-                    totalPointsAwarded += points;
-                    confirmationMessages.push(
-                        generateConfirmationMessage(protocolStep.title, points, perspective)
-                    );
-                    console.log(`[PROTOCOL-GAMIFICATION] +${points} pts (${perspective})`);
-                }
-            }
-        }
-    }
-
-    if (totalPointsAwarded > 0) {
-        const message = confirmationMessages.join('\n');
-        await sendWhatsappMessage(whatsappNumber, message);
-        await supabase.from('messages').insert({
-            patient_id: patient.id,
-            sender: 'system',
-            text: message,
-        });
-        return true; // Processado
-    }
-
-    return false; // Não processado
-}
-
-/**
- * Processa conversa com IA
- */
-async function handleAIConversation(
-    patient: any,
-    messageText: string,
-    whatsappNumber: string,
-    supabase: any
-): Promise<{ success: boolean }> {
-    const transformedPatient = transformPatientFromSupabase(patient);
-    const aiResponse = await generateChatbotReply({
-        patient: transformedPatient,
-        patientMessage: messageText,
-        protocolContext: '',
-    });
-
-    if (aiResponse.decision === 'escalate' && aiResponse.attentionRequest) {
-        await supabase.from('attention_requests').insert({
-            patient_id: patient.id,
-            reason: aiResponse.attentionRequest.reason,
-            trigger_message: messageText,
-            ai_summary: aiResponse.attentionRequest.aiSummary,
-            ai_suggested_reply: aiResponse.attentionRequest.aiSuggestedReply,
-            priority: aiResponse.attentionRequest.priority || 2,
-        });
-        await supabase.from('patients').update({ needs_attention: true }).eq('id', patient.id);
-    }
-
-    if (aiResponse.chatbotReply) {
-        await sendWhatsappMessage(whatsappNumber, aiResponse.chatbotReply);
-        await supabase.from('messages').insert({
-            patient_id: patient.id,
-            sender: 'me',
-            text: aiResponse.chatbotReply,
-        });
-    }
-
-    return { success: true };
 }
 
 /**

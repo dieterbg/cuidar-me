@@ -39,11 +39,15 @@ vi.mock('@/ai/flows/generate-chatbot-reply', () => ({
     generateChatbotReply: vi.fn(),
 }));
 
-// 4. Mock Onboarding
+// 4. Mock Onboarding & Welcome
 vi.mock('@/ai/actions/onboarding', () => ({
     isOnboardingActive: vi.fn(),
     startOnboarding: vi.fn(),
     handleOnboardingReply: vi.fn(),
+}));
+
+vi.mock('@/ai/handlers/welcome-handler', () => ({
+    sendWelcomeMessage: vi.fn(),
 }));
 
 // 5. Mock Twilio
@@ -66,6 +70,7 @@ vi.mock('@/lib/logger', () => ({
 import { classifyMessageIntent } from '@/ai/message-intent-classifier';
 import { generateChatbotReply } from '@/ai/flows/generate-chatbot-reply';
 import { isOnboardingActive, startOnboarding, handleOnboardingReply } from '@/ai/actions/onboarding';
+import { sendWelcomeMessage } from '@/ai/handlers/welcome-handler';
 import { sendWhatsappMessage } from '@/lib/twilio';
 
 describe('WhatsApp Integration Flows', () => {
@@ -83,42 +88,51 @@ describe('WhatsApp Integration Flows', () => {
         mockSupabase.maybeSingle.mockResolvedValue({ data: null }); // No recent checkin
     });
 
-    it('Scenario 1: New Patient (Starts Onboarding)', async () => {
+    it('Scenario 1: New Patient (Unregistered)', async () => {
         // Setup: Patient not found in DB
         mockSupabase.single.mockResolvedValueOnce({ data: null });
-        // Insert returns new patient
-        const newPatient = { id: 'new-id', status: 'pending', plan: 'freemium', full_name: mockName };
-        mockSupabase.single.mockResolvedValueOnce({ data: newPatient });
-
-        // Onboarding is not active yet
-        (isOnboardingActive as any).mockResolvedValue(false);
 
         await handlePatientReply(mockPhone, 'Olá', mockName);
 
-        // Verify patient creation
-        expect(mockSupabase.from).toHaveBeenCalledWith('patients');
-        expect(mockSupabase.insert).toHaveBeenCalledWith(expect.objectContaining({
-            whatsapp_number: mockPhone,
-            status: 'pending'
-        }));
+        // Verify NO patient creation
+        expect(mockSupabase.insert).not.toHaveBeenCalled();
 
-        // Verify Onboarding Start
-        expect(startOnboarding).toHaveBeenCalledWith('new-id', 'freemium', mockPhone, mockName);
+        // Verify Registration Message sent
+        expect(sendWhatsappMessage).toHaveBeenCalledWith(
+            mockPhone,
+            expect.stringContaining('https://cuidar.me/cadastro')
+        );
+
+        // Verify Onboarding Start NOT called
+        expect(startOnboarding).not.toHaveBeenCalled();
     });
 
-    it('Scenario 2: Pending Patient (Continues Onboarding)', async () => {
-        // Setup: Patient exists and is pending
-        const pendingPatient = { id: 'pending-id', status: 'pending', full_name: mockName };
-        mockSupabase.single.mockResolvedValueOnce({ data: pendingPatient });
+    it('Scenario 2: First Contact (Active Patient - Welcome)', async () => {
+        // Setup: Patient exists and is active (newly created via Portal)
+        const activePatient = { id: 'active-id', status: 'active', full_name: mockName, plan: 'freemium', whatsapp_number: mockPhone };
+        mockSupabase.single.mockResolvedValueOnce({ data: activePatient });
 
-        // Onboarding IS active
-        (isOnboardingActive as any).mockResolvedValue(true);
-        (handleOnboardingReply as any).mockResolvedValue({ success: true });
+        // Mock NO previous system messages (First Contact)
+        // Chain: from -> select -> eq -> eq -> resolve { count: 0 }
+        const countQueryMock: any = {
+            then: vi.fn((resolve) => resolve({ count: 0, data: [] }))
+        };
+        countQueryMock.eq = vi.fn().mockReturnValue(countQueryMock);
 
-        await handlePatientReply(mockPhone, 'Meu nome é Teste', mockName);
+        // 1st call: findPatientByPhone (returns builder -> maybeSingle)
+        // 2nd call: count query (returns countQueryMock -> resolve)
+        mockSupabase.select
+            .mockReturnValueOnce(mockSupabase)
+            .mockReturnValueOnce(countQueryMock);
 
-        // Verify Onboarding Reply Handler
-        expect(handleOnboardingReply).toHaveBeenCalledWith('pending-id', mockPhone, 'Meu nome é Teste', mockName);
+        await handlePatientReply(mockPhone, 'Olá', mockName);
+
+        // Verify Welcome Message Handler called
+        expect(sendWelcomeMessage).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'active-id' }),
+            expect.anything()
+        );
+
         // Should NOT call classifier
         expect(classifyMessageIntent).not.toHaveBeenCalled();
     });

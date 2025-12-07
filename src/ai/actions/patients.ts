@@ -64,7 +64,7 @@ export async function getPatientDetails(patientId: string): Promise<{
     sentVideos: SentVideo[];
     messages: Message[];
 }> {
-    const supabase = createClient();
+    const supabase = createAdminClient();
 
     // Fetch patient
     const { data: patientData, error: patientError } = await supabase
@@ -83,7 +83,14 @@ export async function getPatientDetails(patientId: string): Promise<{
         .from('health_metrics')
         .select('*')
         .eq('patient_id', patientId)
-        .order('recorded_at', { ascending: false });
+        .order('date', { ascending: false });
+
+    console.log(`[getPatientDetails] Patient: ${patientId}, Metrics found: ${metricsData?.length}`);
+    if (!metricsData || metricsData.length === 0) {
+        console.log('[getPatientDetails] No metrics found. Check RLS or table content.');
+    } else {
+        console.log('[getPatientDetails] First metric:', metricsData[0]);
+    }
 
     // Fetch sent videos
     const { data: sentVideosData } = await supabase
@@ -97,14 +104,14 @@ export async function getPatientDetails(patientId: string): Promise<{
         .from('messages')
         .select('*')
         .eq('patient_id', patientId)
-        .order('timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(50); // Limit to last 50 messages for performance
 
     const patient = transformPatientFromSupabase(patientData);
 
     const metrics = metricsData?.map(m => ({
         id: m.id,
-        date: m.recorded_at,
+        date: m.date,
         weight: m.weight_kg, // Corrigido mapeamento de weight
         glucoseLevel: m.glucose_level,
         waistCircumference: m.waist_circumference_cm,
@@ -126,7 +133,7 @@ export async function getPatientDetails(patientId: string): Promise<{
         patientId: msg.patient_id,
         sender: msg.sender,
         text: msg.message_content || msg.text, // Fallback
-        timestamp: msg.timestamp,
+        timestamp: msg.created_at,
         mediaUrl: msg.media_url,
         mediaType: msg.media_type,
         isRead: msg.is_read
@@ -210,11 +217,11 @@ export async function deletePatient(patientId: string): Promise<{ success: boole
 export async function createPatientRecord(patientData: Partial<Patient>): Promise<{ success: boolean; patientId?: string; error?: string }> {
     console.log('createPatientRecord called with:', patientData);
     const supabase = createClient();
+    const adminSupabase = createAdminClient(); // Use admin for checks to avoid RLS issues
 
     // Verify if user exists in auth.users using admin client
     if (patientData.userId) {
         try {
-            const adminSupabase = createAdminClient();
             const { data: user, error: userError } = await adminSupabase.auth.admin.getUserById(patientData.userId);
             if (userError || !user) {
                 console.error('User not found in auth.users:', patientData.userId, userError);
@@ -255,6 +262,56 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
         }
     }
 
+    // 1. Check if patient with this WhatsApp already exists
+    if (patientData.whatsappNumber) {
+        const { data: existingPatient, error: searchError } = await adminSupabase
+            .from('patients')
+            .select('*')
+            .eq('whatsapp_number', patientData.whatsappNumber)
+            .single();
+
+        if (existingPatient) {
+            console.log('Found existing patient with this WhatsApp:', existingPatient.id);
+
+            // Case A: Already linked to THIS user
+            if (existingPatient.user_id === patientData.userId) {
+                console.log('Patient already linked to this user. Returning success.');
+                return { success: true, patientId: existingPatient.id };
+            }
+
+            // Case B: Linked to ANOTHER user
+            if (existingPatient.user_id && existingPatient.user_id !== patientData.userId) {
+                console.warn('Patient linked to another user:', existingPatient.user_id);
+                return { success: false, error: 'Este número de WhatsApp já está associado a outra conta.' };
+            }
+
+            // Case C: Unlinked (Ghost Patient) -> Claim it!
+            if (!existingPatient.user_id) {
+                console.log('Patient is unlinked. Claiming for user:', patientData.userId);
+
+                const updateData: any = {
+                    user_id: patientData.userId,
+                    email: patientData.email,
+                    status: 'pending', // Reset to pending to force onboarding review if needed? Or keep as is? Let's set to pending or active based on input.
+                    // Update name if provided
+                    full_name: patientData.fullName || existingPatient.full_name
+                };
+
+                const { error: updateError } = await adminSupabase
+                    .from('patients')
+                    .update(updateData)
+                    .eq('id', existingPatient.id);
+
+                if (updateError) {
+                    console.error('Error claiming patient:', updateError);
+                    return { success: false, error: 'Erro ao vincular paciente existente.' };
+                }
+
+                return { success: true, patientId: existingPatient.id };
+            }
+        }
+    }
+
     // Mapear para snake_case também na criação
     const dbInsert: any = {};
     if (patientData.fullName) dbInsert.full_name = patientData.fullName;
@@ -280,6 +337,10 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
 
     if (error) {
         console.error('Error creating patient:', error);
+        // Fallback for race condition
+        if (error.code === '23505') { // Unique violation
+            return { success: false, error: 'Este número de WhatsApp já está cadastrado.' };
+        }
         return { success: false, error: error.message };
     }
 

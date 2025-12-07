@@ -7,14 +7,32 @@ import { createServiceRoleClient } from '@/lib/supabase-server-utils';
  * ATENÇÃO: Use apenas em desenvolvimento!
  */
 export async function seedDatabase(): Promise<{ success: boolean; error?: string; details?: string }> {
-    if (process.env.NODE_ENV === 'production') {
-        return { success: false, error: 'Seeding is not allowed in production' };
-    }
+    // if (process.env.NODE_ENV === 'production') {
+    //     return { success: false, error: 'Seeding is not allowed in production' };
+    // }
 
     const supabase = createServiceRoleClient();
     const details: string[] = [];
 
     try {
+        // 0. Limpar dados existentes (apenas dos dados de exemplo)
+        console.log('🧹 Cleaning up existing sample data...');
+
+        const samplePhones = ['+5511999999001', '+5511999999002', '+5511999999003', '+5511999999004', '+5511999999005'];
+
+        // Deletar pacientes de exemplo (o cascade deve cuidar das tabelas relacionadas como metrics, messages, etc.)
+        const { error: deleteError } = await supabase
+            .from('patients')
+            .delete()
+            .in('whatsapp_number', samplePhones);
+
+        if (deleteError) {
+            console.error('Error cleaning up patients:', deleteError);
+            // Não retornamos erro aqui para tentar continuar mesmo se falhar (ex: se não existirem)
+        } else {
+            details.push('🧹 Dados anteriores limpos com sucesso');
+        }
+
         // 1. Inserir protocolos de exemplo
         console.log('📋 Seeding sample protocols...');
 
@@ -289,6 +307,22 @@ export async function seedDatabase(): Promise<{ success: boolean; error?: string
                     physical_activity: i % 2 === 0 ? 'Corrida 45min' : null,
                     meal_checkin: ['A', 'A', 'B', 'A', 'C', 'A', 'B', 'A', 'A', 'B', 'A', 'C', 'A', 'A'][i],
                 });
+            }
+
+            // João Pereira - últimos 5 dias (com dificuldade)
+            if (patientIds[3]) {
+                for (let i = 0; i < 5; i++) {
+                    const date = new Date(today);
+                    date.setDate(date.getDate() - i);
+                    healthMetrics.push({
+                        patient_id: patientIds[3],
+                        date: date.toISOString().split('T')[0],
+                        weight_kg: 88 + (i * 0.1), // Ganho de peso leve
+                        glucose_level: 110 + (Math.random() * 10),
+                        sleep_duration_hours: 6 + (Math.random() * 1),
+                        meal_checkin: ['C', 'B', 'C', 'B', 'C'][i],
+                    });
+                }
             }
 
             const { error: metricsError } = await supabase

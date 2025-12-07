@@ -259,7 +259,7 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
                         {conversation.map((msg) => (
                             <div key={msg.id} className={cn("flex items-end gap-2", msg.sender === 'me' ? 'justify-end' : 'justify-start')}>
                                 {msg.sender === 'patient' && <Avatar className="h-8 w-8"><AvatarImage src={patient?.avatar} /><AvatarFallback>{patient?.name[0]}</AvatarFallback></Avatar>}
-                                <div className={cn("max-w-xs md:max-w-md rounded-lg p-3 text-sm", msg.sender === 'me' ? 'bg-primary/80 text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none')}>
+                                <div className={cn("max-w-xs md:max-w-md rounded-2xl p-3 text-sm shadow-sm", msg.sender === 'me' ? 'bg-primary/90 text-primary-foreground rounded-tr-none' : 'bg-muted rounded-tl-none')}>
                                     <p>{msg.text}</p>
                                     <p className="text-xs opacity-70 mt-1 text-right">
                                         {msg.timestamp && !isNaN(new Date(msg.timestamp as string).getTime())
