@@ -253,9 +253,22 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     { href: '/portal/education', label: 'Educação', icon: BookOpen },
   ];
 
-  const menuItems = patient?.status === 'pending'
-    ? allMenuItems.filter(item => item.href === '/portal/welcome')
-    : allMenuItems;
+  const isProfileComplete = !!patient?.height;
+
+  const menuItems = allMenuItems.filter(item => {
+    // Show core items always
+    if (['/portal/welcome', '/portal/profile'].includes(item.href)) return true;
+
+    // Journey is okay too? Let's check if user complained. No.
+    if (item.href === '/portal/journey') return true;
+
+    // Hide Community/Education if profile incomplete
+    if (['/portal/community', '/portal/education'].includes(item.href)) {
+      return isProfileComplete;
+    }
+
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-[#F5F3F0] dark:bg-zinc-950">

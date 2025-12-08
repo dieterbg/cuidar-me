@@ -113,7 +113,7 @@ export default function WelcomePage() {
         {/* BENTO GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[minmax(180px,auto)]">
 
-          {/* MAIN ACTION CARD (Large) */}
+          {/* MAIN ACTION CARD (Large) - Foco do Dia */}
           <Card className="md:col-span-2 lg:col-span-2 row-span-2 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 shadow-md hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
               <Sparkles className="w-48 h-48 text-primary" />
@@ -153,8 +153,6 @@ export default function WelcomePage() {
               )}
             </CardContent>
           </Card>
-
-
 
           {/* QUOTE CARD (Wide) */}
           <Card className="md:col-span-3 lg:col-span-2 bg-secondary/10 border-secondary/20 flex items-center justify-center p-6">
