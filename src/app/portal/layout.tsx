@@ -146,7 +146,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         email: user.email || '',
         fullName: activationName,
         whatsappNumber: activationPhone,
-        status: 'active',
+        status: 'pending',
       });
 
       if (!result.success) {

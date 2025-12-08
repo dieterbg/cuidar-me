@@ -90,9 +90,30 @@ export default function WelcomePage() {
   }
 
   const firstName = patient?.fullName?.split(' ')[0] || 'Visitante';
+  const isPending = patient?.status === 'pending';
   const isProfileComplete = !!patient?.height;
   const level = patient?.gamification?.level || 'Iniciante';
   const points = patient?.gamification?.totalPoints || 0;
+
+  // ETAPA 1: Aguardando liberação pela clínica
+  if (isPending) {
+    return (
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen flex items-center justify-center">
+        <div className="max-w-md text-center space-y-6">
+          <div className="mx-auto w-20 h-20 bg-yellow-100 dark:bg-yellow-900/40 rounded-full flex items-center justify-center">
+            <Sparkles className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Cadastro Pendente</h1>
+          <p className="text-muted-foreground">
+            Seu cadastro foi recebido com sucesso! A clínica entrará em contato ou liberará seu acesso em breve.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Você receberá uma notificação assim que sua conta for ativada. Obrigado pela paciência! 🙏
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen">
@@ -109,6 +130,23 @@ export default function WelcomePage() {
             </p>
           </div>
         </div>
+
+        {/* PENDING REGISTRATION ALERT */}
+        {!isProfileComplete && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/40 rounded-full">
+                <Sparkles className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">Perfil Incompleto</h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                  Sua conta está ativa, mas precisamos dos seus dados de saúde (peso, altura) para liberar todas as funcionalidades.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* BENTO GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[minmax(180px,auto)]">
