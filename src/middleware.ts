@@ -2,6 +2,15 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase-middleware'
 
 export async function middleware(request: NextRequest) {
+    const hostname = request.headers.get('host') || '';
+
+    // 0. Redirect clinicadornelles.com.br root to /clinica landing page
+    if (hostname.includes('clinicadornelles.com.br') && request.nextUrl.pathname === '/') {
+        const clinicaUrl = request.nextUrl.clone();
+        clinicaUrl.pathname = '/clinica';
+        return NextResponse.redirect(clinicaUrl);
+    }
+
     // 1. Update session (refresh tokens if needed)
     const { response, user } = await updateSession(request)
 
