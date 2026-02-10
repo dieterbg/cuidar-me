@@ -228,76 +228,75 @@ export default function RootPage() {
             </div>
 
             {/* Right Side - Auth Forms */}
-            <div className="flex-1 flex items-center justify-center p-4 lg:p-8 bg-white">
-                <Card className="w-full max-w-md border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
-                    <CardHeader className="text-center lg:text-left space-y-1 pb-2">
-                        <div className="lg:hidden flex justify-center mb-6">
-                            <div className="relative h-48 w-full max-w-[20rem]">
-                                <Image
-                                    src="/logo_v2.svg"
-                                    alt="Cuidar.me Logo"
-                                    fill
-                                    className="object-contain"
-                                    priority
-                                />
-                            </div>
-                        </div>
-                        <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo de volta</CardTitle>
-                        <CardDescription>
-                            Acesse sua conta para gerenciar sua saúde ou acompanhar seus pacientes.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs defaultValue="login" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl bg-muted/30 p-1">
-                                <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Entrar</TabsTrigger>
-                                <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Criar Conta</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="login" className="mt-0">
-                                <LoginForm />
-                            </TabsContent>
-
-                            <TabsContent value="register" className="mt-0">
-                                <Tabs defaultValue="patient" className="w-full">
-                                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/30 h-10 rounded-lg p-1">
-                                        <TabsTrigger value="patient" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm">Sou Paciente</TabsTrigger>
-                                        <TabsTrigger value="staff" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm">Sou Profissional</TabsTrigger>
-                                    </TabsList>
-                                    <TabsContent value="staff">
-                                        <RegisterForm userType="staff" />
-                                    </TabsContent>
-                                    <TabsContent value="patient">
-                                        <RegisterForm userType="patient" />
-                                    </TabsContent>
-                                </Tabs>
-                            </TabsContent>
-                        </Tabs>
-                    </CardContent>
-                </Card>
-                <Link
-                    href="/clinica"
-                    className="mt-6 group flex items-center gap-4 p-4 rounded-2xl border border-[#899d5e]/15 bg-[#FAFBF7] hover:bg-[#899d5e]/10 hover:border-[#899d5e]/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#899d5e]/10"
-                >
-                    <Image
-                        src="/logo-clinica.png"
-                        alt="Clínica Dornelles"
-                        width={44}
-                        height={44}
-                        className="rounded-full shadow-sm border-2 border-[#899d5e]/20 group-hover:border-[#899d5e]/40 transition-colors"
-                    />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#2D3B2D] group-hover:text-[#899d5e] transition-colors">
+            <div className="flex-1 flex flex-col bg-white">
+                <div className="flex justify-end p-4 lg:p-6">
+                    <Link
+                        href="/clinica"
+                        className="group flex items-center gap-3 px-4 py-2.5 rounded-full border border-[#899d5e]/20 bg-[#FAFBF7] hover:bg-[#899d5e] hover:border-[#899d5e] transition-all duration-300 hover:shadow-lg hover:shadow-[#899d5e]/20"
+                    >
+                        <Image
+                            src="/logo-clinica.png"
+                            alt="Clínica Dornelles"
+                            width={28}
+                            height={28}
+                            className="rounded-full border border-[#899d5e]/20 group-hover:border-white/40 transition-colors"
+                        />
+                        <span className="text-sm font-medium text-[#2D3B2D] group-hover:text-white transition-colors">
                             Clínica Dornelles
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            Saúde metabólica e emagrecimento individualizado
-                        </p>
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]/50 group-hover:text-[#899d5e] group-hover:translate-x-1 transition-all flex-shrink-0">
-                        <path d="m9 18 6-6-6-6" />
-                    </svg>
-                </Link>
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]/50 group-hover:text-white/70 group-hover:translate-x-0.5 transition-all">
+                            <path d="m9 18 6-6-6-6" />
+                        </svg>
+                    </Link>
+                </div>
+                <div className="flex-1 flex items-center justify-center p-4 lg:p-8 lg:pt-0">
+                    <Card className="w-full max-w-md border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
+                        <CardHeader className="text-center lg:text-left space-y-1 pb-2">
+                            <div className="lg:hidden flex justify-center mb-6">
+                                <div className="relative h-48 w-full max-w-[20rem]">
+                                    <Image
+                                        src="/logo_v2.svg"
+                                        alt="Cuidar.me Logo"
+                                        fill
+                                        className="object-contain"
+                                        priority
+                                    />
+                                </div>
+                            </div>
+                            <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo de volta</CardTitle>
+                            <CardDescription>
+                                Acesse sua conta para gerenciar sua saúde ou acompanhar seus pacientes.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Tabs defaultValue="login" className="w-full">
+                                <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl bg-muted/30 p-1">
+                                    <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Entrar</TabsTrigger>
+                                    <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Criar Conta</TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="login" className="mt-0">
+                                    <LoginForm />
+                                </TabsContent>
+
+                                <TabsContent value="register" className="mt-0">
+                                    <Tabs defaultValue="patient" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/30 h-10 rounded-lg p-1">
+                                            <TabsTrigger value="patient" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm">Sou Paciente</TabsTrigger>
+                                            <TabsTrigger value="staff" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm">Sou Profissional</TabsTrigger>
+                                        </TabsList>
+                                        <TabsContent value="staff">
+                                            <RegisterForm userType="staff" />
+                                        </TabsContent>
+                                        <TabsContent value="patient">
+                                            <RegisterForm userType="patient" />
+                                        </TabsContent>
+                                    </Tabs>
+                                </TabsContent>
+                            </Tabs>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );
