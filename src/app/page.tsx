@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock } from 'lucide-react';
+import { Loader2, Mail, Lock, Building2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const handleAuthError = (error: any, toast: any) => {
     let title = "Erro na autenticação";
@@ -274,6 +275,13 @@ export default function RootPage() {
                         </Tabs>
                     </CardContent>
                 </Card>
+                <Link
+                    href="/clinica"
+                    className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-[#899d5e] transition-colors"
+                >
+                    <Building2 className="h-4 w-4" />
+                    Conheça a Clínica Dornelles
+                </Link>
             </div>
         </div>
     );
