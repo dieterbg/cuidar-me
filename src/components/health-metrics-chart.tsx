@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
 import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ComposedChart, Area } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import type { HealthMetric } from '@/lib/types';
-import { HeartPulse, Weight, Minus } from 'lucide-react';
+import { HeartPulse, Weight, Minus, Activity } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
