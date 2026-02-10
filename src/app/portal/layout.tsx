@@ -17,7 +17,8 @@ import {
   X,
   Trophy,
   Settings,
-  Sparkles
+  Sparkles,
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-client';
@@ -345,10 +346,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </nav>
 
         <div className="p-4 border-t border-border/40 space-y-2">
-          {/* <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl text-muted-foreground hover:text-foreground">
-                <Settings className="h-5 w-5" />
-                Configurações
-            </Button> */}
+          <Link
+            href="/clinica"
+            target="_blank"
+            className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <Building2 className="h-5 w-5" />
+            Nossa Clínica
+          </Link>
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
