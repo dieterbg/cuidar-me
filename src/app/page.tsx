@@ -277,10 +277,26 @@ export default function RootPage() {
                 </Card>
                 <Link
                     href="/clinica"
-                    className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-[#899d5e] transition-colors"
+                    className="mt-6 group flex items-center gap-4 p-4 rounded-2xl border border-[#899d5e]/15 bg-[#FAFBF7] hover:bg-[#899d5e]/10 hover:border-[#899d5e]/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#899d5e]/10"
                 >
-                    <Building2 className="h-4 w-4" />
-                    Conheça a Clínica Dornelles
+                    <Image
+                        src="/logo-clinica.png"
+                        alt="Clínica Dornelles"
+                        width={44}
+                        height={44}
+                        className="rounded-full shadow-sm border-2 border-[#899d5e]/20 group-hover:border-[#899d5e]/40 transition-colors"
+                    />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#2D3B2D] group-hover:text-[#899d5e] transition-colors">
+                            Clínica Dornelles
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Saúde metabólica e emagrecimento individualizado
+                        </p>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]/50 group-hover:text-[#899d5e] group-hover:translate-x-1 transition-all flex-shrink-0">
+                        <path d="m9 18 6-6-6-6" />
+                    </svg>
                 </Link>
             </div>
         </div>
