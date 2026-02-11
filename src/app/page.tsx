@@ -591,6 +591,34 @@ export default function ClinicaPage() {
                 </div>
             </section>
 
+            {/* ─── Trust & Privacy Bar ─── */}
+            <section className="bg-[#FAFBF7] border-y border-[#899d5e]/10">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+                            <div className="flex items-center gap-2.5 text-sm text-[#2D3B2D]/70">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                                Em conformidade com a LGPD
+                            </div>
+                            <div className="flex items-center gap-2.5 text-sm text-[#2D3B2D]/70">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                Dados criptografados
+                            </div>
+                            <div className="flex items-center gap-2.5 text-sm text-[#2D3B2D]/70">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                                WhatsApp apenas com seu consentimento
+                            </div>
+                        </div>
+                        <Link
+                            href="/privacidade"
+                            className="text-sm font-medium text-[#899d5e] hover:text-[#7a8c53] transition-colors underline underline-offset-4"
+                        >
+                            Política de Privacidade →
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
             {/* ─── Footer ─── */}
             <footer className="bg-[#232F23] text-white/50 py-8">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -607,9 +635,15 @@ export default function ClinicaPage() {
                                 Clínica Dornelles
                             </span>
                         </div>
-                        <p className="text-xs">
-                            BW Serviços Médicos LTDA · CNPJ inscrito · Novo Hamburgo, RS
-                        </p>
+                        <div className="flex items-center gap-4">
+                            <Link href="/privacidade" className="text-xs text-white/50 hover:text-white/80 transition-colors underline underline-offset-2">
+                                Política de Privacidade
+                            </Link>
+                            <span className="text-white/20">·</span>
+                            <p className="text-xs">
+                                BW Serviços Médicos LTDA · CNPJ inscrito · Novo Hamburgo, RS
+                            </p>
+                        </div>
                         <p className="text-xs">
                             © {new Date().getFullYear()} Todos os direitos reservados.
                         </p>

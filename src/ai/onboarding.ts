@@ -64,7 +64,9 @@ ${planEmoji} Plano: ${plan === 'vip' ? 'VIP' : plan === 'premium' ? 'Premium' : 
 
 Tudo certo para começarmos?
 
-Responda "Sim" para continuar ou "Ajustar" se precisar alterar algo no cadastro.`;
+Responda "Sim" para continuar ou "Ajustar" se precisar alterar algo no cadastro.
+
+_Para parar de receber mensagens, envie SAIR a qualquer momento._`;
 
         case 'preferences':
             return `Ótimo! Quando prefere receber suas mensagens diárias?

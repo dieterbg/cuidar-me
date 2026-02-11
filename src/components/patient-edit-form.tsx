@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Trash2, Upload } from 'lucide-react';
+import { Loader2, Trash2, Upload, MessageSquare } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { updatePatient, deletePatient as deletePatientAction } from '@/ai/actions/patients';
 import { unassignProtocolFromPatient } from '@/ai/actions/protocols';
@@ -57,6 +58,7 @@ const formSchema = z.object({
     z.number().positive().optional().nullable()
   ),
   medications: z.string().optional().nullable(),
+  whatsappConsent: z.boolean().optional().nullable(),
 });
 
 
@@ -106,7 +108,7 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
           throw new Error(updateResult.error || 'Erro desconhecido ao atualizar paciente.');
         }
 
-        // If patient context and profile is now complete, initiate WhatsApp onboarding
+        // If patient context and profile is now complete AND consent given, initiate WhatsApp onboarding
         if (isPatientContext) {
           const isComplete = !!(
             values.height &&
@@ -116,7 +118,7 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
             values.goal
           );
 
-          if (isComplete) {
+          if (isComplete && values.whatsappConsent) {
             // Call API to initiate onboarding (fire and forget - don't block UI)
             fetch('/api/onboarding/initiate', {
               method: 'POST',
@@ -466,6 +468,55 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                 <p className="text-xs text-muted-foreground">
                   Formatos aceitos: PDF, JPG, PNG. Máx: 10MB.
                 </p>
+              </div>
+            </div>
+
+            {/* WhatsApp Consent */}
+            <div className="space-y-4 pt-4 border-t border-border/50">
+              <div className="rounded-2xl bg-[#899d5e]/5 border border-[#899d5e]/15 p-5 space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-[#899d5e]/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageSquare className="h-5 w-5 text-[#899d5e]" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#2D3B2D]">Comunicação via WhatsApp</h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Ao ativar, você receberá mensagens de acompanhamento do seu protocolo de saúde,
+                      lembretes e dicas personalizadas via WhatsApp. Você pode cancelar a qualquer momento
+                      enviando &quot;SAIR&quot; no WhatsApp.
+                    </p>
+                  </div>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="whatsappConsent"
+                  render={({ field }) => (
+                    <FormItem className="flex items-start gap-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
+                          className="mt-0.5 data-[state=checked]:bg-[#899d5e] data-[state=checked]:border-[#899d5e]"
+                        />
+                      </FormControl>
+                      <div className="leading-none">
+                        <FormLabel className="text-sm font-medium cursor-pointer">
+                          Aceito receber mensagens via WhatsApp
+                        </FormLabel>
+                        <FormDescription className="text-xs mt-1">
+                          Li e concordo com a{' '}
+                          <a
+                            href="/privacidade"
+                            target="_blank"
+                            className="text-[#899d5e] underline hover:text-[#7a8c53]"
+                          >
+                            Política de Privacidade
+                          </a>.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
           </>
