@@ -655,7 +655,7 @@ export default function ClinicaPage() {
                             </Link>
                             <span className="text-white/20">·</span>
                             <p className="text-xs">
-                                BW Serviços Médicos LTDA · CNPJ 00.000.000/0001-00 · Novo Hamburgo, RS
+                                BW Serviços Médicos LTDA · CNPJ 50.429.188/0001-66 · Novo Hamburgo, RS
                             </p>
                         </div>
                         <p className="text-xs">
