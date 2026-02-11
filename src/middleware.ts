@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
     if (isProtectedRoute && !user) {
         // Redirect to login page if trying to access protected route without user
         const redirectUrl = request.nextUrl.clone()
-        redirectUrl.pathname = '/'
+        redirectUrl.pathname = '/paciente'
         // Add a query param to indicate why they were redirected (optional)
         redirectUrl.searchParams.set('redirected', 'true')
         return NextResponse.redirect(redirectUrl)

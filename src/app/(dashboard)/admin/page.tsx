@@ -72,7 +72,7 @@ export default function AdminPage() {
     useEffect(() => {
         if (!authLoading && profile?.role !== 'admin') {
             toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Você não tem permissão para acessar esta página.' });
-            router.push('/');
+            router.push('/paciente');
             return;
         }
 

@@ -45,7 +45,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/');
+      router.push('/paciente');
     }
   }, [user, authLoading, router]);
 
@@ -347,7 +347,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
         <div className="p-4 border-t border-border/40 space-y-2">
           <Link
-            href="/clinica"
+            href="/"
             target="_blank"
             className="flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >

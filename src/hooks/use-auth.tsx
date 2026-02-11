@@ -177,7 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: 'Não foi possível encerrar sua sessão.'
       });
     } else {
-      router.push('/');
+      router.push('/paciente');
     }
   };
 
