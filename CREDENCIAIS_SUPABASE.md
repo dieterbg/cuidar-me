@@ -20,7 +20,7 @@ TWILIO_PHONE_NUMBER=
 # =====================================================
 # CRON JOB
 # =====================================================
-CRON_SECRET=CuidarMeCronSecret123
+CRON_SECRET=seu-cron-secret-aqui
 
 # =====================================================
 # GOOGLE GEMINI (IA)

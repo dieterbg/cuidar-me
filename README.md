@@ -275,7 +275,7 @@ A aplicação usa uma fila para enviar mensagens programadas. Configure um job p
    - **Target:** HTTP
    - **URL:** `https://seu-app.com/api/cron`
    - **Método:** GET
-   - **Header:** `Authorization: Bearer CuidarMeCronSecret123`
+   - **Header:** `Authorization: Bearer seu-cron-secret-aqui`
 4. Salve
 
 ---

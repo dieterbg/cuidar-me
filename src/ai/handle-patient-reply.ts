@@ -14,12 +14,27 @@ import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 export async function handlePatientReply(
     whatsappNumber: string,
     messageText: string,
-    profileName: string
+    profileName: string,
+    messageSid?: string
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = createServiceRoleClient();
 
     try {
-        console.log(`[handlePatientReply] Processing: "${messageText}"`);
+        console.log(`[handlePatientReply] Processing: "${messageText}" (SID: ${messageSid || 'N/A'})`);
+
+        // 0. Idempotency check: se o MessageSid já foi processado, ignorar
+        if (messageSid) {
+            const { data: existingMessage } = await supabase
+                .from('messages')
+                .select('id')
+                .eq('twilio_sid', messageSid)
+                .maybeSingle();
+
+            if (existingMessage) {
+                console.log(`[handlePatientReply] Message already processed (SID: ${messageSid}). Skipping.`);
+                return { success: true };
+            }
+        }
 
         // 1. Buscar paciente (agora APENAS busca, não cria)
         const { findPatientByPhone } = await import('@/services/patient-service');
@@ -30,17 +45,27 @@ export async function handlePatientReply(
             console.log(`[HANDLE-REPLY] Unknown number ${whatsappNumber}. Sending registration link.`);
             await sendWhatsappMessage(
                 whatsappNumber,
-                "Olá! 👋 Para utilizar nossa assistente virtual, você precisa ter um cadastro ativo.\n\nPor favor, cadastre-se gratuitamente em: https://cuidar.me/cadastro"
+                "Olá! 👋 Para utilizar nossa assistente virtual, você precisa ter um cadastro ativo.\n\nPor favor, cadastre-se gratuitamente em: https://clinicadornelles.com.br/cadastro"
             );
             return { success: true }; // Retorna sucesso pois a mensagem foi enviada
         }
 
-        // 2. Salvar mensagem
-        await supabase.from('messages').insert({
-            patient_id: patient.id,
-            sender: 'patient',
-            text: messageText,
-        });
+        // 2. Salvar mensagem (incluindo twilio_sid para idempotência futura)
+        try {
+            await supabase.from('messages').insert({
+                patient_id: patient.id,
+                sender: 'patient',
+                text: messageText,
+                twilio_sid: messageSid,
+            });
+        } catch (insertError: any) {
+            // Se falhar por duplicidade de SID (23505), apenas ignora (idempotência)
+            if (insertError.code === '23505') {
+                console.log(`[handlePatientReply] Duplicate MessageSid detected on insert (SID: ${messageSid}). Skipping.`);
+                return { success: true };
+            }
+            throw insertError;
+        }
 
         await supabase.from('patients').update({
             last_message: messageText,
@@ -166,10 +191,13 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
             await supabase.from('scheduled_messages')
                 .update({ status: 'sent', sent_at: new Date().toISOString() })
                 .eq('id', msg.id);
+
+            // Record in chat history, propagating metadata for context-aware processing
             await supabase.from('messages').insert({
                 patient_id: msg.patient_id,
                 sender: 'system',
                 text: msg.message_content,
+                metadata: msg.metadata || null,
             });
             processed++;
         }

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const body = Object.fromEntries(formData.entries());
 
     // Validate the request is from Twilio before proceeding
-    const isTwilioRequest = validateTwilioWebhook(request, body);
+    const isTwilioRequest = await validateTwilioWebhook(request, body);
     if (!isTwilioRequest) {
       console.warn("Received a request that failed Twilio validation.");
       return new NextResponse('Invalid Twilio Signature', { status: 401 });
@@ -23,14 +23,19 @@ export async function POST(request: NextRequest) {
     const from = body.From as string; // Patient's WhatsApp number (e.g., 'whatsapp:+15551234567')
     const message = body.Body as string; // The message text
     const profileName = body.ProfileName as string; // Patient's WhatsApp profile name
+    const messageSid = body.MessageSid as string; // Twilio's unique message identifier
 
     if (!from || !message) {
       return new NextResponse('Missing required fields: From or Body', { status: 400 });
     }
 
-    // IMPORTANT: Do not await this. Respond to Twilio immediately,
-    // and let the handler process in the background. This prevents timeouts.
-    handlePatientReply(from, message, profileName || 'Novo Contato');
+    // IMPORTANT: In serverless environments (like Vercel), we SHOULD use waitUntil
+    // to ensure the background task completes before the function instance is culled.
+    // Next.js 15 supports request.waitUntil. For Next.js 14, we fallback to plain execution.
+    const backgroundTask = handlePatientReply(from, message, profileName || 'Novo Contato', messageSid);
+    if ('waitUntil' in request && typeof (request as any).waitUntil === 'function') {
+      (request as any).waitUntil(backgroundTask);
+    }
 
     // Respond to Twilio with empty TwiML to confirm receipt and stop further actions.
     const twiml = new twilio.twiml.MessagingResponse();

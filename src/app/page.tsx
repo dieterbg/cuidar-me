@@ -3,24 +3,64 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-    title: 'Clínica Dornelles | Saúde Metabólica e Emagrecimento Individualizado',
+    title: 'Clínica Dornelles | Saúde Metabólica e Emagrecimento em Novo Hamburgo',
     description:
-        'A Clínica Dornelles é referência em saúde metabólica e emagrecimento individualizado em Novo Hamburgo/RS. Dra. Bruna Dornelles e Dr. Lúcio Dornelles oferecem atendimento personalizado com acompanhamento via WhatsApp.',
+        'Especialistas em saúde metabólica e emagrecimento individualizado. Dra. Bruna Dornelles e Dr. Lúcio Dornelles oferecem protocolos personalizados com suporte via WhatsApp em Novo Hamburgo/RS.',
     keywords: [
         'clínica dornelles',
-        'saúde metabólica',
+        'saúde metabólica novo hamburgo',
         'emagrecimento individualizado',
-        'novo hamburgo',
-        'endocrinologia',
-        'nutrição',
-        'acompanhamento whatsapp',
+        'dra bruna dornelles',
+        'dr lúcio dornelles',
+        'endocrinologia novo hamburgo',
+        'tratamento obesidade',
+        'emagrecimento saudável',
     ],
+    authors: [{ name: 'Dra. Bruna Dornelles' }, { name: 'Dr. Lúcio Dornelles' }],
+    creator: 'Clínica Dornelles',
     openGraph: {
         title: 'Clínica Dornelles | Saúde Metabólica e Emagrecimento',
         description:
-            'Referência em saúde metabólica e emagrecimento individualizado em Novo Hamburgo/RS.',
+            'Acompanhamento médico personalizado para emagrecimento sustentável e saúde metabólica em Novo Hamburgo.',
+        url: 'https://clinicadornelles.com.br',
+        siteName: 'Clínica Dornelles',
+        locale: 'pt_BR',
         type: 'website',
     },
+    robots: {
+        index: true,
+        follow: true,
+    },
+};
+
+const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'MedicalBusiness',
+    name: 'Clínica Dornelles',
+    image: 'https://clinicadornelles.com.br/logo-clinica.png',
+    '@id': 'https://clinicadornelles.com.br',
+    url: 'https://clinicadornelles.com.br',
+    telephone: '+5551999999999',
+    address: {
+        '@type': 'PostalAddress',
+        streetAddress: 'Rua Oscar Ludwig, 134',
+        addressLocality: 'Novo Hamburgo',
+        addressRegion: 'RS',
+        postalCode: '93.548-480',
+        addressCountry: 'BR',
+    },
+    geo: {
+        '@type': 'GeoCoordinates',
+        latitude: -29.6844,
+        longitude: -51.1189,
+    },
+    openingHoursSpecification: {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        opens: '08:00',
+        closes: '18:00',
+    },
+    medicalSpecialty: ['Endocrinology', 'WeightManagement'],
 };
 
 function LeafIcon({ className }: { className?: string }) {
@@ -179,6 +219,10 @@ function ClockIcon({ className }: { className?: string }) {
 export default function ClinicaPage() {
     return (
         <div className="min-h-screen bg-[#FAFBF7]">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             {/* ─── Navbar ─── */}
             <nav className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-[#E8E9E4]">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -317,9 +361,9 @@ export default function ClinicaPage() {
             </section>
 
             {/* ─── Services ─── */}
-            <section id="servicos" className="py-20 md:py-28 bg-white">
+            <section id="servicos" className="py-20 md:py-28 bg-white overflow-hidden">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-2xl mx-auto mb-16">
+                    <div className="text-center max-w-2xl mx-auto mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
                         <p className="text-sm font-semibold text-[#899d5e] uppercase tracking-widest mb-3">
                             Nossos Serviços
                         </p>
@@ -369,7 +413,8 @@ export default function ClinicaPage() {
                         ].map((service, i) => (
                             <div
                                 key={i}
-                                className="group relative bg-[#FAFBF7] rounded-2xl p-8 border border-[#E8E9E4] hover:border-[#899d5e]/30 hover:shadow-lg hover:shadow-[#899d5e]/5 transition-all duration-300"
+                                className="group relative bg-[#FAFBF7] rounded-2xl p-8 border border-[#E8E9E4] hover:border-[#899d5e]/30 hover:shadow-lg hover:shadow-[#899d5e]/5 transition-all duration-300 animate-in fade-in zoom-in duration-700 fill-mode-both"
+                                style={{ animationDelay: `${i * 100}ms` }}
                             >
                                 <div className="h-12 w-12 rounded-xl bg-[#899d5e]/10 flex items-center justify-center mb-5 group-hover:bg-[#899d5e]/15 transition-colors">
                                     <service.icon className="h-6 w-6 text-[#899d5e]" />
@@ -389,7 +434,7 @@ export default function ClinicaPage() {
             {/* ─── Team ─── */}
             <section id="equipe" className="py-20 md:py-28 bg-[#FAFBF7]">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-2xl mx-auto mb-16">
+                    <div className="text-center max-w-2xl mx-auto mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
                         <p className="text-sm font-semibold text-[#899d5e] uppercase tracking-widest mb-3">
                             Nossa Equipe
                         </p>
@@ -417,7 +462,8 @@ export default function ClinicaPage() {
                         ].map((doctor, i) => (
                             <div
                                 key={i}
-                                className="bg-white rounded-2xl p-8 border border-[#E8E9E4] shadow-sm hover:shadow-lg hover:shadow-[#899d5e]/5 transition-all duration-300"
+                                className="bg-white rounded-2xl p-8 border border-[#E8E9E4] shadow-sm hover:shadow-lg hover:shadow-[#899d5e]/5 transition-all duration-300 animate-in fade-in slide-in-from-right-8 duration-700 fill-mode-both"
+                                style={{ animationDelay: `${i * 200}ms` }}
                             >
                                 <div className="flex items-start gap-5">
                                     <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[#899d5e] to-[#a8b87a] flex items-center justify-center flex-shrink-0">
@@ -442,6 +488,7 @@ export default function ClinicaPage() {
                     </div>
                 </div>
             </section>
+
 
             {/* ─── About ─── */}
             <section id="sobre" className="py-20 md:py-28 bg-white">

@@ -32,23 +32,31 @@ export async function handleProtocolGamification(
     // 1. Buscar a ÚLTIMA mensagem enviada pelo sistema para este paciente
     const { data: lastSystemMessages } = await supabase
         .from('messages')
-        .select('text')
+        .select('text, metadata')
         .eq('patient_id', patient.id)
         .eq('sender', 'system')
         .order('created_at', { ascending: false })
         .limit(1);
 
-    const lastSystemMessageText = lastSystemMessages?.[0]?.text || '';
+    const lastMsg = lastSystemMessages?.[0];
+    const lastSystemMessageText = lastMsg?.text || '';
+    const lastMsgMetadata = lastMsg?.metadata || null;
 
-    // 2. Filtrar apenas o passo do protocolo que corresponde à última mensagem
-    // Isso garante que a resposta do usuário seja vinculada APENAS ao contexto atual
-    const activeProtocolStep = allMessages.find(step =>
-        lastSystemMessageText.includes(step.message) ||
-        (step.title && lastSystemMessageText.includes(step.title))
-    );
+    // 2. Filtrar o passo do protocolo que corresponde ao contexto atual
+    // Prioridade 1: Metadados estruturados (preciso)
+    // Prioridade 2: Match de texto (fallback fuzzy)
+    const activeProtocolStep = allMessages.find(step => {
+        // Se temos metadados e o título/perspective batem, é o match perfeito
+        if (lastMsgMetadata?.isGamification && lastMsgMetadata.checkinTitle === step.title) {
+            return true;
+        }
+        // Fallback: fuzzy text match
+        return lastSystemMessageText.includes(step.message) ||
+            (step.title && lastSystemMessageText.includes(step.title));
+    });
 
     if (!activeProtocolStep) {
-        console.log('[PROTOCOL-GAMIFICATION] No active protocol step found matching last message.');
+        console.log('[PROTOCOL-GAMIFICATION] No active protocol step found matching context.');
         return false;
     }
 
