@@ -184,8 +184,21 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
 
     if (!pendingMessages) return { success: true, processed: 0 };
 
+    // Padrões de números de teste/seed que nunca devem ser enviados em produção
+    const TEST_PHONE_PATTERNS = ['999999000', '999990000', '999990001', '999990002', '999990003'];
+
     let processed = 0;
     for (const msg of pendingMessages) {
+        // Proteção: pular números de teste para evitar cobranças desnecessárias no Twilio
+        const isTestNumber = TEST_PHONE_PATTERNS.some(pattern => msg.patient_whatsapp_number.includes(pattern));
+        if (isTestNumber) {
+            console.warn(`[QUEUE] Skipping test number: ${msg.patient_whatsapp_number}`);
+            await supabase.from('scheduled_messages')
+                .update({ status: 'error', error_info: 'Test/seed phone number — skipped in production' })
+                .eq('id', msg.id);
+            continue;
+        }
+
         const sent = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content);
         if (sent) {
             await supabase.from('scheduled_messages')
