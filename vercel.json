@@ -2,15 +2,7 @@
     "crons": [
         {
             "path": "/api/cron/schedule-protocol-messages",
-            "schedule": "0 9 * * *"
-        },
-        {
-            "path": "/api/cron/process-message-queue",
-            "schedule": "*/30 * * * *"
-        },
-        {
-            "path": "/api/cron/send-daily-checkins",
-            "schedule": "0 11,17,22 * * *"
+            "schedule": "0 6 * * *"
         }
     ]
 }
