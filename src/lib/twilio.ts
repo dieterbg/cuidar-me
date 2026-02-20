@@ -43,11 +43,11 @@ export async function sendWhatsappMessage(to: string, body: string): Promise<boo
             body: body,
         });
 
-        console.log(`[Twilio] Mensagem para ${to} enviada com sucesso! SID: ${message.sid}, Status: ${message.status}`);
+        console.log(`[Twilio] Mensagem para ...${to.slice(-4)} enviada com sucesso! SID: ${message.sid}, Status: ${message.status}`);
 
         return true;
     } catch (error: any) {
-        console.error(`[Twilio] ERRO AO ENVIAR para ${to}:`, error.message);
+        console.error(`[Twilio] ERRO AO ENVIAR para ...${to.slice(-4)}:`, error.message);
         return false;
     }
 }

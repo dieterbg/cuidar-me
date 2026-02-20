@@ -33,8 +33,23 @@ export async function awardNewBadges(userId: string): Promise<{
         const patient = patientData as any;
         const currentBadges: string[] = patient.gamification?.badges || [];
 
-        // 2. Coletar estatísticas (Stats)
-        // Algumas estatísticas precisam de queries adicionais
+        // 2. Coletar estatísticas (Stats) — queries reais do banco
+        const patientId = patient.id;
+
+        // Contadores de check-ins por perspectiva
+        const [hydrationResult, mealsResult, activityResult, wellbeingResult, commentsResult] = await Promise.all([
+            supabase.from('daily_checkins').select('*', { count: 'exact', head: true })
+                .eq('patient_id', patientId).not('hydration', 'is', null),
+            supabase.from('daily_checkins').select('*', { count: 'exact', head: true })
+                .eq('patient_id', patientId).not('breakfast', 'is', null),
+            supabase.from('daily_checkins').select('*', { count: 'exact', head: true })
+                .eq('patient_id', patientId).not('activity', 'is', null),
+            supabase.from('daily_checkins').select('*', { count: 'exact', head: true })
+                .eq('patient_id', patientId).not('wellbeing', 'is', null),
+            supabase.from('community_comments').select('*', { count: 'exact', head: true })
+                .eq('author_id', patientId),
+        ]);
+
         const stats: PatientStats = {
             streak: {
                 current: patient.gamification?.streak?.currentStreak || 0,
@@ -44,23 +59,19 @@ export async function awardNewBadges(userId: string): Promise<{
                 total: patient.gamification?.totalPoints || 0
             },
             level: {
-                // Migração suave: se for string antiga, calcular baseado em pontos
                 current: typeof patient.gamification?.level === 'number'
                     ? patient.gamification.level
                     : calculateLevel(patient.gamification?.totalPoints || 0)
             },
             perspectives: {
-                // TODO: Implementar contagem real baseada em logs de atividades
-                // Por enquanto, usamos valores estimados ou armazenados se existirem
-                alimentacao: { checkins: 0, perfectCheckins: 0 },
-                movimento: { checkins: 0, perfectCheckins: 0 },
-                hidratacao: { checkins: 0, perfectCheckins: 0 },
+                hidratacao: { checkins: hydrationResult.count || 0, perfectCheckins: 0 },
+                alimentacao: { checkins: mealsResult.count || 0, perfectCheckins: 0 },
+                movimento: { checkins: activityResult.count || 0, perfectCheckins: 0 },
                 disciplina: { checkins: 0, perfectCheckins: 0 },
-                bemEstar: { checkins: 0, perfectCheckins: 0 }
+                bemEstar: { checkins: wellbeingResult.count || 0, perfectCheckins: 0 },
             },
             community: {
-                // TODO: Implementar queries de count na tabela community
-                comments: 0,
+                comments: commentsResult.count || 0,
                 reactions: 0,
                 posts: 0
             },

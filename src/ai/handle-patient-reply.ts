@@ -20,7 +20,7 @@ export async function handlePatientReply(
     const supabase = createServiceRoleClient();
 
     try {
-        console.log(`[handlePatientReply] Processing: "${messageText}" (SID: ${messageSid || 'N/A'})`);
+        console.log(`[handlePatientReply] Processing msg (len: ${messageText.length}, from: ...${whatsappNumber.slice(-4)}, SID: ${messageSid || 'N/A'})`);
 
         // 0. Idempotency check: se o MessageSid já foi processado, ignorar
         if (messageSid) {
@@ -42,12 +42,46 @@ export async function handlePatientReply(
 
         // Se não encontrou paciente, envia mensagem de cadastro e encerra
         if (!patient) {
-            console.log(`[HANDLE-REPLY] Unknown number ${whatsappNumber}. Sending registration link.`);
+            console.log(`[HANDLE-REPLY] Unknown number ...${whatsappNumber.slice(-4)}. Sending registration link.`);
             await sendWhatsappMessage(
                 whatsappNumber,
                 "Olá! 👋 Para utilizar nossa assistente virtual, você precisa ter um cadastro ativo.\n\nPor favor, cadastre-se gratuitamente em: https://clinicadornelles.com.br/cadastro"
             );
-            return { success: true }; // Retorna sucesso pois a mensagem foi enviada
+            return { success: true };
+        }
+
+        // =====================================================
+        // 🛑 RATE LIMITING POR PLANO (C4)
+        // Protege contra abuso e controla custos Gemini/Twilio
+        // =====================================================
+        const DAILY_LIMITS: Record<string, number> = {
+            freemium: 5,
+            premium: 30,
+            vip: Infinity,
+        };
+
+        const patientPlan = (patient as any).subscription?.plan || 'freemium';
+        const dailyLimit = DAILY_LIMITS[patientPlan] ?? DAILY_LIMITS.freemium;
+
+        if (dailyLimit !== Infinity) {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+
+            const { count: todayMsgCount } = await supabase
+                .from('messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('patient_id', patient.id)
+                .eq('sender', 'patient')
+                .gte('created_at', todayStart.toISOString());
+
+            if ((todayMsgCount ?? 0) >= dailyLimit) {
+                console.log(`[RATE LIMIT] Patient ${patient.id} (${patientPlan}) hit daily limit of ${dailyLimit}`);
+                const limitMsg = patientPlan === 'freemium'
+                    ? "Você atingiu o limite diário de mensagens do plano gratuito. 💡 Conheça nossos planos Premium para acompanhamento ilimitado! Acesse: https://clinicadornelles.com.br/portal/journey"
+                    : "Você atingiu o limite diário de mensagens. Tente novamente amanhã! 😊";
+                await sendWhatsappMessage(whatsappNumber, limitMsg);
+                return { success: true };
+            }
         }
 
         // 2. Salvar mensagem (incluindo twilio_sid para idempotência futura)
@@ -107,9 +141,32 @@ export async function handlePatientReply(
         const hasActiveCheckin = !!recentProtocolMessage;
         const checkinTitle = recentProtocolMessage?.text || undefined;
 
-        console.log(`[CheckIn] Active: ${hasActiveCheckin}, Title: ${checkinTitle?.substring(0, 50)}...`);
+        console.log(`[CheckIn] Active: ${hasActiveCheckin}, patientId: ${patient.id}`);
 
-        // 4. CLASSIFICAR INTENÇÃO usando IA
+        // =====================================================
+        // 🚨 GATE DE EMERGÊNCIA POR KEYWORDS (antes da IA)
+        // Detecção determinística de termos críticos — não depende da IA
+        // =====================================================
+        const EMERGENCY_PATTERNS = [
+            /dor.{0,15}(peito|braço|cabeça\s+forte|torax)/i,
+            /desmai|desfale|apag|perd.{0,10}(consciência|sentidos)/i,
+            /suicid|me\s+mat|não\s+aguento\s+mais|não\s+vejo\s+saída|quero\s+sumir/i,
+            /não\s+consigo\s+respir|falta\s+de\s+ar|sufoc/i,
+            /reação.{0,15}(medicamento|alergi|remédio)/i,
+            /visão\s+(escurec|embara)|quase\s+desmaiei/i,
+            /tremed?eira|suando\s+frio|convuls/i,
+            /inchaço.{0,15}(língua|garganta|rosto)/i,
+        ];
+
+        const isEmergencyByKeyword = EMERGENCY_PATTERNS.some(p => p.test(messageText));
+
+        if (isEmergencyByKeyword) {
+            console.log(`[EMERGENCY GATE] Keyword match detected for patient ${patient.id}`);
+            const { handleEmergency } = await import('./handlers/emergency-handler');
+            return await handleEmergency(patient, messageText, whatsappNumber, supabase);
+        }
+
+        // 4. CLASSIFICAR INTENÇÃO usando IA (fallback — emergências já foram tratadas acima)
         const { classifyMessageIntent, MessageIntent } = await import('./message-intent-classifier');
 
         const classification = await classifyMessageIntent(messageText, {

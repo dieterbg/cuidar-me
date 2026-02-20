@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("Error processing Twilio webhook:", error);
-    return new NextResponse(`Webhook Error: ${error.message}`, { status: 500 });
+    console.error("[Error processing Twilio webhook]", error);
+    return new NextResponse('Webhook Error', { status: 500 });
   }
 }

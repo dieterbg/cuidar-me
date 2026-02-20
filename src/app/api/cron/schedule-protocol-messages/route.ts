@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scheduleProtocolMessages } from '@/cron/send-protocol-messages';
+import { withRetry } from '@/lib/error-handler';
 
 /**
  * API Route para cron job de agendamento de mensagens de protocolo
@@ -37,8 +38,16 @@ async function handleCronRequest(request: NextRequest) {
 
         console.log('[CRON API] Starting protocol message scheduling...');
 
-        // Executar agendamento de mensagens
-        const result = await scheduleProtocolMessages();
+        // Executar agendamento com retry automático (3 tentativas, backoff exponencial)
+        const result = await withRetry(
+            () => scheduleProtocolMessages(),
+            {
+                maxRetries: 3,
+                initialDelay: 3000,
+                onRetry: (attempt, error) =>
+                    console.warn(`[CRON API] Retry #${attempt}: ${error.message}`),
+            }
+        );
 
         if (result.success) {
             console.log('[CRON API] Success:', result);
