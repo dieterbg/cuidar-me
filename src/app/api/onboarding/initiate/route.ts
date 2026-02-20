@@ -92,17 +92,12 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const twilioResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                to: patient.whatsapp_number,
-                message: welcomeMessage,
-            }),
-        });
+        // 4. Enviar via WhatsApp (Twilio direto)
+        const { sendWhatsappMessage } = await import('@/lib/twilio');
+        const sent = await sendWhatsappMessage(patient.whatsapp_number, welcomeMessage);
 
-        if (!twilioResponse.ok) {
-            console.error('[POST /api/onboarding/initiate] Twilio error');
+        if (!sent) {
+            console.error('[POST /api/onboarding/initiate] Twilio send failed');
             return NextResponse.json(
                 { success: false, error: 'Failed to send WhatsApp message' },
                 { status: 500 }

@@ -130,7 +130,7 @@ export function processStepResponse(
                     normalizedResponse.includes('mudar')) {
                     return {
                         data,
-                        error: 'Para ajustar seus dados, acesse: https://cuidar.me/profile\n\nDepois volte aqui e me mande "Sim" para continuar!'
+                        error: 'Para ajustar seus dados, acesse: https://clinicadornelles.com.br/portal/profile\n\nDepois volte aqui e me mande "Sim" para continuar!'
                     };
                 } else {
                     return {

@@ -27,7 +27,7 @@ Estou aqui para te ajudar a ter uma vida mais saudável. Como você está no pla
 ✅ Acompanhamento de peso
 
 ⚠️ **Dica Importante:** Para eu conseguir te ajudar melhor, preciso que você complete seu perfil no nosso site:
-https://cuidar.me/portal/profile
+https://clinicadornelles.com.br/portal/profile
 
 Quer conhecer nossos planos Premium com nutricionista e protocolos personalizados? Digite *PLANOS* a qualquer momento.`;
         }
@@ -50,7 +50,7 @@ Sou sua assistente de saúde pessoal e vou te acompanhar no seu protocolo **${ac
 Vou te mandar lembretes, dicas e tarefas diárias para garantir que você alcance seus objetivos.
 
 Para começarmos bem, certifique-se de que seu perfil está completo no site:
-https://cuidar.me/portal/profile
+https://clinicadornelles.com.br/portal/profile
 
 Vamos juntos nessa jornada! 💪`;
             } else {
@@ -59,7 +59,7 @@ Vamos juntos nessa jornada! 💪`;
 Sou sua assistente de saúde pessoal. Vi que você ainda não escolheu seu protocolo de saúde.
 
 Por favor, acesse o portal para selecionar o melhor programa para você:
-https://cuidar.me/portal/journey
+https://clinicadornelles.com.br/portal/journey
 
 Assim que você escolher, começaremos nosso acompanhamento diário! 😉`;
             }
