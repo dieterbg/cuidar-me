@@ -249,7 +249,7 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
         // Proteção: pular números de teste para evitar cobranças desnecessárias no Twilio
         const isTestNumber = TEST_PHONE_PATTERNS.some(pattern => msg.patient_whatsapp_number.includes(pattern));
         if (isTestNumber) {
-            console.warn(`[QUEUE] Skipping test number: ${msg.patient_whatsapp_number}`);
+            console.warn(`[QUEUE] Skipping test number ...${msg.patient_whatsapp_number.slice(-4)}`);
             await supabase.from('scheduled_messages')
                 .update({ status: 'error', error_info: 'Test/seed phone number — skipped in production' })
                 .eq('id', msg.id);
@@ -346,6 +346,14 @@ export async function processMissedCheckins(): Promise<{
             if (patientResponse) continue;
 
             // 4. Paciente não respondeu! Enviar lembrete
+            // Proteção: pular números de teste/seed
+            const TEST_PHONE_PATTERNS = ['999999000', '999990000', '999990001', '999990002', '999990003'];
+            const isTestNumber = TEST_PHONE_PATTERNS.some(p => protocol.patient.whatsapp_number.includes(p));
+            if (isTestNumber) {
+                console.warn(`[MISSED CHECKINS] Skipping test number ...${protocol.patient.whatsapp_number.slice(-4)}`);
+                continue;
+            }
+
             const reminderMessage = `👋 Olá ${protocol.patient.full_name}! 
 
 Percebi que você ainda não respondeu ao check-in de hoje. 
