@@ -32,7 +32,7 @@ import { Label } from '@/components/ui/label';
 import { getLevelName } from '@/lib/level-system';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, profile, signOut, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -46,8 +46,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/paciente');
+      return;
     }
-  }, [user, authLoading, router]);
+
+    // Proteção: Se o usuário logado NÃO for um paciente, tire ele do portal
+    if (!authLoading && profile && profile.role !== 'paciente') {
+      router.replace('/dashboard');
+    }
+  }, [user, profile, authLoading, router]);
 
   useEffect(() => {
     if (user) {
@@ -186,7 +192,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }
 
   // Se o usuário for um paciente, mas o documento dele ainda não existe, mostre a tela de criação.
-  if (!patient) {
+  // Somente mostramos isso para quem tem a role 'paciente' ou se for um novo cadastro ainda não classificado
+  if (!patient && (!profile || profile.role === 'paciente')) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center border-none shadow-xl bg-card/50 backdrop-blur-md">

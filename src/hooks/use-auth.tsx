@@ -162,8 +162,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     // Redirecionar usando window.location para garantir que funciona
+    // Enviamos para /dashboard que é o nosso roteador inteligente de roles
     setTimeout(() => {
-      window.location.href = '/portal/welcome';
+      window.location.href = '/dashboard';
     }, 800);
   };
 
