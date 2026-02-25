@@ -186,14 +186,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     }
   };
 
-
-  if (authLoading || isStatusLoading) {
+  // Se estiver redirecionando ou carregando, não renderize nada que dependa de 'patient'
+  if (authLoading || isStatusLoading || (profile && profile.role !== 'paciente')) {
     return <div className="flex h-screen items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   }
 
   // Se o usuário for um paciente, mas o documento dele ainda não existe, mostre a tela de criação.
   // Somente mostramos isso para quem tem a role 'paciente' ou se for um novo cadastro ainda não classificado
-  if (!patient && (!profile || profile.role === 'paciente')) {
+  if (!patient) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center border-none shadow-xl bg-card/50 backdrop-blur-md">
@@ -315,14 +315,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 mb-6">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                <AvatarImage src={patient.avatar} />
+                <AvatarImage src={patient?.avatar} />
                 <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                  {(patient.fullName || user?.user_metadata?.full_name || user?.email || 'P').charAt(0).toUpperCase()}
+                  {(patient?.fullName || user?.user_metadata?.full_name || user?.email || 'P').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="overflow-hidden">
                 <p className="text-sm font-bold truncate">
-                  {(patient.fullName || user?.user_metadata?.full_name || 'Paciente').split(' ')[0]}
+                  {(patient?.fullName || user?.user_metadata?.full_name || 'Paciente').split(' ')[0]}
                 </p>
               </div>
             </div>
