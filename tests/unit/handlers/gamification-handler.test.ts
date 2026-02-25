@@ -12,6 +12,7 @@ vi.mock('@/lib/data', () => ({
         messages: [{
             day: 1,
             title: 'Beber Água',
+            message: 'Você bebeu água hoje?',
             gamification: {
                 points: 10,
                 perspectives: {
@@ -36,11 +37,27 @@ vi.mock('@/ai/actions/gamification', () => ({
 }));
 
 describe('GamificationHandler', () => {
-    const mockSupabase = {
-        from: vi.fn(() => ({
-            insert: vi.fn().mockResolvedValue({}),
-        })),
-    } as any;
+    // Create a fully chainable Supabase mock
+    const createMockSupabase = () => {
+        const chain: any = {};
+        const methods = ['from', 'select', 'insert', 'update', 'eq', 'order', 'limit'];
+        for (const method of methods) {
+            chain[method] = vi.fn(() => chain);
+        }
+        // Default terminal operations
+        chain.single = vi.fn(async () => ({ data: null }));
+        chain.maybeSingle = vi.fn(async () => ({ data: null }));
+
+        // Make the chain itself thenable
+        chain.then = (resolve: any) => resolve({
+            data: [{
+                text: 'Você bebeu água hoje?',
+                metadata: { isGamification: true, checkinTitle: 'Beber Água' }
+            }]
+        });
+
+        return chain;
+    };
 
     const mockPatient = { id: '123', user_id: 'u1', whatsapp_number: '5511999999999' };
     const mockProtocol = { protocol: { id: 'p1' }, current_day: 1 };
@@ -50,6 +67,8 @@ describe('GamificationHandler', () => {
     });
 
     it('should process valid gamification response', async () => {
+        const mockSupabase = createMockSupabase();
+
         const result = await handleProtocolGamification(
             mockPatient,
             mockProtocol,
@@ -59,11 +78,42 @@ describe('GamificationHandler', () => {
         );
 
         expect(result).toBe(true);
-        // Should send confirmation message
         const { sendWhatsappMessage } = await import('@/lib/twilio');
         expect(sendWhatsappMessage).toHaveBeenCalledWith('5511999999999', 'Ganhou 10 pontos!');
-
-        // Should save system message
         expect(mockSupabase.from).toHaveBeenCalledWith('messages');
+    });
+
+    it('should ignore non-gamification response', async () => {
+        const { isGamificationCheckin } = await import('@/ai/protocol-response-processor');
+        (isGamificationCheckin as any).mockReturnValueOnce(false);
+
+        const mockSupabase = createMockSupabase();
+
+        const result = await handleProtocolGamification(
+            mockPatient,
+            mockProtocol,
+            'algum texto',
+            '5511999999999',
+            mockSupabase
+        );
+
+        expect(result).toBe(false);
+    });
+
+    it('should return false if no protocol step matches context', async () => {
+        const mockSupabase = createMockSupabase();
+        mockSupabase.then = (resolve: any) => resolve({
+            data: [{ text: 'Outra coisa', metadata: {} }]
+        });
+
+        const result = await handleProtocolGamification(
+            mockPatient,
+            mockProtocol,
+            'Sim',
+            '5511999999999',
+            mockSupabase
+        );
+
+        expect(result).toBe(false);
     });
 });

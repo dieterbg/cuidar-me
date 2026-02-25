@@ -22,7 +22,7 @@ describe('WhatsApp Webhook API', () => {
 
     it('should return 401 if Twilio validation fails', async () => {
         // Setup mock to fail validation
-        (validateTwilioWebhook as any).mockReturnValue(false);
+        (validateTwilioWebhook as any).mockResolvedValue(false);
 
         const formData = new FormData();
         formData.append('From', 'whatsapp:+1234567890');
@@ -42,7 +42,7 @@ describe('WhatsApp Webhook API', () => {
 
     it('should return 400 if required fields are missing', async () => {
         // Setup mock to pass validation
-        (validateTwilioWebhook as any).mockReturnValue(true);
+        (validateTwilioWebhook as any).mockResolvedValue(true);
 
         const formData = new FormData();
         // Missing 'Body'
@@ -62,12 +62,13 @@ describe('WhatsApp Webhook API', () => {
 
     it('should process valid request and return TwiML', async () => {
         // Setup mock to pass validation
-        (validateTwilioWebhook as any).mockReturnValue(true);
+        (validateTwilioWebhook as any).mockResolvedValue(true);
 
         const formData = new FormData();
         formData.append('From', 'whatsapp:+1234567890');
         formData.append('Body', 'Hello World');
         formData.append('ProfileName', 'John Doe');
+        formData.append('MessageSid', 'SM123');
 
         const req = new NextRequest('http://localhost/api/whatsapp', {
             method: 'POST',
@@ -83,12 +84,13 @@ describe('WhatsApp Webhook API', () => {
         expect(handlePatientReply).toHaveBeenCalledWith(
             'whatsapp:+1234567890',
             'Hello World',
-            'John Doe'
+            'John Doe',
+            'SM123'
         );
     });
 
     it('should use default profile name if missing', async () => {
-        (validateTwilioWebhook as any).mockReturnValue(true);
+        (validateTwilioWebhook as any).mockResolvedValue(true);
 
         const formData = new FormData();
         formData.append('From', 'whatsapp:+1234567890');
@@ -105,7 +107,8 @@ describe('WhatsApp Webhook API', () => {
         expect(handlePatientReply).toHaveBeenCalledWith(
             'whatsapp:+1234567890',
             'Hello',
-            'Novo Contato' // Default value
+            'Novo Contato', // Default value
+            undefined // No MessageSid provided
         );
     });
 });

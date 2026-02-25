@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkBadgeCriteria, checkBadgeUnlocks, type PatientStats } from '@/lib/badge-unlock-logic';
+import { checkBadgeCriteria, checkBadgeUnlocks, extractPatientStats, type PatientStats } from '@/lib/badge-unlock-logic';
 import { BADGE_CATALOG } from '@/lib/badge-catalog';
 
 /**
@@ -90,6 +90,71 @@ describe('Badge System', () => {
             expect(newBadges).toContain('streak_7'); // 10 >= 7
             expect(newBadges).toContain('points_500'); // 750 >= 500
             expect(newBadges).toContain('hydration_master'); // 40 >= 30
+        });
+    });
+
+    // =================================================================
+    // BDG-08/09: extractPatientStats
+    // =================================================================
+    describe('extractPatientStats', () => {
+        it('BDG-08: extrai stats de um Patient completo', () => {
+            const patient = {
+                gamification: {
+                    totalPoints: 500,
+                    level: '5',
+                    badges: [],
+                    streak: {
+                        currentStreak: 7,
+                        longestStreak: 15,
+                    },
+                    weeklyProgress: {},
+                },
+            } as any;
+
+            const stats = extractPatientStats(patient);
+
+            expect(stats.streak.current).toBe(7);
+            expect(stats.streak.longest).toBe(15);
+            expect(stats.points.total).toBe(500);
+            expect(stats.level.current).toBe(5);
+            expect(stats.perspectives.alimentacao).toEqual({ checkins: 0, perfectCheckins: 0 });
+        });
+
+        it('BDG-09: lida com Patient sem gamification', () => {
+            const patient = {} as any;
+            const stats = extractPatientStats(patient);
+
+            expect(stats.streak.current).toBe(0);
+            expect(stats.streak.longest).toBe(0);
+            expect(stats.points.total).toBe(0);
+            expect(stats.level.current).toBe(1); // Default 'Iniciante' → 1
+        });
+    });
+
+    // =================================================================
+    // BDG-10/11: checkBadgeCriteria special & level types
+    // =================================================================
+    describe('checkBadgeCriteria — special & level', () => {
+        it('BDG-10: desbloqueia badge special (perfectWeeks)', () => {
+            const specialBadge = BADGE_CATALOG.find(b => b.criteria.type === 'special' && b.criteria.requirement === 'perfect_4_weeks');
+            if (specialBadge) {
+                const statsWithPerfectWeeks = { ...mockStats, special: { perfectWeeks: 4, weightGoalReached: false } };
+                expect(checkBadgeCriteria(specialBadge, statsWithPerfectWeeks)).toBe(true);
+
+                const statsWithout = { ...mockStats, special: { perfectWeeks: 2, weightGoalReached: false } };
+                expect(checkBadgeCriteria(specialBadge, statsWithout)).toBe(false);
+            }
+        });
+
+        it('BDG-11: desbloqueia badge de level (nível mínimo)', () => {
+            const levelBadge = BADGE_CATALOG.find(b => b.criteria.type === 'level');
+            if (levelBadge) {
+                const highLevelStats = { ...mockStats, level: { current: 20 } };
+                expect(checkBadgeCriteria(levelBadge, highLevelStats)).toBe(true);
+
+                const lowLevelStats = { ...mockStats, level: { current: 1 } };
+                expect(checkBadgeCriteria(levelBadge, lowLevelStats)).toBe(false);
+            }
         });
     });
 });

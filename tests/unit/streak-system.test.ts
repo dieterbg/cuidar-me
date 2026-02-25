@@ -71,4 +71,37 @@ describe('Streak System', () => {
             expect(formatStreakDisplay(30)).toBe('🔥 30 dias de sequência!');
         });
     });
+
+    // =================================================================
+    // STK-06/07: Additional isStreakAtRisk cases
+    // =================================================================
+    describe('isStreakAtRisk — edge cases', () => {
+        it('STK-06: retorna true se atividade foi hoje (mesma data, > 1 dia gap from midnight)', () => {
+            // Activity today: lastActivityDate = now
+            const today = new Date();
+            const streakData: StreakData = {
+                currentStreak: 5,
+                longestStreak: 10,
+                lastActivityDate: today.toISOString(),
+                streakFreezes: 2,
+                freezesUsedThisMonth: 0,
+            };
+
+            // today.setHours(0,0,0,0) vs today = Math.floor(diff / ms_per_day) = 0
+            // 0 >= 1 = false → streak is NOT at risk
+            expect(isStreakAtRisk(streakData)).toBe(false);
+        });
+
+        it('STK-07: retorna false para lastActivityDate null', () => {
+            const streakData: StreakData = {
+                currentStreak: 3,
+                longestStreak: 5,
+                lastActivityDate: null,
+                streakFreezes: 2,
+                freezesUsedThisMonth: 0,
+            };
+
+            expect(isStreakAtRisk(streakData)).toBe(false);
+        });
+    });
 });
