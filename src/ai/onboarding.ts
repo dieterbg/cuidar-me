@@ -70,8 +70,19 @@ export function getStepMessage(
             welcomeMsg += `${planEmoji} Plano: ${planName}\n\n`;
 
             if (plan === 'freemium') {
-                welcomeMsg += `Como você está no plano **Gratuito**, você receberá suas dicas e lembretes de saúde sempre pela manhã (8h). 🌅\n\n`;
-                welcomeMsg += `_Nota: No plano gratuito, o chat com IA não está habilitado para dúvidas personalizadas._\n\n`;
+                welcomeMsg += `Como você está no plano **Gratuito**, você receberá uma dica de saúde todo dia pela manhã (8h). 🌅\n\n`;
+                welcomeMsg += `_Quer acompanhamento completo com IA e check-ins diários? Conheça o Plano Premium!_\n\n`;
+            } else if (plan === 'premium') {
+                welcomeMsg += `No seu plano **Premium**, você terá:\n`;
+                welcomeMsg += `🌅 Dicas personalizadas pela manhã\n`;
+                welcomeMsg += `🌙 Check-in consolidado à noite (20h)\n`;
+                welcomeMsg += `💬 Assistente de saúde com IA 24h\n`;
+                welcomeMsg += `🎮 Gamificação e protocolos personalizados\n\n`;
+            } else {
+                welcomeMsg += `No seu plano **VIP**, você terá acesso total:\n`;
+                welcomeMsg += `💬 Assistente IA ilimitado 24h\n`;
+                welcomeMsg += `⭐ Escalação prioritária para equipe de saúde\n`;
+                welcomeMsg += `🎯 Protocolos de elite bio-individualizados\n\n`;
             }
 
             welcomeMsg += `Tudo certo para começarmos?\n\n`;
@@ -90,26 +101,49 @@ C) 🌙 Noite (20h)
 Responda A, B ou C`;
 
         case 'complete':
+            // =====================================================
+            // Mensagem de conclusão diferenciada por plano
+            // =====================================================
+            if (plan === 'freemium') {
+                return `Perfeito! 🌱
+
+A partir de amanhã às 8h você receberá sua **Dica de Saúde** diária. ☀️
+
+É rápido, prático e gratuito — uma dica por dia para cuidar melhor de você!
+
+💎 _Quer ir além? No Plano Premium você tem check-in diário, assistente com IA 24h e gamificação completa. Fale com a clínica para saber mais!_
+
+Bem-vindo ao Cuidar.me! 🚀`;
+            }
+
             const timeEmoji = data.preferredTime === 'morning' ? '🌅' :
                 data.preferredTime === 'afternoon' ? '🌞' : '🌙';
             const timeText = data.preferredTime === 'morning' ? '8h' :
                 data.preferredTime === 'afternoon' ? '14h' : '20h';
 
+            if (plan === 'premium') {
+                return `Perfeito! ${timeEmoji}
+
+A partir de amanhã, seu acompanhamento será:
+🌅 ${timeText} — Dica personalizada do dia
+🌙 20h — Check-in consolidado (água, alimentação, exercício)
+💬 Assistente de saúde com IA — disponível 24h
+
+🎮 Seus pontos e conquistas começam a contar a partir do primeiro check-in!
+
+Vamos juntos nessa jornada de transformação! 💪`;
+            }
+
+            // VIP
             return `Perfeito! ${timeEmoji}
 
-A partir de amanhã às ${timeText} você receberá:
-📊 Check-in diário
-💬 Dicas personalizadas
-🎯 Acompanhamento do seu progresso
+Seu plano VIP está ativo com acesso total:
+💬 Assistente IA ilimitado — disponível 24h
+⭐ Escalação prioritária para equipe de saúde
+🎯 Protocolos de elite bio-individualizados
+🎮 Gamificação completa com recompensas exclusivas
 
-${plan === 'freemium'
-                    ? '💡 Dica: Upgrade para Premium e tenha acesso a protocolos personalizados e gamificação completa!'
-                    : plan === 'premium'
-                        ? '🎉 Como Premium, você tem acesso a protocolos personalizados e gamificação!'
-                        : '⭐ Como VIP, você tem acesso total + consultoria mensal!'
-                }
-
-Bem-vindo à sua jornada de transformação! 🚀`;
+Você é nossa prioridade. Bem-vindo! 👑`;
 
         default:
             return 'Próximo passo...';

@@ -213,11 +213,24 @@ Cuidar-me/
 
 ## 🎮 Funcionalidades Principais
 
+### 📊 Planos (PLG - Product Led Growth)
+
+| Feature | 🥉 Freemium | 🥈 Premium | 🥇 VIP |
+|---------|-------------|------------|---------|
+| Dica diária (8h) | ✅ Genérica | ✅ Personalizada | ✅ Personalizada |
+| Check-in consolidado (20h) | ❌ | ✅ | ✅ |
+| Chat com IA | ❌ (upsell) | ✅ 30 msgs/dia | ✅ Ilimitado |
+| Protocolos | ❌ | ✅ | ✅ Elite |
+| Gamificação | ❌ | ✅ | ✅ + Exclusiva |
+
+> Veja [PRODUCT-TIERS.md](./PRODUCT-TIERS.md) para a estratégia completa.
+
 ### Para Pacientes
 - ✅ Portal de cadastro e perfil
 - ✅ Recebimento de mensagens via WhatsApp
-- ✅ Sistema de gamificação (pontos, níveis, badges)
-- ✅ Check-ins diários (alimentação, hidratação, exercícios)
+- ✅ Sistema de gamificação (pontos, níveis, badges) — Premium/VIP
+- ✅ Check-ins diários (alimentação, hidratação, exercícios) — Premium/VIP
+- ✅ Dicas de saúde diárias — Todos os planos
 - ✅ Comunidade anônima
 - ✅ Vídeos educacionais
 
@@ -230,7 +243,7 @@ Cuidar-me/
 - ✅ Métricas e gráficos de progresso
 
 ### IA e Automação
-- ✅ Chatbot inteligente (Gemini AI)
+- ✅ Chatbot inteligente (Gemini AI) — Premium/VIP
 - ✅ Análise de conversas
 - ✅ Extração automática de dados (peso, glicemia, etc.)
 - ✅ Mensagens programadas
