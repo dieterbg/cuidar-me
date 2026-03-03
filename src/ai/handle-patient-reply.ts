@@ -45,7 +45,7 @@ export async function handlePatientReply(
             console.log(`[HANDLE-REPLY] Unknown number ...${whatsappNumber.slice(-4)}. Sending registration link.`);
             await sendWhatsappMessage(
                 whatsappNumber,
-                "Olá! 👋 Para utilizar nossa assistente virtual, você precisa ter um cadastro ativo.\n\nPor favor, cadastre-se gratuitamente em: https://clinicadornelles.com.br/cadastro"
+                "Olá! 👋 Para utilizar nossa assistente virtual, você precisa ter um cadastro ativo.\n\nPor favor, entre em contato com a Clínica Dornelles para se cadastrar: https://www.clinicadornelles.com.br"
             );
             return { success: true };
         }
