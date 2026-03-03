@@ -29,13 +29,11 @@ export async function POST(request: NextRequest) {
       return new NextResponse('Missing required fields: From or Body', { status: 400 });
     }
 
-    // IMPORTANT: In serverless environments (like Vercel), we SHOULD use waitUntil
-    // to ensure the background task completes before the function instance is culled.
-    // Next.js 15 supports request.waitUntil. For Next.js 14, we fallback to plain execution.
-    const backgroundTask = handlePatientReply(from, message, profileName || 'Novo Contato', messageSid);
-    if ('waitUntil' in request && typeof (request as any).waitUntil === 'function') {
-      (request as any).waitUntil(backgroundTask);
-    }
+    // IMPORTANT: We MUST await handlePatientReply before returning.
+    // On Vercel Hobby / Next.js 14, waitUntil is NOT available, so fire-and-forget
+    // patterns cause the serverless function to terminate before background work completes.
+    // Twilio allows up to 15 seconds for webhook responses, which is sufficient.
+    await handlePatientReply(from, message, profileName || 'Novo Contato', messageSid);
 
     // Respond to Twilio with empty TwiML to confirm receipt and stop further actions.
     const twiml = new twilio.twiml.MessagingResponse();
