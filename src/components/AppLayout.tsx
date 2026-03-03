@@ -194,10 +194,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
           <div className="px-4 py-2 border-t border-dashed border-[#EBECE8] mt-2 group/version">
             <div className="flex flex-col gap-1 opacity-40 group-hover/version:opacity-100 transition-opacity duration-300">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-[#899d5e]">Build v1.4.4</span>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-[#899d5e]">Build v1.4.5</span>
               <span className="text-[9px] text-muted-foreground leading-tight">
-                Update: 03/03 - 15:30<br />
-                Tiered Strategy + Chat Timestamps
+                Update: 03/03 - 15:50<br />
+                Tiered Strategy + Webhook Resilience
               </span>
             </div>
           </div>

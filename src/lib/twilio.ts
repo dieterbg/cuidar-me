@@ -95,16 +95,30 @@ export async function validateTwilioWebhook(request: NextRequest, body: any) {
     }
 
     const signature = request.headers.get('x-twilio-signature');
+    if (!signature) return false;
+
+    // Vercel proxy headers
     const protocol = request.headers.get('x-forwarded-proto') || 'https';
     const host = request.headers.get('host');
-    const url = `${protocol}://${host}${request.nextUrl.pathname}`;
+
+    // Check multiple possible URLs because Twilio signature validation is very sensitive to the exact string
+    const urlFromHeaders = `${protocol}://${host}${request.nextUrl.pathname}`;
+    const urlFromEnv = process.env.NEXT_PUBLIC_APP_URL
+        ? `${process.env.NEXT_PUBLIC_APP_URL}${request.nextUrl.pathname}`
+        : null;
 
     const creds = await getTwilioCredentials();
     const authToken = process.env.TWILIO_AUTH_TOKEN || creds?.authToken;
 
-    if (!authToken || !signature) {
-        return false;
+    if (!authToken) return false;
+
+    // Try primary URL from headers
+    const isValid = twilio.validateRequest(authToken, signature, urlFromHeaders, body);
+
+    if (!isValid && urlFromEnv && urlFromEnv !== urlFromHeaders) {
+        // Fallback to Env URL if headers-based one fails
+        return twilio.validateRequest(authToken, signature, urlFromEnv, body);
     }
 
-    return twilio.validateRequest(authToken, signature, url, body);
+    return isValid;
 }
