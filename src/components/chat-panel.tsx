@@ -261,9 +261,15 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
                                 {msg.sender === 'patient' && <Avatar className="h-8 w-8"><AvatarImage src={patient?.avatar} /><AvatarFallback>{patient?.name[0]}</AvatarFallback></Avatar>}
                                 <div className={cn("max-w-xs md:max-w-md rounded-2xl p-3 text-sm shadow-sm", msg.sender === 'me' ? 'bg-primary/90 text-primary-foreground rounded-tr-none' : 'bg-muted rounded-tl-none')}>
                                     <p>{msg.text}</p>
-                                    <p className="text-xs opacity-70 mt-1 text-right">
+                                    <p className="text-[10px] opacity-60 mt-1 text-right whitespace-nowrap">
                                         {msg.timestamp && !isNaN(new Date(msg.timestamp as string).getTime())
-                                            ? format(new Date(msg.timestamp as string), 'HH:mm')
+                                            ? (() => {
+                                                const date = new Date(msg.timestamp as string);
+                                                const isToday = new Date().toDateString() === date.toDateString();
+                                                return isToday
+                                                    ? format(date, 'HH:mm')
+                                                    : format(date, "dd/MM 'às' HH:mm", { locale: ptBR });
+                                            })()
                                             : '--:--'
                                         }
                                     </p>

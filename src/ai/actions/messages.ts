@@ -180,5 +180,8 @@ export async function getMessages(patientId: string): Promise<Message[]> {
         return [];
     }
 
-    return data as Message[];
+    return (data || []).map(msg => ({
+        ...msg,
+        timestamp: msg.created_at
+    })) as Message[];
 }
