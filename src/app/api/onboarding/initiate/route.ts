@@ -140,20 +140,6 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Se for Freemium, enviar uma segunda mensagem com os detalhes do plano (já que o template pode estar desatualizado)
-        if (patient.plan === 'freemium') {
-            const freemiumDetails = `Como você está no plano **Gratuito**, você receberá suas dicas e lembretes de saúde sempre pela manhã (8h). 🌅\n\n_Nota: No plano gratuito, o chat com IA não está habilitado para dúvidas personalizadas._`;
-
-            await sendWhatsappMessage(patient.whatsapp_number, freemiumDetails);
-
-            // Também registrar esta no histórico
-            await supabase.from('messages').insert({
-                patient_id: patientId,
-                sender: 'system',
-                text: freemiumDetails,
-            });
-        }
-
         // 5. Registrar mensagem no histórico para evitar duplicidade de boas-vindas
         await supabase.from('messages').insert({
             patient_id: patientId,
