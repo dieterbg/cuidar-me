@@ -185,12 +185,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <SidebarFooter className="p-6">
           <Button
             variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl h-12 px-4"
+            className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl h-12 px-4 mb-2"
             onClick={signOut}
           >
             <LogOut className="mr-3 h-5 w-5" />
             <span className="font-medium">Sair</span>
           </Button>
+
+          <div className="px-4 py-2 border-t border-dashed border-[#EBECE8] mt-2 group/version">
+            <div className="flex flex-col gap-1 opacity-40 group-hover/version:opacity-100 transition-opacity duration-300">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-[#899d5e]">Build v1.4.2</span>
+              <span className="text-[9px] text-muted-foreground leading-tight">
+                Update: 03/03 - 14:40<br />
+                Tiered Strategy + Flow Fixes
+              </span>
+            </div>
+          </div>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="bg-[#F9FAF6]/50">
