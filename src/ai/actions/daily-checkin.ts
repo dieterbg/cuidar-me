@@ -14,6 +14,7 @@ import {
     processCheckinResponse,
     calculateCheckinPoints,
     generateCheckinSummary,
+    getCheckinStepTemplate,
 } from '@/ai/daily-checkin';
 import { sendWhatsappMessage } from '@/lib/twilio';
 
@@ -65,7 +66,12 @@ export async function startDailyCheckin(
 
         // Enviar primeira mensagem
         const message = getCheckinStepMessage('hydration', {}, patientName);
-        const sent = await sendWhatsappMessage(whatsappNumber, message);
+        const { sid, variables } = getCheckinStepTemplate('hydration', patientName);
+
+        const sent = await sendWhatsappMessage(whatsappNumber, message, {
+            contentSid: sid,
+            contentVariables: variables
+        });
 
         if (!sent) {
             return { success: false, error: 'Failed to send message' };
@@ -229,7 +235,12 @@ export async function handleDailyCheckinReply(
 
         // Enviar próxima mensagem
         const nextMessage = getCheckinStepMessage(nextStep, updatedData, patientName);
-        const sent = await sendWhatsappMessage(whatsappNumber, nextMessage);
+        const { sid: nextSid, variables: nextVariables } = getCheckinStepTemplate(nextStep, patientName);
+
+        const sent = await sendWhatsappMessage(whatsappNumber, nextMessage, {
+            contentSid: nextSid,
+            contentVariables: nextVariables
+        });
 
         if (sent) {
             await supabase

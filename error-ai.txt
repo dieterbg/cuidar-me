@@ -1,0 +1,70 @@
+﻿
+ RUN  v4.0.14 C:/Users/Usuario/.gemini/antigravity/scratch/Cuidar-me
+
+node.exe : 
+No C:\Program Files\n
+odejs\npx.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (:String   
+ ) [], RemoteExce    
+ption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» 
+Failed Suites 1 
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  tests/unit/ai-
+logic.test.ts [ tests
+/unit/ai-logic.test.t
+s ]
+ReferenceError: 
+Cannot access 
+'mockPrompt' before 
+initialization
+ ÔØ» 
+Object.<anonymous> te
+sts/unit/ai-logic.tes
+t.ts:10:35
+      8| vi.mock('@/a
+i/genkit', () => ({
+      9|     ai: {
+     10|         
+definePrompt: 
+vi.fn(() => 
+mockPrompt),
+       |             
+                     
+ ^
+     11|         
+defineFlow: 
+vi.fn((config, fn) 
+=> {
+     12|             
+return (input: any) 
+=> fn(input);
+ ÔØ» src/ai/message-i
+ntent-classifier.ts:3
+2:27
+ ÔØ» tests/unit/ai-lo
+gic.test.ts:17:1
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»[1/1]ÔÄ»
+
+
+ Test Files  1 failed (1)
+      Tests  no tests
+   Start at  17:24:20
+   Duration  3.38s (transform 184ms, setup 868ms, import 0ms, tests 0ms, environment 1.87s)
+

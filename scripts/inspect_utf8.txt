@@ -1,0 +1,53 @@
+﻿Searching for patient Dieter BG...
+Results: [
+  {
+    "id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "user_id": "5cfef0ce-b5a0-4e79-aabb-8d6532ce1d31",
+    "full_name": "Dieter BG",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "email": "dbg@gmail.com",
+    "avatar": null,
+    "status": "active",
+    "needs_attention": false,
+    "risk_level": null,
+    "plan": "freemium",
+    "priority": 1,
+    "birth_date": null,
+    "gender": null,
+    "height_cm": null,
+    "initial_weight_kg": null,
+    "health_conditions": null,
+    "allergies": null,
+    "community_username": null,
+    "last_message": null,
+    "last_message_timestamp": null,
+    "total_points": 0,
+    "level": "Iniciante",
+    "badges": [],
+    "created_at": "2026-02-26T12:35:05.181669+00:00",
+    "updated_at": "2026-02-26T18:22:38.337203+00:00",
+    "preferred_message_time": "morning",
+    "goal": null,
+    "target_weight_kg": null,
+    "waist_circumference_cm": null,
+    "medications": null,
+    "gamification": {
+      "level": "Iniciante",
+      "badges": [],
+      "totalPoints": 0,
+      "weeklyProgress": {
+        "perspectives": {}
+      }
+    },
+    "streak_data": {
+      "currentStreak": 0,
+      "longestStreak": 0,
+      "streakFreezes": 2,
+      "lastActivityDate": null,
+      "lastFreezeResetDate": null,
+      "freezesUsedThisMonth": 0
+    }
+  }
+]
+--- Onboarding States ---
+Recent Onboarding States: []

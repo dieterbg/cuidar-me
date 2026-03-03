@@ -402,6 +402,31 @@ export default function PatientProfilePage() {
                     </div>
                     {canEditPatient && (
                         <div className="flex gap-3 w-full lg:w-auto">
+                            <Button
+                                variant="outline"
+                                className="flex-1 lg:flex-none border-green-200 hover:bg-green-50 text-green-700"
+                                onClick={async () => {
+                                    toast({ title: "📱 Iniciando Onboarding...", description: "Manual re-trigger." });
+                                    try {
+                                        const res = await fetch('/api/onboarding/initiate', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ patientId: patient.id }),
+                                        });
+                                        if (res.ok) {
+                                            toast({ title: "✅ Onboarding Enviado!", description: "Mensagem reenviada.", className: "bg-green-50" });
+                                        } else {
+                                            const data = await res.json();
+                                            throw new Error(data.error);
+                                        }
+                                    } catch (err: any) {
+                                        toast({ variant: "destructive", title: "❌ Erro", description: err.message });
+                                    }
+                                }}
+                            >
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Re-enviar Onboarding
+                            </Button>
                             <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" className="flex-1 lg:flex-none">

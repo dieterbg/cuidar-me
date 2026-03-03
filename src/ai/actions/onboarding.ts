@@ -124,12 +124,14 @@ export async function handleOnboardingReply(
         if (nextStep === 'complete') {
             updatePayload.completed_at = new Date().toISOString();
 
-            // Atualizar apenas o horário preferido no paciente
-            if (updatedData.preferredTime) {
+            // Determinar o horário preferido
+            const preferredTime = updatedData.preferredTime || (plan === 'freemium' ? 'morning' : undefined);
+
+            if (preferredTime) {
                 const { error: patientUpdateError } = await supabase
                     .from('patients')
                     .update({
-                        preferred_message_time: updatedData.preferredTime,
+                        preferred_message_time: preferredTime,
                         status: 'active', // Ativar paciente
                     })
                     .eq('id', patientId);
@@ -137,7 +139,7 @@ export async function handleOnboardingReply(
                 if (patientUpdateError) {
                     console.error('[handleOnboardingReply] Patient Update Error:', patientUpdateError);
                 } else {
-                    console.log('[handleOnboardingReply] Patient status updated to ACTIVE');
+                    console.log('[handleOnboardingReply] Patient status updated to ACTIVE with time:', preferredTime);
                 }
             }
         }

@@ -43,7 +43,13 @@ export function getNextStep(
         return 'complete';
     }
 
-    return flow[currentIndex + 1];
+    // Pular preferências para o plano Freemium
+    const nextStep = flow[currentIndex + 1];
+    if (plan === 'freemium' && nextStep === 'preferences') {
+        return 'complete';
+    }
+
+    return nextStep;
 }
 
 /**
@@ -58,15 +64,21 @@ export function getStepMessage(
     switch (step) {
         case 'welcome':
             const planEmoji = plan === 'vip' ? '⭐' : plan === 'premium' ? '💎' : '🌱';
-            return `Olá${patientName ? ` ${patientName}` : ''}! Vi que você se cadastrou no Cuidar.me 👋
+            const planName = plan === 'vip' ? 'VIP' : plan === 'premium' ? 'Premium' : 'Freemium';
 
-${planEmoji} Plano: ${plan === 'vip' ? 'VIP' : plan === 'premium' ? 'Premium' : 'Freemium'}
+            let welcomeMsg = `Olá${patientName ? ` ${patientName}` : ''}! Vi que você se cadastrou no Cuidar.me 👋\n\n`;
+            welcomeMsg += `${planEmoji} Plano: ${planName}\n\n`;
 
-Tudo certo para começarmos?
+            if (plan === 'freemium') {
+                welcomeMsg += `Como você está no plano **Gratuito**, você receberá suas dicas e lembretes de saúde sempre pela manhã (8h). 🌅\n\n`;
+                welcomeMsg += `_Nota: No plano gratuito, o chat com IA não está habilitado para dúvidas personalizadas._\n\n`;
+            }
 
-Responda "Sim" para continuar ou "Ajustar" se precisar alterar algo no cadastro.
+            welcomeMsg += `Tudo certo para começarmos?\n\n`;
+            welcomeMsg += `Responda "Sim" para continuar ou "Ajustar" se precisar alterar algo no cadastro.\n\n`;
+            welcomeMsg += `_Para parar de receber mensagens, envie SAIR a qualquer momento._`;
 
-_Para parar de receber mensagens, envie SAIR a qualquer momento._`;
+            return welcomeMsg;
 
         case 'preferences':
             return `Ótimo! Quando prefere receber suas mensagens diárias?

@@ -1,0 +1,16 @@
+--- Step 1: Inspect Patient Data ---
+Patient Found: {
+  "id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+  "full_name": "Dieter BG",
+  "whatsapp_number": "whatsapp:+555198770099",
+  "status": "active"
+}
+
+--- Step 2: Clear existing onboarding for clean test ---
+Onboarding state cleared.
+
+--- Step 3: Trigger Onboarding Action ---
+Result: {
+  "success": false,
+  "error": "`cookies` was called outside a request scope. Read more: https://nextjs.org/docs/messages/next-dynamic-api-wrong-context"
+}

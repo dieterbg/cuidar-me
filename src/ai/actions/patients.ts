@@ -151,7 +151,11 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
 
     // Explicit mapping
     if (updates.fullName !== undefined) dbUpdates.full_name = updates.fullName;
-    if (updates.whatsappNumber !== undefined) dbUpdates.whatsapp_number = updates.whatsappNumber;
+    if (updates.whatsappNumber !== undefined) {
+        // Import normalization utility
+        const { normalizeBrazilianNumber } = require('@/lib/utils');
+        dbUpdates.whatsapp_number = normalizeBrazilianNumber(updates.whatsappNumber);
+    }
     if (updates.birthDate !== undefined) dbUpdates.birth_date = updates.birthDate;
     if (updates.gender !== undefined) dbUpdates.gender = updates.gender;
     if (updates.height !== undefined) dbUpdates.height_cm = updates.height;
@@ -314,10 +318,12 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
 
     // Mapear para snake_case também na criação
     const dbInsert: any = {};
+    const { normalizeBrazilianNumber } = require('@/lib/utils');
+
     if (patientData.fullName) dbInsert.full_name = patientData.fullName;
     if (patientData.email) dbInsert.email = patientData.email;
     if (patientData.userId) dbInsert.user_id = patientData.userId;
-    if (patientData.whatsappNumber) dbInsert.whatsapp_number = patientData.whatsappNumber;
+    if (patientData.whatsappNumber) dbInsert.whatsapp_number = normalizeBrazilianNumber(patientData.whatsappNumber);
     if (patientData.birthDate) dbInsert.birth_date = patientData.birthDate;
     if (patientData.gender) dbInsert.gender = patientData.gender;
     if (patientData.height) dbInsert.height_cm = patientData.height;

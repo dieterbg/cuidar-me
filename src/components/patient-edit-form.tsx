@@ -108,6 +108,53 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
           throw new Error(updateResult.error || 'Erro desconhecido ao atualizar paciente.');
         }
 
+        // Trigger WhatsApp onboarding if status is being changed to 'active' from 'pending'
+        // This covers both Admin activation and Patient profile completion if we want
+        const isActivating = isAdminContext && patient.status === 'pending' && values.status === 'active';
+
+        console.log('[PatientEditForm] onSubmit State:', {
+          context,
+          oldStatus: patient.status,
+          newStatus: values.status,
+          isAdminContext,
+          isActivating
+        });
+
+        if (isActivating) {
+          console.log('[PatientEditForm] Admin activating patient, triggering onboarding...');
+          toast({
+            title: "📱 Iniciando Onboarding...",
+            description: "Enviando mensagem de boas-vindas via WhatsApp.",
+          });
+
+          // Await to ensure it reaches the server before parent onSave() potentially unmounts
+          try {
+            const response = await fetch('/api/onboarding/initiate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ patientId: patient.id }),
+            });
+
+            if (response.ok) {
+              toast({
+                title: "✅ Onboarding Enviado!",
+                description: "O paciente recebeu a mensagem inicial.",
+                className: "bg-green-50 border-green-200 text-green-800"
+              });
+            } else {
+              const errData = await response.json();
+              throw new Error(errData.error || 'Falha no servidor ao iniciar onboarding.');
+            }
+          } catch (err: any) {
+            console.error('Failed to initiate onboarding (admin):', err);
+            toast({
+              variant: 'destructive',
+              title: "❌ Erro no Onboarding",
+              description: err.message || "Não foi possível enviar a mensagem de boas-vindas.",
+            });
+          }
+        }
+
         // If patient context and profile is now complete AND consent given, initiate WhatsApp onboarding
         if (isPatientContext) {
           const isComplete = !!(
@@ -120,11 +167,12 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
 
           if (isComplete && values.whatsappConsent) {
             // Call API to initiate onboarding (fire and forget - don't block UI)
+            console.log('[PatientEditForm] Patient profile complete, triggering onboarding...');
             fetch('/api/onboarding/initiate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ patientId: patient.id }),
-            }).catch(err => console.error('Failed to initiate onboarding:', err));
+            }).catch(err => console.error('Failed to initiate onboarding (patient):', err));
           }
         }
 

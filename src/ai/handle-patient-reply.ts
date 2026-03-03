@@ -107,6 +107,33 @@ export async function handlePatientReply(
         }).eq('id', patient.id);
 
         // =====================================================
+        // 🛑 GATE 1: OPT-OUT (SAIR)
+        // Determinístico, alta prioridade
+        // =====================================================
+        const OPT_OUT_KEYWORDS = ['sair', 'stop', 'cancelar', 'parar', 'unsubscribe'];
+        const normalizedMsg = messageText.toLowerCase().trim();
+
+        if (OPT_OUT_KEYWORDS.includes(normalizedMsg)) {
+            console.log(`[OPT-OUT] Keyword detected for patient ${patient.id}`);
+            const { handleOptOut } = await import('./handlers/opt-out-handler');
+            await handleOptOut(patient, whatsappNumber, supabase);
+            return { success: true };
+        }
+
+        // =====================================================
+        // 🚀 GATE 2: ONBOARDING ATIVO
+        // Intercepta qualquer mensagem se o paciente estiver em onboarding
+        // =====================================================
+        const { isOnboardingActive, handleOnboardingReply } = await import('./actions/onboarding');
+        const onboardingActive = await isOnboardingActive(patient.id);
+
+        if (onboardingActive) {
+            console.log(`[ONBOARDING] Active flow detected for patient ${patient.id}. Routing to handler.`);
+            const result = await handleOnboardingReply(patient.id, whatsappNumber, messageText, patient.full_name);
+            return { success: result.success };
+        }
+
+        // =====================================================
         // 🚀 FLUXO DE BOAS-VINDAS (PRIMEIRO CONTATO)
         // Se não houver mensagens anteriores do sistema, enviar boas-vindas
         // =====================================================
@@ -177,6 +204,20 @@ export async function handlePatientReply(
         console.log(`[Intent] ${classification.intent} (${classification.confidence})`);
 
         // 5. ROTEAMENTO BASEADO NA INTENÇÃO
+
+        // 5.0 GATE DE PLANO FREEMIUM (UPSELL)
+        // Se for Freemium e não for uma emergência ou social simples, bloquear chat e oferecer upgrade
+        if (patientPlan === 'freemium' && classification.intent === MessageIntent.QUESTION) {
+            const upsellMsg = "Olá! 😊 Notei que você tem uma dúvida de saúde. \n\nO chat interativo com nossa IA é um benefício exclusivo dos planos **Premium e VIP**, que oferecem acompanhamento completo 24h.\n\nNo seu plano atual, você continuará recebendo nossas dicas diárias de saúde! 🌅\n\n💡 Quer liberar o chat agora? Acesse: https://clinicadornelles.com.br/portal/journey";
+
+            await sendWhatsappMessage(whatsappNumber, upsellMsg);
+            await supabase.from('messages').insert({
+                patient_id: patient.id,
+                sender: 'me',
+                text: upsellMsg,
+            });
+            return { success: true };
+        }
 
         // 5.1 EMERGÊNCIA - Escala imediatamente
         if (classification.intent === MessageIntent.EMERGENCY) {

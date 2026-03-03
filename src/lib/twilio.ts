@@ -1,18 +1,18 @@
-
 import twilio from 'twilio';
 import { NextRequest } from 'next/server';
 import { getTwilioCredentials } from '@/ai/actions/system';
 
+
 // This function dynamically gets the Twilio client.
 async function getTwilioClient() {
-    // First, try to get credentials from Firestore
     const creds = await getTwilioCredentials();
 
-    const accountSid = creds?.accountSid || process.env.TWILIO_ACCOUNT_SID;
-    const authToken = creds?.authToken || process.env.TWILIO_AUTH_TOKEN;
+    // Prioritize values from .env.local for easier local configuration
+    const accountSid = process.env.TWILIO_ACCOUNT_SID || creds?.accountSid;
+    const authToken = process.env.TWILIO_AUTH_TOKEN || creds?.authToken;
 
     if (!accountSid || !authToken) {
-        console.error("[Twilio] ERRO: Credenciais do Twilio (Account SID ou Auth Token) não configuradas no Firestore ou nas variáveis de ambiente.");
+        console.error("[Twilio] ERRO: Credenciais do Twilio (Account SID ou Auth Token) não configuradas.");
         return null;
     }
 
@@ -20,34 +20,70 @@ async function getTwilioClient() {
 }
 
 
-export async function sendWhatsappMessage(to: string, body: string): Promise<boolean> {
+export async function sendWhatsappMessage(
+    to: string,
+    body: string,
+    options?: { contentSid?: string; contentVariables?: Record<string, string> }
+): Promise<boolean> {
     const twilioClient = await getTwilioClient();
     if (!twilioClient) {
-        console.error("[Twilio] Falha ao enviar mensagem: Cliente Twilio não pôde ser inicializado.");
+        console.error("[Twilio] Falha ao enviar mensagem: Cliente Twilio não inicializado.");
         return false;
     }
 
+    // Normalizar o número de destino
+    const { normalizeBrazilianNumber } = require('./utils');
+    const normalizedTo = normalizeBrazilianNumber(to);
+
     // Get the configured Twilio phone number
     const creds = await getTwilioCredentials();
-    const fromNumber = creds?.phoneNumber || process.env.TWILIO_PHONE_NUMBER;
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER || creds?.phoneNumber;
 
     if (!fromNumber) {
-        console.error("[Twilio] ERRO: Nenhum número de telefone do Twilio configurado para envio. Verifique as credenciais no Admin ou nas variáveis de ambiente.");
+        console.error("[Twilio] ERRO: Nenhum número de telefone do Twilio configurado.");
         return false;
     }
 
     try {
+        const messageParams: any = {
+            from: fromNumber,
+            to: normalizedTo
+        };
+
+        // 1. Tentar enviar via Template se houver ContentSid
+        if (options?.contentSid) {
+            try {
+                const templateParams = {
+                    ...messageParams,
+                    contentSid: options.contentSid,
+                    contentVariables: options.contentVariables ? JSON.stringify(options.contentVariables) : undefined
+                };
+                const message = await twilioClient.messages.create(templateParams);
+                console.log(`[Twilio] Mensagem enviada via TEMPLATE para ${normalizedTo}. SID: ${message.sid}`);
+                return true;
+            } catch (templateError: any) {
+                // Erros fatais (como remetente inexistente/inválido) não devem tentar o fallback
+                const fatalCodes = [63007, 21211, 21606, 20003];
+                if (fatalCodes.includes(templateError.code)) {
+                    console.error(`[Twilio Fatal Error]: ${templateError.message} (Code: ${templateError.code})`);
+                    return false;
+                }
+
+                console.warn(`[Twilio] Falha no template (SID: ${options.contentSid}). Tentando body normal como fallback...`);
+                // Continua para o passo 2
+            }
+        }
+
+        // 2. Enviar via Body (Mensagem Normal ou Fallback)
         const message = await twilioClient.messages.create({
-            from: fromNumber, // Use the configured number
-            to: to, // e.g., 'whatsapp:+5511999998888'
-            body: body,
+            ...messageParams,
+            body: body
         });
 
-        console.log(`[Twilio] Mensagem para ...${to.slice(-4)} enviada com sucesso! SID: ${message.sid}, Status: ${message.status}`);
-
+        console.log(`[Twilio] Mensagem enviada via BODY para ${normalizedTo}. SID: ${message.sid}`);
         return true;
     } catch (error: any) {
-        console.error(`[Twilio] ERRO AO ENVIAR para ...${to.slice(-4)}:`, error.message);
+        console.error(`[Twilio Error]:`, error.message);
         return false;
     }
 }
@@ -55,21 +91,18 @@ export async function sendWhatsappMessage(to: string, body: string): Promise<boo
 
 export async function validateTwilioWebhook(request: NextRequest, body: any) {
     if (process.env.NODE_ENV === 'development') {
-        console.log("Skipping Twilio validation in development environment.");
         return true;
     }
 
     const signature = request.headers.get('x-twilio-signature');
-
     const protocol = request.headers.get('x-forwarded-proto') || 'https';
     const host = request.headers.get('host');
     const url = `${protocol}://${host}${request.nextUrl.pathname}`;
 
     const creds = await getTwilioCredentials();
-    const authToken = creds?.authToken || process.env.TWILIO_AUTH_TOKEN;
+    const authToken = process.env.TWILIO_AUTH_TOKEN || creds?.authToken;
 
     if (!authToken || !signature) {
-        console.error("Auth token or signature is missing. Cannot validate Twilio webhook.");
         return false;
     }
 

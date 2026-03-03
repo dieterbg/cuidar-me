@@ -132,6 +132,39 @@ export function getCheckinStepMessage(
 }
 
 /**
+ * Retorna o Content SID do template para um passo do check-in
+ */
+export function getCheckinStepTemplate(
+    step: CheckinStep,
+    patientName: string
+): { sid?: string; variables?: Record<string, string> } {
+    const sids: Record<CheckinStep, string | undefined> = {
+        hydration: process.env.TWILIO_CHECKIN_WATER_SID,
+        breakfast: process.env.TWILIO_CHECKIN_BREAKFAST_SID,
+        lunch: process.env.TWILIO_CHECKIN_LUNCH_SID,
+        dinner: process.env.TWILIO_CHECKIN_DINNER_SID,
+        snacks: process.env.TWILIO_CHECKIN_SNACKS_SID,
+        activity: process.env.TWILIO_CHECKIN_ACTIVITY_SID,
+        wellbeing: process.env.TWILIO_CHECKIN_WELLBEING_SID,
+        weight: process.env.TWILIO_CHECKIN_WEIGHT_SID,
+        complete: undefined,
+    };
+
+    const sid = sids[step];
+    if (!sid) return {};
+
+    const firstName = patientName.split(' ')[0];
+    const variables: Record<string, string> = {};
+
+    // Mapear variáveis específicas de cada template se necessário
+    if (step === 'hydration') {
+        variables["1"] = firstName;
+    }
+
+    return { sid, variables };
+}
+
+/**
  * Processa a resposta do usuário para cada passo
  */
 export function processCheckinResponse(

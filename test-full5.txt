@@ -1,0 +1,675 @@
+﻿
+ RUN  v4.0.14 C:/Users/Usuario/.gemini/antigravity/scratch/Cuidar-me
+
+ ÔØ» tests/unit/protocol-response-processor.test.ts (26 tests | 2 failed) 70ms
+       Ô£ô PRP-01: detecta steps com [GAMIFICA├ç├âO] no t├¡tulo 5ms
+       Ô£ô PRP-02: retorna false para steps normais 2ms
+       Ô£ô PRP-03: retorna perspectiva do step 1ms
+       Ô£ô retorna null se sem perspectiva 1ms
+       Ô£ô PRP-04: aceita "A", "B", "C" (case-insensitive) 5ms
+       Ô£ô PRP-05: aceita variantes "A)", "B ..." 1ms
+       Ô£ô PRP-06: rejeita input totalmente inv├ílido 1ms
+       Ô£ô PRP-07: aceita variantes positivas 2ms
+       Ô£ô PRP-08: aceita variantes negativas 2ms
+       ├ù PRP-09: fallback ÔÇö msg > 3 chars = positivo 26ms
+       ├ù rejeita input vazio ou muito curto sem palavra-chave 3ms
+       Ô£ô PRP-10: extrai n├║mero de "85.5" e "90,3kg" 2ms
+       Ô£ô PRP-11: rejeita valores fora de 30-300 1ms
+       Ô£ô PRP-12: calcula pontos para Almo├ºo (A=20, B=15, C=10) 1ms
+       Ô£ô calcula pontos para Hidrata├º├úo (A=15, B=10, C=5) 1ms
+       Ô£ô calcula pontos para Peso (num├®rico v├ílido = 50) 1ms
+       Ô£ô calcula pontos para Atividade (A=40, B=0) 1ms
+       Ô£ô calcula pontos para Atividade via sim/n├úo 1ms
+       Ô£ô calcula pontos para Bem-Estar geral 1ms
+       Ô£ô calcula pontos para Bem-Estar sono 0ms
+       Ô£ô retorna 0 para t├¡tulo desconhecido 0ms
+       Ô£ô PRP-13: gera msg com emoji correto para pontos > 0 1ms
+       Ô£ô gera msg de incentivo para pontos = 0 1ms
+       Ô£ô usa emoji correto por perspectiva 1ms
+       Ô£ô PRP-14: mapeia hidratacao ÔåÆ hydration 1ms
+       Ô£ô mapeia outras perspectivas ÔåÆ mood 1ms
+stdout | tests/unit/handlers/gamification-handler.test.ts > GamificationHandler > should process valid gamification response
+[PROTOCOL-GAMIFICATION] Processing protocol check-in
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 1: New Patient (Unregistered) ÔÇö sends registration link
+[handlePatientReply] Processing msg (len: 3, from: ...9999, SID: N/A)
+
+ ÔØ» tests/unit/onboarding.test.ts (15 tests | 1 failed) 47ms
+       Ô£ô ONB-01: avan├ºa welcome ÔåÆ preferences ÔåÆ complete 5ms
+       Ô£ô ONB-02: retorna complete para step inv├ílido ou ├║ltimo 1ms
+       Ô£ô funciona com todos os planos 1ms
+       Ô£ô ONB-03: gera mensagem de welcome com nome e plano 2ms
+       Ô£ô welcome mostra emoji correto por plano 1ms
+       Ô£ô ONB-04: gera mensagem de preferences com op├º├Áes A/B/C 1ms
+       Ô£ô ONB-05: gera mensagem complete com hor├írio escolhido 1ms
+       Ô£ô complete mostra texto diferente por plano 1ms
+       Ô£ô ONB-06: welcome ÔÇö aceita "sim", "vamos", "ok" 2ms
+       Ô£ô ONB-07: welcome ÔÇö aceita "ajustar" e retorna link 1ms
+       Ô£ô ONB-08: welcome ÔÇö rejeita resposta inv├ílida 1ms
+       Ô£ô ONB-09: preferences ÔÇö mapeia AÔåÆmorning, BÔåÆafternoon, CÔåÆnight 1ms
+       ├ù ONB-10: preferences ÔÇö aceita "manh├ú", "tarde", "noite" 22ms
+       Ô£ô ONB-11: preferences ÔÇö rejeita resposta inv├ílida 0ms
+       Ô£ô complete ÔÇö aceita qualquer resposta 1ms
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 1: New Patient (Unregistered) ÔÇö sends registration link
+[HANDLE-REPLY] Unknown number ...9999. Sending registration link.
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 2: First Contact ÔÇö sends welcome message
+[handlePatientReply] Processing msg (len: 3, from: ...9999, SID: N/A)
+
+stdout | tests/unit/handlers/gamification-handler.test.ts > GamificationHandler > should process valid gamification response
+[PROTOCOL-GAMIFICATION] Active Context: Beber ├ügua
+
+stdout | tests/unit/handlers/gamification-handler.test.ts > GamificationHandler > should process valid gamification response
+[PROTOCOL-GAMIFICATION] +10 pts (positive)
+
+stdout | tests/unit/handlers/gamification-handler.test.ts > GamificationHandler > should ignore non-gamification response
+[PROTOCOL-GAMIFICATION] Processing protocol check-in
+
+stdout | tests/unit/handlers/gamification-handler.test.ts > GamificationHandler > should ignore non-gamification response
+[PROTOCOL-GAMIFICATION] Active Context: Beber ├ügua
+
+stdout | tests/unit/handlers/gamification-handler.test.ts > GamificationHandler > should return false if no protocol step matches context
+[PROTOCOL-GAMIFICATION] Processing protocol check-in
+
+stdout | tests/unit/handlers/gamification-handler.test.ts > GamificationHandler > should return false if no protocol step matches context
+[PROTOCOL-GAMIFICATION] No active protocol step found matching context.
+
+ Ô£ô tests/unit/handlers/gamification-handler.test.ts (3 tests) 160ms
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 3: Emergency keyword ÔÇö escalates immediately
+[handlePatientReply] Processing msg (len: 22, from: ...9999, SID: N/A)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 3: Emergency keyword ÔÇö escalates immediately
+[CheckIn] Active: false, patientId: active-id
+[EMERGENCY GATE] Keyword match detected for patient active-id
+
+stdout | tests/unit/actions/streak.test.ts > Server Action: Streak > resetMonthlyFreezes > STR-08: reseta freezes para todos os pacientes
+Ô£à Resetados freezes de 2 pacientes
+
+stdout | tests/unit/actions/streak.test.ts > Server Action: Streak > sendStreakReminders > envia para quem n├úo agiu hoje
+­ƒô▓ Lembrete enviado para user-1 (streak: 5)
+Ô£à 1 lembretes de streak enviados
+
+node.exe : stderr | t
+ests/unit/actions/str
+eak.test.ts > Server 
+Action: Streak > 
+retorna erro se 
+paciente n├úo 
+encontrado
+No C:\Program Files\n
+odejs\npx.ps1:29 
+caractere:3
++   & $NODE_EXE 
+$NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (stderr    
+ | tests/...n├úo     
+encontrado:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+Error fetching 
+patient for streak 
+update: { message: 
+'not found' }
+
+ Ô£ô tests/unit/actions/streak.test.ts (10 tests) 125ms
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 4: Social greeting ÔÇö returns quick reply
+[handlePatientReply] Processing msg (len: 7, from: ...9999, SID: N/A)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 4: Social greeting ÔÇö returns quick reply
+[CheckIn] Active: false, patientId: active-id
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 4: Social greeting ÔÇö returns quick reply
+[Intent] social (0.9)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 5: Question ÔÇö delegates to AI conversation handler
+[handlePatientReply] Processing msg (len: 14, from: ...9999, SID: N/A)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 5: Question ÔÇö delegates to AI conversation handler
+[CheckIn] Active: false, patientId: active-id
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 5: Question ÔÇö delegates to AI conversation handler
+[Intent] question (0.8)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 6: Check-in Response ÔÇö routes to gamification handler
+[handlePatientReply] Processing msg (len: 1, from: ...9999, SID: N/A)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 6: Check-in Response ÔÇö routes to gamification handler
+[CheckIn] Active: false, patientId: active-id
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 6: Check-in Response ÔÇö routes to gamification handler
+[Intent] checkin_response (0.95)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 7: SAIR ÔÇö opt-out command (placeholder logic)
+[handlePatientReply] Processing msg (len: 4, from: ...9999, SID: N/A)
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 7: SAIR ÔÇö opt-out command (placeholder logic)
+[CheckIn] Active: false, patientId: active-id
+
+stdout | tests/integration/whatsapp-flows.test.ts > WhatsApp Integration Flows > Scenario 7: SAIR ÔÇö opt-out command (placeholder logic)
+[Intent] social (0.5)
+
+ ÔØ» tests/integration/whatsapp-flows.test.ts (7 tests | 1 failed) 401ms
+     Ô£ô Scenario 1: New Patient (Unregistered) ÔÇö sends registration link 95ms
+     Ô£ô Scenario 2: First Contact ÔÇö sends welcome message 110ms
+     Ô£ô Scenario 3: Emergency keyword ÔÇö escalates immediately 128ms
+     Ô£ô Scenario 4: Social greeting ÔÇö returns quick reply 9ms
+     Ô£ô Scenario 5: Question ÔÇö delegates to AI conversation handler 33ms
+     ├ù Scenario 6: Check-in Response ÔÇö routes to gamification handler 16ms
+     Ô£ô Scenario 7: SAIR ÔÇö opt-out command (placeholder logic) 4ms
+stderr | tests/api/cr
+on.test.ts > API 
+Routes: Cron Jobs > p
+rocess-message-queue 
+> CRN-04: rejeita se 
+sem secret correto
+[QUEUE API] 
+Unauthorized request
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > process-message-queue > CRN-01: processa fila com sucesso
+[QUEUE API] Processing message queue...
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > process-message-queue > CRN-01: processa fila com sucesso
+[QUEUE API] Processed 2 missed check-ins
+[QUEUE API] Processed 5 messages
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > process-message-queue > retorna 500 se falhar
+[QUEUE API] Processing message queue...
+
+stderr | tests/api/cr
+on.test.ts > API 
+Routes: Cron Jobs > p
+rocess-message-queue 
+> retorna 500 se 
+falhar
+[QUEUE API] Failed: 
+DB Error
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > process-message-queue > retorna 500 se falhar
+[QUEUE API] Processed 2 missed check-ins
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > schedule-protocol-messages > CRN-02: agenda mensagens de protocolo
+[CRON API] Starting protocol message scheduling...
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > schedule-protocol-messages > CRN-02: agenda mensagens de protocolo
+[CRON API] Success: { success: true, messagesScheduled: 10, protocolsCompleted: 1 }
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > send-daily-checkins > CRN-03: envia check-ins di├írios
+[DailyCheckin API] Starting daily check-in processing...
+
+stdout | tests/api/cron.test.ts > API Routes: Cron Jobs > send-daily-checkins > CRN-03: envia check-ins di├írios
+[DailyCheckin API] Success: { processed: 3, skipped: 0 }
+
+ Ô£ô tests/api/cron.test.ts (5 tests) 49ms
+stdout | tests/unit/ai-logic.test.ts
+[DEBUG] actions/system.ts loaded
+
+stderr | tests/unit/a
+ctions/patients.test.
+ts > Server Action: 
+Patients > 
+getPatients > 
+PAT-02: retorna 
+array vazio se erro
+Error fetching 
+patients: { message: 
+'DB error' }
+
+stderr | tests/unit/a
+ctions/patients.test.
+ts > Server Action: 
+Patients > getPatient
+ProfileByUserId > 
+PAT-04: retorna null 
+se n├úo encontrar
+Error fetching 
+patient profile by 
+user id: { message: 
+'not found' }
+
+stdout | tests/unit/actions/patients.test.ts > Server Action: Patients > getPatientDetails > PAT-05: retorna patient + metrics + videos + messages
+[getPatientDetails] Patient: p1, Metrics found: 1
+[getPatientDetails] First metric: { id: 'm1', weight_kg: 80, date: '2026-01-01' }
+
+stderr | tests/unit/a
+ctions/patients.test.
+ts > Server Action: 
+Patients > 
+getPatientDetails > 
+retorna vazio se 
+paciente n├úo 
+encontrado
+Error fetching 
+patient details: { 
+message: 'not found' 
+}
+
+stdout | tests/unit/actions/patients.test.ts > Server Action: Patients > createPatientRecord > PAT-06: cria paciente com campos corretos
+createPatientRecord called with: {
+  fullName: 'Ana Souza',
+  email: 'ana@test.com',
+  userId: 'user-1',
+  whatsappNumber: 'whatsapp:+5511999'
+}
+
+stdout | tests/unit/actions/patients.test.ts > Server Action: Patients > createPatientRecord > PAT-06: cria paciente com campos corretos
+User verified in auth.users: { user: { id: 'mock-user-id' } }
+
+stdout | tests/unit/actions/patients.test.ts > Server Action: Patients > createPatientRecord > PAT-06: cria paciente com campos corretos
+Profile verified: { id: 'user-1', role: 'paciente' }
+
+stdout | tests/unit/actions/patients.test.ts > Server Action: Patients > updatePatient > PAT-08: atualiza campos camelCase ÔåÆ snake_case
+Updating patient: p1 Payload: { full_name: 'Maria Silva Updated', status: 'active' }
+
+stdout | tests/unit/actions/patients.test.ts > Server Action: Patients > updatePatient > retorna success se nenhum campo para atualizar
+Updating patient: p1 Payload: {}
+
+stderr | tests/unit/a
+ctions/patients.test.
+ts > Server Action: 
+Patients > 
+deletePatient > 
+retorna erro se falha
+Error deleting 
+patient: { message: 
+'FK violation' }
+
+stderr | tests/unit/a
+ctions/patients.test.
+ts > Server Action: 
+Patients > 
+addHealthMetric > 
+retorna erro se 
+falha na inser├º├úo
+Error adding health 
+metric: { message: 
+'insert error' }
+
+ Ô£ô tests/unit/actions/patients.test.ts (13 tests) 76ms
+stderr | tests/unit/a
+ctions/protocols.test
+.ts > Server Action: 
+Protocols > 
+getProtocols > 
+retorna array vazio 
+se erro
+Error fetching 
+protocols: { 
+message: 'error' }
+
+stderr | tests/unit/a
+ctions/protocols.test
+.ts > Server Action: 
+Protocols > assignPro
+tocolToPatient > 
+retorna erro se 
+inser├º├úo falha
+Error assigning 
+protocol: { message: 
+'FK error' }
+
+stderr | tests/unit/a
+ctions/protocols.test
+.ts > Server Action: 
+Protocols > 
+deleteProtocol > 
+retorna erro se falha
+Error deleting 
+protocol: { message: 
+'error' }
+
+ Ô£ô tests/unit/actions/protocols.test.ts (8 tests) 45ms
+stderr | tests/unit/a
+ctions/messages.test.
+ts > Server Action: 
+Messages > 
+getMessages > 
+retorna array vazio 
+se erro
+Error fetching 
+messages: { message: 
+'error' }
+
+stderr | tests/unit/a
+ctions/messages.test.
+ts > Server Action: 
+Messages > 
+addMessage > retorna 
+erro se inser├º├úo 
+falha
+Error adding 
+message: { message: 
+'insert error' }
+
+stdout | tests/unit/actions/gamification.test.ts > Server Action: Gamification > GAM-01: hydration soma +10 pts
+[GAMIFICATION] registerQuickAction called for user user-1 type hydration perspective auto
+
+stdout | tests/unit/actions/gamification.test.ts > Server Action: Gamification > GAM-02: mood soma +15 pts
+[GAMIFICATION] registerQuickAction called for user user-1 type mood perspective auto
+
+stdout | tests/unit/actions/gamification.test.ts > Server Action: Gamification > GAM-03: perspectiva override funciona
+[GAMIFICATION] registerQuickAction called for user user-1 type hydration perspective alimentacao
+
+stdout | tests/unit/actions/gamification.test.ts > Server Action: Gamification > GAM-04: b├┤nus +50 quando completa meta semanal
+[GAMIFICATION] registerQuickAction called for user user-1 type hydration perspective auto
+
+stderr | tests/unit/a
+ctions/messages.test.
+ts > Server Action: 
+Messages > addMessage
+AndSendWhatsapp > 
+falha se Twilio 
+retorna false
+[Server Action] Erro 
+em addMessageAndSendW
+hatsapp: Error: A 
+mensagem n├úo p├┤de 
+ser enviada via 
+Twilio.
+    at Module.addMess
+ageAndSendWhatsapp (C
+:/Users/Usuario/.gemi
+ni/antigravity/scratc
+h/Cuidar-me/src/ai/ac
+tions/messages.ts:46:
+19)
+    at processTicksAn
+dRejections (node:int
+ernal/process/task_qu
+eues:105:5)
+    at C:/Users/Usuar
+io/.gemini/antigravit
+y/scratch/Cuidar-me/t
+ests/unit/actions/mes
+sages.test.ts:96:28
+    at file:///C:/Use
+rs/Usuario/.gemini/an
+tigravity/scratch/Cui
+dar-me/node_modules/@
+vitest/runner/dist/in
+dex.js:919:20
+
+stdout | tests/unit/actions/gamification.test.ts > Server Action: Gamification > GAM-05: atualiza n├¡vel quando sobe de n├¡vel
+[GAMIFICATION] registerQuickAction called for user user-1 type hydration perspective auto
+
+stdout | tests/unit/actions/gamification.test.ts > Server Action: Gamification > GAM-06: retorna erro se paciente n├úo encontrado
+[GAMIFICATION] registerQuickAction called for user fake-user type hydration perspective auto
+
+ Ô£ô tests/unit/actions/messages.test.ts (6 tests) 62ms
+stderr | tests/unit/a
+ctions/gamification.t
+est.ts > Server 
+Action: Gamification 
+> GAM-06: retorna 
+erro se paciente 
+n├úo encontrado
+Error fetching 
+patient for 
+gamification: { 
+message: 'not found' 
+}
+
+ Ô£ô tests/unit/actions/gamification.test.ts (6 tests) 32ms
+stderr | tests/unit/a
+ctions/store.test.ts 
+> Server Action: 
+Store > retorna erro 
+se paciente n├úo 
+encontrado na compra
+Error fetching 
+patient for 
+purchase: { message: 
+'not found' }
+
+ Ô£ô tests/unit/actions/store.test.ts (8 tests) 35ms
+stderr | tests/api/wh
+atsapp.test.ts > 
+WhatsApp Webhook API 
+> should return 401 
+if Twilio validation 
+fails
+Received a request 
+that failed Twilio 
+validation.
+
+stdout | tests/api/whatsapp.test.ts > WhatsApp Webhook API > should return 400 if required fields are missing
+Twilio webhook request validated successfully.
+
+stdout | tests/api/whatsapp.test.ts > WhatsApp Webhook API > should process valid request and return TwiML
+Twilio webhook request validated successfully.
+
+stdout | tests/api/whatsapp.test.ts > WhatsApp Webhook API > should use default profile name if missing
+Twilio webhook request validated successfully.
+
+ Ô£ô tests/api/whatsapp.test.ts (4 tests) 83ms
+ Ô£ô tests/unit/level-system.test.ts (22 tests) 28ms
+ Ô£ô tests/unit/daily-checkin.test.ts (21 tests) 27ms
+ Ô£ô tests/unit/supabase-transforms.test.ts (8 tests) 25ms
+ Ô£ô tests/unit/badge-system.test.ts (11 tests) 24ms
+ Ô£ô tests/unit/rate-limit.test.ts (7 tests) 16ms
+ Ô£ô tests/unit/services/patient-service.test.ts (2 tests) 10ms
+ Ô£ô tests/unit/points-store.test.ts (4 tests) 10ms
+ Ô£ô tests/unit/streak-system.test.ts (8 tests) 11ms
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» 
+Failed Suites 1 
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  tests/unit/ai-
+logic.test.ts [ tests
+/unit/ai-logic.test.t
+s ]
+TypeError: __vite_ssr
+_import_0__.ai.define
+Tool is not a 
+function
+ ÔØ» src/ai/flows/gen
+erate-chatbot-reply.t
+s:22:33
+     20| }
+     21| 
+     22| const 
+scheduleReminderTool 
+= ai.defineTool(
+       |             
+                    ^
+     23|   {
+     24|     name: 
+'scheduleReminder',
+ ÔØ» tests/unit/ai-lo
+gic.test.ts:19:1
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»[1/5]ÔÄ»
+
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ Failed Tests 4 
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  tests/integrat
+ion/whatsapp-flows.te
+st.ts > WhatsApp 
+Integration Flows > 
+Scenario 6: Check-in 
+Response ÔÇö routes 
+to gamification 
+handler
+AssertionError: 
+expected "vi.fn()" 
+to be called at 
+least once
+ ÔØ» tests/integratio
+n/whatsapp-flows.test
+.ts:280:48
+    278| 
+    279|         expe
+ct(result.success).to
+Be(true);
+    280|         expe
+ct(mockHandleProtocol
+Gamification).toHaveB
+eenCalled();
+       |             
+                     
+              ^
+    281|     });
+    282| 
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»[2/5]ÔÄ»
+
+ FAIL  tests/unit/onb
+oarding.test.ts > 
+Onboarding > 
+processStepResponse 
+> ONB-10: 
+preferences ÔÇö 
+aceita "manh├ú", 
+"tarde", "noite"
+AssertionError: 
+expected 'morning' 
+to be 'afternoon' // 
+Object.is equality
+
+Expected: "afternoon"
+Received: "morning"
+
+ ÔØ» tests/unit/onboa
+rding.test.ts:116:88
+    114|         
+it('ONB-10: 
+preferences ÔÇö 
+aceita "manh├ú", 
+"tarde", "noite"', 
+(ÔÇª
+    115|             
+expect(processStepRes
+ponse('preferences', 
+'manh├ú', {}).datÔÇª
+    116|             
+expect(processStepRes
+ponse('preferences', 
+'tarde', {}).datÔÇª
+       |             
+                     
+                     
+                     
+            ^
+    117|             
+expect(processStepRes
+ponse('preferences', 
+'noite', {}).datÔÇª
+    118|         });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»[3/5]ÔÄ»
+
+ FAIL  tests/unit/pro
+tocol-response-proces
+sor.test.ts > 
+Protocol Response 
+Processor > 
+processYesNoResponse 
+> PRP-09: fallback 
+ÔÇö msg > 3 chars = 
+positivo
+AssertionError: 
+expected false to be 
+true // Object.is 
+equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ÔØ» tests/unit/proto
+col-response-processo
+r.test.ts:93:39
+     91|             
+const result = proces
+sYesNoResponse('hoje 
+foi tranquilo');
+     92|             
+expect(result.isValid
+).toBe(true);
+     93|             
+expect(result.isPosit
+ive).toBe(true);
+       |             
+                     
+     ^
+     94|         });
+     95| 
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»[4/5]ÔÄ»
+
+ FAIL  tests/unit/pro
+tocol-response-proces
+sor.test.ts > 
+Protocol Response 
+Processor > 
+processYesNoResponse 
+> rejeita input 
+vazio ou muito curto 
+sem palavra-chave
+AssertionError: 
+expected true to be 
+false // Object.is 
+equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ÔØ» tests/unit/proto
+col-response-processo
+r.test.ts:98:36
+     96|         
+it('rejeita input 
+vazio ou muito curto 
+sem palavra-chave', 
+() ÔÇª
+     97|             
+const result = proces
+sYesNoResponse('xy');
+     98|             
+expect(result.isValid
+).toBe(false);
+       |             
+                     
+  ^
+     99|         });
+    100|     });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»[5/5]ÔÄ»
+
+
+ Test Files  4 failed | 17 passed (21)
+      Tests  4 failed | 190 passed (194)
+   Start at  17:26:11
+   Duration  13.24s (transform 4.23s, setup 24.64s, import 4.94s, tests 1.34s, environment 39.08s)
+
