@@ -177,9 +177,16 @@ export async function handlePatientReply(
             const isEmergencyByKeyword = EMERGENCY_PATTERNS.some(p => p.test(messageText));
 
             if (isEmergencyByKeyword) {
-                console.log(`[EMERGENCY GATE] Keyword match for FREEMIUM patient ${patient.id}`);
-                const { handleEmergency } = await import('./handlers/emergency-handler');
-                return await handleEmergency(patient, messageText, whatsappNumber, supabase);
+                console.log(`[EMERGENCY GATE] Keyword match for FREEMIUM patient ${patient.id}. Sending safety message (no escalation).`);
+                const safetyMsg = `⚠️ Percebemos que você pode estar passando por uma situação de saúde importante.\n\nPor favor, procure atendimento médico imediatamente:\n\n🚑 **SAMU:** Ligue **192**\n🏥 **Pronto-socorro** mais próximo\n📞 **CVV (apoio emocional):** Ligue **188**\n\nSua saúde é prioridade. Não deixe de buscar ajuda profissional! ❤️`;
+
+                await sendWhatsappMessage(whatsappNumber, safetyMsg);
+                await supabase.from('messages').insert({
+                    patient_id: patient.id,
+                    sender: 'me',
+                    text: safetyMsg,
+                });
+                return { success: true };
             }
 
             // Qualquer outra mensagem → upsell
