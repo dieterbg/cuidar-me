@@ -180,24 +180,32 @@
 
 ## Resumo de Validação
 
-| # | Teste | Resultado |
-|---|-------|-----------|
-| 1.1 | Onboarding welcome | ⬜ |
-| 1.2 | Resposta "Sim" | ⬜ |
-| 1.3 | Resposta "Ajustar" | ⬜ |
-| 1.4 | Resposta inválida | ⬜ |
-| 2.1 | Mensagem social → upsell | ⬜ |
-| 2.2 | Pergunta saúde → upsell | ⬜ |
-| 2.3 | Mensagem aleatória → upsell | ⬜ |
-| 2.4 | Rate limit | ⬜ |
-| 3.1 | Emergência (dor no peito) | ⬜ |
-| 3.2 | Emergência mental | ⬜ |
-| 4.1 | Opt-out SAIR | ⬜ |
-| 4.2 | Variações opt-out | ⬜ |
-| 5.1 | Dica diária 8h | ⬜ |
-| 5.2 | Resposta à dica → upsell | ⬜ |
-| 5.3 | Inativo não recebe dica | ⬜ |
-| 6.1 | Histórico no dashboard | ⬜ |
-| 6.2 | Info do paciente | ⬜ |
-| 7.1 | Telefone cadastrado | ⬜ |
-| 7.2 | Telefone não cadastrado | ⬜ |
+| # | Você envia / faz | Resposta esperada do sistema | ✅ |
+|---|-----------------|-----------------------------|----|
+| **ONBOARDING** | | | |
+| 1.1 | Admin inicia onboarding | "🌱 Plano: Freemium... dica de saúde todo dia às 8h... Responda Sim" | ⬜ |
+| 1.2 | "Sim" | "A partir de amanhã às 8h receberá sua Dica de Saúde diária... 💎 Plano Premium..." | ⬜ |
+| 1.3 | "Ajustar" | Link para editar perfil. NÃO avança. | ⬜ |
+| 1.4 | "Talvez" (inválido) | "Responda Sim para começar ou Ajustar para alterar seus dados" | ⬜ |
+| **BLOQUEIO DE CHAT** | | | |
+| 2.1 | "Bom dia!" | Upsell: "No plano Gratuito, recebe dicas às 8h. 💎 Premium tem IA 24h..." | ⬜ |
+| 2.2 | "Posso comer chocolate?" | Mesmo upsell. NÃO responde a pergunta. | ⬜ |
+| 2.3 | "kkkk" ou 👍 | Mesmo upsell. NÃO responde "Como posso te ajudar?" | ⬜ |
+| 2.4 | 6+ mensagens seguidas | 5 primeiras = upsell. 6ª+ = rate limit com menção a Premium. | ⬜ |
+| **EMERGÊNCIA** | | | |
+| 3.1 | "Dor forte no peito" | "⚠️ Procure atendimento: 🚑 SAMU 192 / 🏥 Pronto-socorro". NÃO escala clínica. | ⬜ |
+| 3.2 | "Não aguento mais" | Mensagem segurança com 📞 CVV 188. NÃO escala clínica. | ⬜ |
+| **OPT-OUT** | | | |
+| 4.1 | "SAIR" | Confirma cancelamento. Status → inativo. Para dicas. | ⬜ |
+| 4.2 | "stop" / "cancelar" / "parar" | Mesmo efeito que SAIR. | ⬜ |
+| **DICA DIÁRIA** | | | |
+| 5.1 | Aguardar 8h (ou disparar cron) | "Bom dia, [Nome]! 💧 Dica do Cuidar... 💡 Conheça Premium!" | ⬜ |
+| 5.2 | Responder à dica | Upsell (conversa bloqueada). NÃO resposta IA. | ⬜ |
+| 5.3 | (após opt-out) | NÃO recebe dica. | ⬜ |
+| **DASHBOARD** | | | |
+| 6.1 | Abrir página do paciente | Histórico com todas mensagens (dicas, upsells, segurança). | ⬜ |
+| 6.2 | Verificar dados | Plano = Freemium, Status = Ativo. | ⬜ |
+| **TELEFONE** | | | |
+| 7.1 | Enviar msg de nº cadastrado | Sistema encontra paciente → upsell (não "precisa cadastro"). | ⬜ |
+| 7.2 | Enviar msg de nº desconhecido | "Precisa ter cadastro ativo" + link para clinicadornelles.com.br. | ⬜ |
+
