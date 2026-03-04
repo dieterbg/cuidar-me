@@ -106,7 +106,16 @@ export async function handleOnboardingReply(
 
         if (processError) {
             // Enviar mensagem de erro
-            await sendWhatsappMessage(whatsappNumber, `❌ ${processError}\n\nTente novamente:`);
+            const errorMessage = `❌ ${processError}\n\nTente novamente:`;
+            await sendWhatsappMessage(whatsappNumber, errorMessage);
+
+            // Salvar no histórico
+            await supabase.from('messages').insert({
+                patient_id: patientId,
+                sender: 'system',
+                text: errorMessage,
+            });
+
             return { success: true }; // Não avançar, esperar nova resposta
         }
 

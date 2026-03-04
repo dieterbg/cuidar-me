@@ -2,6 +2,8 @@
 
 Plataforma completa de acompanhamento de pacientes com protocolo clínico personalizado, gamificação, comunicação via WhatsApp e análise por IA.
 
+> 🌟 **Importante:** Antes de contribuir ou alterar a lógica de negócios, leia obrigatoriamente o documento [Regras de Ouro (Golden Rules)](./GOLDEN-RULES.md) para entender a divisão de planos (Freemium/Premium/VIP) e o conceito clínico de cada Protocolo.
+
 ## 🚀 Stack Tecnológico
 
 - **Framework:** Next.js 14 (App Router)

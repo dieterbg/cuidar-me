@@ -38,7 +38,8 @@ export async function handlePatientReply(
 
         // 1. Buscar paciente (agora APENAS busca, não cria)
         const { findPatientByPhone } = await import('@/services/patient-service');
-        const patient = await findPatientByPhone(supabase, whatsappNumber);
+        const patientRaw = await findPatientByPhone(supabase, whatsappNumber);
+        const patient = patientRaw ? transformPatientFromSupabase(patientRaw) : null;
 
         // Se não encontrou paciente, envia mensagem de cadastro e encerra
         if (!patient) {
@@ -60,8 +61,7 @@ export async function handlePatientReply(
             vip: Infinity,
         };
 
-        // Ler plano do paciente — coluna direta na tabela patients
-        const patientPlan = (patient as any).plan || 'freemium';
+        const patientPlan = patient.subscription.plan || 'freemium';
         console.log(`[handlePatientReply] Patient ${patient.id} plan: ${patientPlan}`);
         const dailyLimit = DAILY_LIMITS[patientPlan] ?? DAILY_LIMITS.freemium;
 
@@ -82,6 +82,14 @@ export async function handlePatientReply(
                     ? "Você atingiu o limite diário de mensagens do plano gratuito. 💡 Conheça nossos planos Premium para acompanhamento ilimitado! Acesse: https://clinicadornelles.com.br/portal/journey"
                     : "Você atingiu o limite diário de mensagens. Tente novamente amanhã! 😊";
                 await sendWhatsappMessage(whatsappNumber, limitMsg);
+
+                // Salvar no histórico para o admin ver o bloqueio
+                await supabase.from('messages').insert({
+                    patient_id: patient.id,
+                    sender: 'me',
+                    text: limitMsg,
+                });
+
                 return { success: true };
             }
         }
@@ -131,7 +139,7 @@ export async function handlePatientReply(
 
         if (onboardingActive) {
             console.log(`[ONBOARDING] Active flow detected for patient ${patient.id}. Routing to handler.`);
-            const result = await handleOnboardingReply(patient.id, whatsappNumber, messageText, patient.full_name);
+            const result = await handleOnboardingReply(patient.id, whatsappNumber, messageText, patient.fullName);
             return { success: result.success };
         }
 

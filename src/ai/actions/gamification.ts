@@ -55,6 +55,28 @@ export async function registerQuickAction(
     }
 
     if (perspectiveKey) {
+        // ✨ ANTI-CHEAT (RATE LIMITING) ✨
+        // Evita que o paciente clique no botão 50 vezes seguidas no painel web para "farmar" pontos.
+        const now = Date.now();
+        const COOLDOWN_MS = 60 * 60 * 1000; // 1 hora de espera entre cliques no mesmo botão
+
+        if (!patient.gamification.lastActionLogs) {
+            patient.gamification.lastActionLogs = {};
+        }
+
+        const lastActionTime = patient.gamification.lastActionLogs[perspectiveKey];
+        if (lastActionTime && (now - lastActionTime) < COOLDOWN_MS) {
+            const minutesLeft = Math.ceil((COOLDOWN_MS - (now - lastActionTime)) / 60000);
+            return {
+                success: false,
+                message: `Você já registrou isso há pouco tempo! Tente novamente em ${minutesLeft} minutos. ⏳`,
+                pointsEarned: 0
+            };
+        }
+
+        // Registrar a hora do novo clique
+        patient.gamification.lastActionLogs[perspectiveKey] = now;
+
         // Atualizar progresso semanal
         const currentProgress = patient.gamification.weeklyProgress?.perspectives?.[perspectiveKey] || { current: 0, goal: 5, isComplete: false };
 

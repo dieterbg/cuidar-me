@@ -1,35 +1,39 @@
 /**
  * Sistema de Níveis - 20 Níveis Progressivos
  * 
- * Níveis 1-5:   Iniciante   (0-500 pts,    gaps de 100)
- * Níveis 6-10:  Praticante  (500-1500 pts, gaps de 200)
- * Níveis 11-15: Veterano    (1500-3000 pts, gaps de 300)
- * Níveis 16-20: Mestre      (3000-6000 pts, gaps de 600)
+ * Níveis 1-5:   Bronze    (0-3999 pts)     [Exige 1500 para Bronze I real, mas usamos 0-3999 pro tier inteiro]
+ * Níveis 6-10:  Prata     (4000-7999 pts)
+ * Níveis 11-15: Ouro      (8000-14999 pts)
+ * Níveis 16-20: Diamante  (15000+ pts)
  */
 
 // Thresholds de pontos para cada nível (1-20)
+// Baseados nas Regras de Ouro:
+// Bronze começa em 0 mas a conquista real é 1500. Prata 4000, Ouro 8000, Diamante 15000.
 const LEVEL_THRESHOLDS = [
-    0,    // Nível 1
-    100,  // Nível 2
-    200,  // Nível 3
-    300,  // Nível 4
-    400,  // Nível 5
-    500,  // Nível 6
-    700,  // Nível 7
-    900,  // Nível 8
-    1100, // Nível 9
-    1300, // Nível 10
-    1500, // Nível 11
-    1800, // Nível 12
-    2100, // Nível 13
-    2400, // Nível 14
-    2700, // Nível 15
-    3000, // Nível 16
-    3600, // Nível 17
-    4200, // Nível 18
-    4800, // Nível 19
-    5400, // Nível 20
+    0,      // Nível 1  (Bronze I)
+    300,    // Nível 2  (Bronze II)
+    700,    // Nível 3  (Bronze III)
+    1500,   // Nível 4  (Bronze IV - Conquista Oficial Bronze)
+    2500,   // Nível 5  (Bronze V)
+    4000,   // Nível 6  (Prata I - Conquista Oficial Prata)
+    4800,   // Nível 7  (Prata II)
+    5600,   // Nível 8  (Prata III)
+    6400,   // Nível 9  (Prata IV)
+    7200,   // Nível 10 (Prata V)
+    8000,   // Nível 11 (Ouro I - Conquista Oficial Ouro)
+    9000,   // Nível 12 (Ouro II)
+    10000,  // Nível 13 (Ouro III)
+    11500,  // Nível 14 (Ouro IV)
+    13000,  // Nível 15 (Ouro V)
+    15000,  // Nível 16 (Diamante I - Conquista Oficial Diamante)
+    17000,  // Nível 17 (Diamante II)
+    19500,  // Nível 18 (Diamante III)
+    22000,  // Nível 19 (Diamante IV)
+    25000,  // Nível 20 (Diamante V)
 ];
+
+export type GamificationTier = 'Bronze' | 'Prata' | 'Ouro' | 'Diamante';
 
 /**
  * Calcula o nível baseado nos pontos totais
@@ -47,33 +51,33 @@ export function calculateLevel(totalPoints: number): number {
 }
 
 /**
- * Retorna o nome completo do nível (ex: "Veterano III")
+ * Retorna o nome completo do nível (ex: "Ouro III")
  * @param level - Número do nível (1-20)
  * @returns Nome formatado
  */
 export function getLevelName(level: number): string {
     if (level <= 5) {
-        return `Iniciante ${toRoman(level)}`;
+        return `Bronze ${toRoman(level)}`;
     }
     if (level <= 10) {
-        return `Praticante ${toRoman(level - 5)}`;
+        return `Prata ${toRoman(level - 5)}`;
     }
     if (level <= 15) {
-        return `Veterano ${toRoman(level - 10)}`;
+        return `Ouro ${toRoman(level - 10)}`;
     }
-    return `Mestre ${toRoman(level - 15)}`;
+    return `Diamante ${toRoman(level - 15)}`;
 }
 
 /**
  * Retorna apenas o "tier" (categoria) do nível
  * @param level - Número do nível (1-20)
- * @returns 'Iniciante' | 'Praticante' | 'Veterano' | 'Mestre'
+ * @returns GamificationTier
  */
-export function getLevelTier(level: number): 'Iniciante' | 'Praticante' | 'Veterano' | 'Mestre' {
-    if (level <= 5) return 'Iniciante';
-    if (level <= 10) return 'Praticante';
-    if (level <= 15) return 'Veterano';
-    return 'Mestre';
+export function getLevelTier(level: number): GamificationTier {
+    if (level <= 5) return 'Bronze';
+    if (level <= 10) return 'Prata';
+    if (level <= 15) return 'Ouro';
+    return 'Diamante';
 }
 
 /**
@@ -82,20 +86,26 @@ export function getLevelTier(level: number): 'Iniciante' | 'Praticante' | 'Veter
  */
 export function isLevelTier(
     level: number | string,
-    tier: 'Iniciante' | 'Praticante' | 'Veterano' | 'Mestre'
+    tier: GamificationTier | 'Iniciante' | 'Praticante' | 'Veterano' | 'Mestre'
 ): boolean {
-    // Se vier como string antiga, converter
+    const targetTier = migrateOldTierName(tier as string);
+
     if (typeof level === 'string') {
-        const oldMapping: Record<string, 'Iniciante' | 'Praticante' | 'Veterano' | 'Mestre'> = {
-            'Iniciante': 'Iniciante',
-            'Praticante': 'Praticante',
-            'Veterano': 'Veterano',
-            'Mestre': 'Mestre',
-        };
-        return oldMapping[level] === tier;
+        const mappedLevel = migrateOldTierName(level);
+        return mappedLevel === targetTier;
     }
 
-    return getLevelTier(level) === tier;
+    return getLevelTier(level) === targetTier;
+}
+
+function migrateOldTierName(tier: string): GamificationTier {
+    const oldMapping: Record<string, GamificationTier> = {
+        'Iniciante': 'Bronze',
+        'Praticante': 'Prata',
+        'Veterano': 'Ouro',
+        'Mestre': 'Diamante',
+    };
+    return oldMapping[tier] || tier as GamificationTier;
 }
 
 /**
@@ -142,11 +152,11 @@ export function getLevelProgress(totalPoints: number, currentLevel: number): num
  */
 export function getLevelEmoji(level: number): string {
     const tier = getLevelTier(level);
-    const emojis = {
-        'Iniciante': '🌱',
-        'Praticante': '🌿',
-        'Veterano': '🌳',
-        'Mestre': '👑',
+    const emojis: Record<GamificationTier, string> = {
+        'Bronze': '🥉',
+        'Prata': '🥈',
+        'Ouro': '🥇',
+        'Diamante': '💎',
     };
     return emojis[tier];
 }
@@ -194,7 +204,7 @@ export function migrateOldLevel(oldLevel: string | number, totalPoints: number):
  */
 export interface LevelInfo {
     level: number;
-    tier: 'Iniciante' | 'Praticante' | 'Veterano' | 'Mestre';
+    tier: GamificationTier;
     progress: number; // 0-100
     pointsForNext: number;
     color: string;
@@ -212,11 +222,11 @@ export function getLevelInfo(totalPoints: number): LevelInfo {
     const pointsForNext = level >= 20 ? 0 : getPointsForNextLevel(level) - totalPoints;
 
     // Cores por tier
-    const colors = {
-        'Iniciante': 'text-gray-600 dark:text-gray-400',
-        'Praticante': 'text-blue-600 dark:text-blue-400',
-        'Veterano': 'text-purple-600 dark:text-purple-400',
-        'Mestre': 'text-amber-600 dark:text-amber-400',
+    const colors: Record<GamificationTier, string> = {
+        'Bronze': 'text-[#cd7f32] dark:text-[#cd7f32]',
+        'Prata': 'text-gray-400 dark:text-gray-300',
+        'Ouro': 'text-yellow-500 dark:text-yellow-400',
+        'Diamante': 'text-cyan-400 dark:text-cyan-300',
     };
 
     return {
@@ -227,3 +237,4 @@ export function getLevelInfo(totalPoints: number): LevelInfo {
         color: colors[tier],
     };
 }
+

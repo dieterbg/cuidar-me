@@ -19,10 +19,10 @@ import { QuickActionButton } from '@/components/quick-action-button';
 import { getLevelTier, getLevelName } from '@/lib/level-system';
 
 const levelConfig: { [key: string]: { nextLevel: string, goal: number } } = {
-    'Iniciante': { nextLevel: 'Praticante', goal: 500 },
-    'Praticante': { nextLevel: 'Veterano', goal: 1000 },
-    'Veterano': { nextLevel: 'Mestre', goal: 2000 },
-    'Mestre': { nextLevel: 'Mestre', goal: 2000 }, // Max level
+    'Bronze': { nextLevel: 'Prata', goal: 4000 },
+    'Prata': { nextLevel: 'Ouro', goal: 8000 },
+    'Ouro': { nextLevel: 'Diamante', goal: 15000 },
+    'Diamante': { nextLevel: 'Diamante', goal: 25000 }, // Max level
 }
 
 const badgeImages: Record<string, string> = {

@@ -256,26 +256,34 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
                 </CardHeader>
                 <ScrollArea className="h-[50vh] p-4 border-y" ref={scrollAreaRef}>
                     <div className="space-y-4">
-                        {conversation.map((msg) => (
-                            <div key={msg.id} className={cn("flex items-end gap-2", msg.sender === 'me' ? 'justify-end' : 'justify-start')}>
-                                {msg.sender === 'patient' && <Avatar className="h-8 w-8"><AvatarImage src={patient?.avatar} /><AvatarFallback>{patient?.name[0]}</AvatarFallback></Avatar>}
-                                <div className={cn("max-w-xs md:max-w-md rounded-2xl p-3 text-sm shadow-sm", msg.sender === 'me' ? 'bg-primary/90 text-primary-foreground rounded-tr-none' : 'bg-muted rounded-tl-none')}>
-                                    <p>{msg.text}</p>
-                                    <p className="text-[10px] opacity-60 mt-1 text-right whitespace-nowrap">
-                                        {msg.timestamp && !isNaN(new Date(msg.timestamp as string).getTime())
-                                            ? (() => {
-                                                const date = new Date(msg.timestamp as string);
-                                                const isToday = new Date().toDateString() === date.toDateString();
-                                                return isToday
-                                                    ? format(date, 'HH:mm')
-                                                    : format(date, "dd/MM 'às' HH:mm", { locale: ptBR });
-                                            })()
-                                            : '--:--'
-                                        }
-                                    </p>
+                        {conversation.map((msg) => {
+                            const isFromStaff = msg.sender === 'me' || msg.sender === 'system';
+                            return (
+                                <div key={msg.id} className={cn("flex items-end gap-2", isFromStaff ? 'justify-end' : 'justify-start')}>
+                                    {msg.sender === 'patient' && <Avatar className="h-8 w-8"><AvatarImage src={patient?.avatar} /><AvatarFallback>{patient?.name[0]}</AvatarFallback></Avatar>}
+                                    {msg.sender === 'system' && <Badge variant="outline" className="text-[9px] mb-2 bg-muted/50">Sistema</Badge>}
+                                    <div className={cn("max-w-xs md:max-w-md rounded-2xl p-3 text-sm shadow-sm",
+                                        msg.sender === 'me' ? 'bg-primary/90 text-primary-foreground rounded-tr-none' :
+                                            msg.sender === 'system' ? 'bg-blue-50 border border-blue-100 text-blue-900 rounded-tr-none' :
+                                                'bg-muted rounded-tl-none')}>
+                                        <p>{msg.text}</p>
+                                        <p className={cn("text-[10px] opacity-60 mt-1 text-right whitespace-nowrap", msg.sender === 'me' ? 'text-primary-foreground' : '')}>
+                                            {msg.timestamp && !isNaN(new Date(msg.timestamp as string).getTime())
+                                                ? (() => {
+                                                    const date = new Date(msg.timestamp as string);
+                                                    const isToday = new Date().toDateString() === date.toDateString();
+                                                    return isToday
+                                                        ? format(date, 'HH:mm')
+                                                        : format(date, "dd/MM 'às' HH:mm", { locale: ptBR });
+                                                })()
+                                                : '--:--'
+                                            }
+                                        </p>
+                                    </div>
+                                    {msg.sender === 'me' && <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary text-primary-foreground text-xs">E</AvatarFallback></Avatar>}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         {conversation.length === 0 && (
                             <div className="text-center text-muted-foreground py-10">
                                 Nenhuma mensagem nesta conversa ainda.

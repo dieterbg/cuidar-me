@@ -342,7 +342,7 @@ export default function PatientProfilePage() {
 
     const handleSaveSuccess = () => {
         setIsEditModalOpen(false);
-        fetchData(true);
+        fetchData(false);
     };
 
 

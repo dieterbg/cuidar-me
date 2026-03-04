@@ -168,6 +168,22 @@ export async function assignProtocolToPatient(
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
 
+    // Validar se o paciente não é Freemium (Regra de Ouro)
+    const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .select('plan')
+        .eq('id', patientId)
+        .single();
+
+    if (patientError) {
+        console.error('Error fetching patient plan:', patientError);
+        return { success: false, error: 'Erro ao verificar plano do paciente.' };
+    }
+
+    if (patient?.plan === 'freemium') {
+        return { success: false, error: 'Acesso Negado: Pacientes Freemium não podem receber protocolos.' };
+    }
+
     // Desativar protocolo anterior se existir
     await supabase
         .from('patient_protocols')
