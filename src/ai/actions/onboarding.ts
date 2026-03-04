@@ -55,8 +55,8 @@ export async function startOnboarding(
             .from('messages')
             .insert({
                 patient_id: patientId,
-                sender_type: 'system',
-                content: message,
+                sender: 'system',
+                text: message,
             });
 
         console.log(`[startOnboarding] Started minimal onboarding for patient ${patientId} (${plan})`);
@@ -86,7 +86,9 @@ export async function handleOnboardingReply(
             .select('*')
             .eq('patient_id', patientId)
             .is('completed_at', null)
-            .single();
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
         if (fetchError || !onboardingState) {
             console.error('[handleOnboardingReply] No active onboarding found');
@@ -112,8 +114,8 @@ export async function handleOnboardingReply(
             // Salvar no histórico
             await supabase.from('messages').insert({
                 patient_id: patientId,
-                sender_type: 'system',
-                content: errorMessage,
+                sender: 'system',
+                text: errorMessage,
             });
 
             return { success: true }; // Não avançar, esperar nova resposta
@@ -174,8 +176,8 @@ export async function handleOnboardingReply(
                 .from('messages')
                 .insert({
                     patient_id: patientId,
-                    sender_type: 'system',
-                    content: nextMessage,
+                    sender: 'system',
+                    text: nextMessage,
                 });
         }
 
@@ -203,7 +205,8 @@ export async function isOnboardingActive(patientId: string): Promise<boolean> {
         .select('id')
         .eq('patient_id', patientId)
         .is('completed_at', null)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
     return !error && !!data;
 }

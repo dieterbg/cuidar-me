@@ -109,6 +109,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <span className="font-bold text-foreground text-sm truncate max-w-[120px]">
                   {profile?.display_name?.split(' ')[0] ?? 'Usuário'}
                 </span>
+                <span className="text-xs text-muted-foreground/50">v1.5.1 - 04/03 - 17:15</span>
                 <span className="text-xs text-muted-foreground font-medium">
                   {profile?.role ? roleLabels[profile.role] : 'Membro'}
                 </span>

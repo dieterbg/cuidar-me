@@ -137,8 +137,8 @@ export async function POST(request: NextRequest) {
         // 5. Registrar mensagem no histórico para evitar duplicidade de boas-vindas
         await supabase.from('messages').insert({
             patient_id: patientId,
-            sender_type: 'system',
-            content: welcomeMessage,
+            sender: 'system',
+            text: welcomeMessage,
         });
 
         return NextResponse.json({
