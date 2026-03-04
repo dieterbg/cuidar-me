@@ -158,7 +158,7 @@ export async function handleOnboardingReply(
         const { error: updateError } = await supabase
             .from('onboarding_states')
             .update(updatePayload)
-            .eq('patient_id', patientId);
+            .eq('id', onboardingState.id);
 
         if (updateError) {
             console.error('[handleOnboardingReply] Update Error:', updateError);
