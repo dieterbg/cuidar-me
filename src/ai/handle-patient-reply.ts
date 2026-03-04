@@ -139,7 +139,7 @@ export async function handlePatientReply(
 
         if (onboardingActive) {
             console.log(`[ONBOARDING] Active flow detected for patient ${patient.id}. Routing to handler.`);
-            const result = await handleOnboardingReply(patient.id, whatsappNumber, messageText, patient.full_name);
+            const result = await handleOnboardingReply(patient.id, whatsappNumber, messageText, patient.fullName);
             return { success: result.success };
         }
 
