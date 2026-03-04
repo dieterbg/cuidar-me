@@ -194,10 +194,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
           <div className="px-4 py-2 border-t border-dashed border-[#EBECE8] mt-2 group/version">
             <div className="flex flex-col gap-1 opacity-40 group-hover/version:opacity-100 transition-opacity duration-300">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-[#899d5e]">Build v1.4.9</span>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-[#899d5e]">Build v1.5.0</span>
               <span className="text-[9px] text-muted-foreground leading-tight">
-                Update: 04/03 - 11:35<br />
-                Normalization & Freemium Fix
+                Update: 04/03 - 16:40<br />
+                Genkit Fix & Dynamic Simulation
               </span>
             </div>
           </div>
