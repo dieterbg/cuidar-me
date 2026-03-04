@@ -62,29 +62,23 @@ export async function POST(request: NextRequest) {
         // 2. Criar ou Resetar estado inicial se for manual
         const initialStep: OnboardingStep = 'welcome';
         if (!existingOnboarding) {
-
             const { error: createError } = await supabase
                 .from('onboarding_states')
                 .insert({
                     patient_id: patientId,
-                    current_step: initialStep, // Check field name! (was 'step' in some versions)
-                    metadata: { source: 'api_manual_trigger' }
+                    step: initialStep,
+                    plan: patient.plan,
+                    data: {},
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
                 });
 
             if (createError) {
-
-                // Fallback to 'step' if 'current_step' fails (depends on DB schema)
-                const { error: createError2 } = await supabase
-                    .from('onboarding_states')
-                    .insert({
-                        patient_id: patientId,
-                        step: initialStep,
-                        plan: patient.plan,
-                        data: {},
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString(),
-                    });
-
+                console.error('[POST /api/onboarding/initiate] Error creating onboarding state:', createError);
+                return NextResponse.json(
+                    { success: false, error: 'Failed to create onboarding state' },
+                    { status: 500 }
+                );
             }
         }
 
@@ -143,8 +137,8 @@ export async function POST(request: NextRequest) {
         // 5. Registrar mensagem no histórico para evitar duplicidade de boas-vindas
         await supabase.from('messages').insert({
             patient_id: patientId,
-            sender: 'system',
-            text: welcomeMessage,
+            sender_type: 'system',
+            content: welcomeMessage,
         });
 
         return NextResponse.json({

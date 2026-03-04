@@ -174,7 +174,7 @@ export default function PatientProfilePage() {
         } finally {
             if (isInitialLoad) setLoading(false);
         }
-    }, [patientId, toast, isEditModalOpen, notFound]);
+    }, [patientId, toast, notFound]);
 
     useEffect(() => {
         fetchData(true);

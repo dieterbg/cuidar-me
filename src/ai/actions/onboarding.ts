@@ -55,8 +55,8 @@ export async function startOnboarding(
             .from('messages')
             .insert({
                 patient_id: patientId,
-                sender: 'system',
-                text: message,
+                sender_type: 'system',
+                content: message,
             });
 
         console.log(`[startOnboarding] Started minimal onboarding for patient ${patientId} (${plan})`);
@@ -112,8 +112,8 @@ export async function handleOnboardingReply(
             // Salvar no histórico
             await supabase.from('messages').insert({
                 patient_id: patientId,
-                sender: 'system',
-                text: errorMessage,
+                sender_type: 'system',
+                content: errorMessage,
             });
 
             return { success: true }; // Não avançar, esperar nova resposta
@@ -174,8 +174,8 @@ export async function handleOnboardingReply(
                 .from('messages')
                 .insert({
                     patient_id: patientId,
-                    sender: 'system',
-                    text: nextMessage,
+                    sender_type: 'system',
+                    content: nextMessage,
                 });
         }
 
