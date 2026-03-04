@@ -47,6 +47,7 @@ firebase-debug.log
 # IDE
 .vscode/
 .idea/
+.idx/
 *.swp
 *.swo
 *~
@@ -62,6 +63,3 @@ temp/
 
 # Git backup
 .git.backup/
-
-.vercel
-.env*.local
