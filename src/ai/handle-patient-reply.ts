@@ -60,7 +60,9 @@ export async function handlePatientReply(
             vip: Infinity,
         };
 
-        const patientPlan = (patient as any).subscription?.plan || 'freemium';
+        // Ler plano do paciente — coluna direta na tabela patients
+        const patientPlan = (patient as any).plan || 'freemium';
+        console.log(`[handlePatientReply] Patient ${patient.id} plan: ${patientPlan}`);
         const dailyLimit = DAILY_LIMITS[patientPlan] ?? DAILY_LIMITS.freemium;
 
         if (dailyLimit !== Infinity) {
@@ -152,6 +154,51 @@ export async function handlePatientReply(
             return { success: true };
         }
 
+        // =====================================================
+        // 🛑 GATE FREEMIUM: BLOQUEIO TOTAL DE CONVERSA
+        // Freemium = Somente Broadcast (dica diária).
+        // QUALQUER mensagem de um Freemium → Upsell para Premium.
+        // (Exceto: opt-out e onboarding, já tratados acima)
+        // (Exceto: emergências por keyword, tratadas abaixo)
+        // =====================================================
+        if (patientPlan === 'freemium') {
+            // Ainda detecta emergências por keyword para Freemium
+            const EMERGENCY_PATTERNS = [
+                /dor.{0,15}(peito|braço|cabeça\s+forte|torax)/i,
+                /desmai|desfale|apag|perd.{0,10}(consciência|sentidos)/i,
+                /suicid|me\s+mat|não\s+aguento\s+mais|não\s+vejo\s+saída|quero\s+sumir/i,
+                /não\s+consigo\s+respir|falta\s+de\s+ar|sufoc/i,
+                /reação.{0,15}(medicamento|alergi|remédio)/i,
+                /visão\s+(escurec|embara)|quase\s+desmaiei/i,
+                /tremed?eira|suando\s+frio|convuls/i,
+                /inchaço.{0,15}(língua|garganta|rosto)/i,
+            ];
+
+            const isEmergencyByKeyword = EMERGENCY_PATTERNS.some(p => p.test(messageText));
+
+            if (isEmergencyByKeyword) {
+                console.log(`[EMERGENCY GATE] Keyword match for FREEMIUM patient ${patient.id}`);
+                const { handleEmergency } = await import('./handlers/emergency-handler');
+                return await handleEmergency(patient, messageText, whatsappNumber, supabase);
+            }
+
+            // Qualquer outra mensagem → upsell
+            console.log(`[FREEMIUM GATE] Blocking chat for patient ${patient.id}. Sending upsell.`);
+            const upsellMsg = `Obrigado pela sua mensagem! 😊\n\nNo plano Gratuito, você recebe dicas de saúde diárias às 8h.\n\n💎 Quer ir além? Com o Plano **Premium** você tem:\n✅ Assistente de saúde com IA 24h\n✅ Check-in diário personalizado\n✅ Gamificação e conquistas\n✅ Protocolos de acompanhamento\n\nFale com a clínica para fazer o upgrade! 🚀`;
+
+            await sendWhatsappMessage(whatsappNumber, upsellMsg);
+            await supabase.from('messages').insert({
+                patient_id: patient.id,
+                sender: 'me',
+                text: upsellMsg,
+            });
+            return { success: true };
+        }
+
+        // =====================================================
+        // A PARTIR DAQUI: APENAS PREMIUM E VIP
+        // =====================================================
+
         // 3. DETECTAR CHECK-INS ATIVOS
         // Verificar se enviamos mensagem de protocolo nas últimas 24h
         const { data: recentProtocolMessage } = await supabase
@@ -203,21 +250,7 @@ export async function handlePatientReply(
 
         console.log(`[Intent] ${classification.intent} (${classification.confidence})`);
 
-        // 5. ROTEAMENTO BASEADO NA INTENÇÃO
-
-        // 5.0 GATE DE PLANO FREEMIUM (UPSELL)
-        // Se for Freemium e não for uma emergência ou social simples, bloquear chat e oferecer upgrade
-        if (patientPlan === 'freemium' && classification.intent === MessageIntent.QUESTION) {
-            const upsellMsg = "Olá! 😊 Notei que você tem uma dúvida de saúde. \n\nO chat interativo com nossa IA é um benefício exclusivo dos planos **Premium e VIP**, que oferecem acompanhamento completo 24h.\n\nNo seu plano atual, você continuará recebendo nossas dicas diárias de saúde! 🌅\n\n💡 Quer liberar o chat agora? Acesse: https://clinicadornelles.com.br/portal/journey";
-
-            await sendWhatsappMessage(whatsappNumber, upsellMsg);
-            await supabase.from('messages').insert({
-                patient_id: patient.id,
-                sender: 'me',
-                text: upsellMsg,
-            });
-            return { success: true };
-        }
+        // 5. ROTEAMENTO BASEADO NA INTENÇÃO (PREMIUM/VIP ONLY)
 
         // 5.1 EMERGÊNCIA - Escala imediatamente
         if (classification.intent === MessageIntent.EMERGENCY) {
