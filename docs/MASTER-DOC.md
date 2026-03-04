@@ -245,6 +245,118 @@ graph TD
 
 **Arquivo principal:** `src/ai/handle-patient-reply.ts` (482 linhas — o orquestrador central)
 
+### 🎬 Vídeos Educacionais
+
+O Cuidar.me possui uma **biblioteca de vídeos educacionais** segmentada por plano. Os vídeos são cadastrados pelo admin e filtrados automaticamente para exibir apenas conteúdos elegíveis ao plano do paciente.
+
+- **Cadastro:** Admin cadastra vídeos com título, descrição, URL (YouTube/Vimeo), categoria e `eligible_plans`
+- **Exibição:** Portal do Paciente (`/portal/education`) mostra apenas vídeos cujo `eligible_plans` inclui o plano do paciente
+- **Feedback:** Pacientes podem dar like/dislike em vídeos assistidos (tabela `sent_videos`)
+- **Componentes:** `video-card.tsx` (card do vídeo), `video-player.tsx` (player embeddado)
+- **Admin:** Tela de gerenciamento em `(dashboard)/education/`
+
+**Arquivos envolvidos:**
+
+| Arquivo | Função |
+|---------|--------|
+| `src/ai/actions/videos.ts` | CRUD de vídeos + filtro por plano |
+| `src/components/video-card.tsx` | Card de exibição |
+| `src/components/video-player.tsx` | Player de vídeo |
+| `src/app/portal/education/page.tsx` | Página do paciente |
+| `src/app/(dashboard)/education/page.tsx` | Gestão pelo admin |
+
+### 🫂 Comunidade Anônima
+
+Espaço seguro onde pacientes podem interagir anonimamente, compartilhar experiências e se apoiar mutuamente. Cada paciente recebe um **username gerado automaticamente** (baseado no primeiro nome) para manter o anonimato.
+
+- **Tópicos:** Pacientes criam tópicos com título e texto
+- **Comentários:** Outros pacientes podem comentar nos tópicos
+- **Fixados:** Admin pode fixar tópicos importantes (pinned)
+- **Moderação:** Admin pode deletar tópicos e comentários
+- **Username:** Gerado automaticamente na primeira interação (`ensureCommunityUsername`)
+
+**Tabelas:**
+- `community_topics` — Tópicos (author_id, author_username, title, text, is_pinned, comment_count)
+- `community_comments` — Comentários (topic_id, author_id, author_username, text)
+
+**Arquivos envolvidos:**
+
+| Arquivo | Função |
+|---------|--------|
+| `src/ai/actions-extended.ts` | CRUD de tópicos e comentários |
+| `src/app/portal/community/page.tsx` | Listagem (paciente) |
+| `src/app/portal/community/[id]/page.tsx` | Detalhes do tópico |
+| `src/app/(dashboard)/community/page.tsx` | Gestão (admin) |
+| `src/app/(dashboard)/community/[id]/page.tsx` | Detalhes (admin) |
+
+### 🧪 Exames Laboratoriais (Lab Results)
+
+O sistema processa **exames laboratoriais via IA** (Gemini Vision). O profissional faz upload da imagem do exame, a IA extrai os valores e compara com faixas de referência, gerando alertas automáticos quando necessário.
+
+**Dados extraídos automaticamente:**
+- Glicemia (jejum), HbA1c
+- Colesterol Total, LDL, HDL, Triglicerídeos
+- Creatinina, Ureia (Função renal)
+- ALT, AST (Função hepática)
+- TSH, T4 (Tireoide)
+- Vitamina D, Vitamina B12
+
+**Fluxo de processamento:**
+1. Upload da imagem do exame pelo admin
+2. IA (Gemini Vision) extrai valores via `extract-lab-results` flow
+3. Valores são salvos na tabela `lab_results`
+4. Se houver valores alterados: cria `attention_request`, marca paciente como `needs_attention`, envia alerta via WhatsApp
+5. Se todos normais: envia mensagem de confirmação
+
+**Arquivos envolvidos:**
+
+| Arquivo | Função |
+|---------|--------|
+| `src/ai/actions/lab-results.ts` | Processamento e alertas |
+| `src/ai/flows/extract-lab-results.ts` | Extração via Gemini Vision |
+| Tabela `lab_results` | Armazenamento |
+
+### 📊 Acompanhamento de Saúde (Peso, Métricas e Evolução)
+
+O paciente pode registrar **métricas de saúde** diretamente no Dashboard, e o sistema traça a evolução ao longo do tempo com gráficos.
+
+**Métricas rastreadas:**
+- **Peso** — Registro manual (semanal), com cálculo de IMC automático
+- **Hidratação** — Via check-in diário (WhatsApp) ou botão no portal
+- **Alimentação** — Via check-in (A=100%, B=Adaptei, C=Fugi)
+- **Exercício** — Duração em minutos + tipo
+- **Bem-estar** — Escala 1-5 emojis
+
+**Check-ins diários (via WhatsApp):**
+- O cron envia check-ins consolidados às 20h (Premium/VIP)
+- As respostas são parseadas e salvas na tabela `daily_checkins`
+- Cada check-in gera pontos de gamificação
+
+**Componentes de visualização:**
+
+| Componente | Função |
+|------------|--------|
+| `health-metrics-chart.tsx` | Gráfico de evolução (peso, IMC) |
+| `gamification-display.tsx` | Painel de pontos e nível |
+| `streak-display.tsx` | Visualização de streaks |
+| `streak-badge.tsx` | Badge visual de streak |
+| `hydration-button.tsx` | Botão rápido de hidratação |
+| `quick-action-button.tsx` | Botões de ação rápida |
+| `patient-analysis-panel.tsx` | Painel de análise do paciente |
+| `level-progress.tsx` | Barra de progresso do nível |
+
+**Tabelas envolvidas:**
+- `daily_checkins` — Check-ins diários (água, alimentação, exercício, humor)
+- `health_metrics` — Métricas avulsas (peso, glicose, pressão)
+- `gamification` — Estado de pontos, XP, nível
+- `lab_results` — Resultados laboratoriais
+
+**Portal do Paciente — Páginas:**
+- `/portal/journey` — Visualização da jornada e progresso
+- `/portal/achievements` — Conquistas e badges desbloqueados
+- `/portal/store` — Loja para trocar pontos por recompensas
+- `/portal/profile` — Perfil com histórico de métricas
+
 ---
 
 ## 6. Inteligência Artificial
