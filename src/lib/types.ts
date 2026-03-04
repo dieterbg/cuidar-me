@@ -215,7 +215,7 @@ export interface ScheduledMessage {
 
 export interface Message {
     id: string;
-    sender: 'patient' | 'me';
+    sender: 'patient' | 'me' | 'system';
     text: string;
     timestamp: Date | string; // Allow string for seeding
 }
