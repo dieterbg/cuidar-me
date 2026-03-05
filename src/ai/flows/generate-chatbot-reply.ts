@@ -54,7 +54,7 @@ const prompt = ai.definePrompt({
   input: { schema: GenerateChatbotReplyInputSchema },
   output: { schema: GenerateChatbotReplyOutputSchema },
   tools: [scheduleReminderTool],
-  model: 'googleai/gemini-2.0-flash-exp',
+  model: 'googleai/gemini-1.5-flash',
   config: {
     temperature: 0.3,
   },
