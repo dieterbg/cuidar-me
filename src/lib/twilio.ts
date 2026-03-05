@@ -112,12 +112,30 @@ export async function validateTwilioWebhook(request: NextRequest, body: any) {
 
     if (!authToken) return false;
 
-    // Try primary URL from headers
+    // --- DIAGNOSTIC LOG (TEMPORARY) ---
+    const { createServiceRoleClient } = await import('./supabase-server-utils');
+    const supabaseDebug = createServiceRoleClient();
+    // ----------------------------------
+
     const isValid = twilio.validateRequest(authToken, signature, urlFromHeaders, body);
+
+    if (!isValid) {
+        await supabaseDebug.from('messages').insert({
+            sender: 'system',
+            text: `[DEBUG] validateRequest failed. URL1: ${urlFromHeaders}, URL2 (Env): ${urlFromEnv}, Signature: ${signature.substring(0, 10)}...`
+        });
+    }
 
     if (!isValid && urlFromEnv && urlFromEnv !== urlFromHeaders) {
         // Fallback to Env URL if headers-based one fails
-        return twilio.validateRequest(authToken, signature, urlFromEnv, body);
+        const isValidRetry = twilio.validateRequest(authToken, signature, urlFromEnv, body);
+        if (isValidRetry) {
+            await supabaseDebug.from('messages').insert({
+                sender: 'system',
+                text: `[DEBUG] validateRequest SUCCESS with URL2: ${urlFromEnv}`
+            });
+        }
+        return isValidRetry;
     }
 
     return isValid;
