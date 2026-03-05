@@ -1,6 +1,6 @@
 # 📖 CUIDAR.ME — Documentação Mestre
 
-**Versão:** 1.0 | **Última atualização:** 04/03/2026 — v1.5.1  
+**Versão:** 1.0 | **Última atualização:** 05/03/2026 20:27 — v1.5.2  
 **Objetivo:** Este é o documento de referência definitivo do Cuidar.me. Toda idealização, regras de negócio, arquitetura técnica, estado atual de implementação e histórico de correções estão aqui. Deve ser atualizado a cada sprint ou mudança significativa.
 
 ---
@@ -627,6 +627,14 @@ NEXT_PUBLIC_APP_URL
 ---
 
 ## 13. Histórico de Correções
+
+### v1.5.2 — 05/03/2026 (20:27)
+
+| Correção | Arquivo(s) | Causa Raiz |
+|----------|-----------|------------|
+| **Estabilização de Modelos Gemini** | `genkit.ts`, `*.ts` (flows) | Erro 404 em `gemini-2.0-flash`. Fixado para `flash-latest` e `pro-latest`. |
+| **Fix Lógica do Botão "Sugerir"** | `chat-panel.tsx` | Falha ao buscar última mensagem do paciente quando havia mensagens de sistema. |
+| **Refinamento de Fluxo de Chat** | `handle-patient-reply.ts` | Automação de interações sociais vs. escalonamento de emergências. |
 
 ### v1.5.1 — 04/03/2026
 
