@@ -45,7 +45,7 @@ const classifyPrompt = ai.definePrompt({
             reason: z.string(),
         })
     },
-    model: 'googleai/gemini-1.5-flash',
+    model: 'googleai/gemini-flash-latest',
     config: {
         temperature: 0.1, // Baixa temperatura para classificação consistente
     },
