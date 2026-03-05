@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { sendWhatsappMessage as sendWhatsappMessageTwilio } from '@/lib/twilio';
 
 export async function addMessage(
@@ -186,7 +187,7 @@ export async function getMessages(patientId: string): Promise<Message[]> {
     })) as Message[];
 }
 export async function deleteMessages(patientId: string): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     // 1. Delete all messages for the patient
     const { error: deleteError } = await supabase
