@@ -51,35 +51,35 @@ export async function POST(request: NextRequest) {
 
 
 
-        if (existingOnboarding && !existingOnboarding.completed_at) {
+        // 2. Apagar qualquer estado de onboarding anterior (ativo ou concluído) para este paciente
+        const { error: deleteError } = await supabase
+            .from('onboarding_states')
+            .delete()
+            .eq('patient_id', patientId);
 
+        if (deleteError) {
+            console.error('[POST /api/onboarding/initiate] Error resetting onboarding state:', deleteError);
         }
 
-        if (existingOnboarding && existingOnboarding.completed_at) {
-
-        }
-
-        // 2. Criar ou Resetar estado inicial se for manual
+        // Criar um novo estado de onboarding limpo
         const initialStep: OnboardingStep = 'welcome';
-        if (!existingOnboarding) {
-            const { error: createError } = await supabase
-                .from('onboarding_states')
-                .insert({
-                    patient_id: patientId,
-                    step: initialStep,
-                    plan: patient.plan,
-                    data: {},
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                });
+        const { error: createError } = await supabase
+            .from('onboarding_states')
+            .insert({
+                patient_id: patientId,
+                step: initialStep,
+                plan: patient.plan,
+                data: {},
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            });
 
-            if (createError) {
-                console.error('[POST /api/onboarding/initiate] Error creating onboarding state:', createError);
-                return NextResponse.json(
-                    { success: false, error: 'Failed to create onboarding state' },
-                    { status: 500 }
-                );
-            }
+        if (createError) {
+            console.error('[POST /api/onboarding/initiate] Error creating onboarding state:', createError);
+            return NextResponse.json(
+                { success: false, error: 'Failed to create onboarding state' },
+                { status: 500 }
+            );
         }
 
         // 3. Gerar mensagem
@@ -135,10 +135,10 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Registrar mensagem no histórico para evitar duplicidade de boas-vindas
-        await supabase.from('messages').insert({
-            patient_id: patientId,
+        const { addMessage } = await import('@/ai/actions/messages');
+        await addMessage(patientId, {
             sender: 'system',
-            text: welcomeMessage,
+            text: welcomeMessage
         });
 
         return NextResponse.json({
