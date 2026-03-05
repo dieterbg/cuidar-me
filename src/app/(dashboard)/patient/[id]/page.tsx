@@ -225,6 +225,10 @@ export default function PatientProfilePage() {
 
         loadMessages();
 
+        // Polling fallback: Atualiza de 5 em 5 segundos
+        // Isso resolve o problema quando o Supabase Dashboard não tem o Realtime ativado para a tabela
+        const intervalId = setInterval(loadMessages, 5000);
+
         // Configurar listener em tempo real para mensagens
         const channel = supabase
             .channel(`messages:${patientId}`)
@@ -252,6 +256,7 @@ export default function PatientProfilePage() {
             .subscribe();
 
         return () => {
+            clearInterval(intervalId);
             supabase.removeChannel(channel);
         };
     }, [patientId, fetchData, toast]);
