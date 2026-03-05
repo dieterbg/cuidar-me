@@ -9,8 +9,8 @@
  * - GenerateProtocolOutput - The return type for the generateProtocol function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'zod';
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 import { googleAI } from '@genkit-ai/google-genai';
 
 const GenerateProtocolInputSchema = z.object({
@@ -20,9 +20,9 @@ export type GenerateProtocolInput = z.infer<typeof GenerateProtocolInputSchema>;
 
 
 const ProtocolStepSchema = z.object({
-    day: z.number().describe("The day in the protocol when the message should be sent."),
-    title: z.string().describe("A short, descriptive title for the protocol step."),
-    description: z.string().describe("The actual message content to be sent to the patient."),
+  day: z.number().describe("The day in the protocol when the message should be sent."),
+  title: z.string().describe("A short, descriptive title for the protocol step."),
+  description: z.string().describe("The actual message content to be sent to the patient."),
 });
 
 const GenerateProtocolOutputSchema = z.object({
@@ -40,8 +40,8 @@ export async function generateProtocol(input: GenerateProtocolInput): Promise<Ge
 
 const prompt = ai.definePrompt({
   name: 'generateProtocolPrompt',
-  input: {schema: GenerateProtocolInputSchema},
-  output: {schema: GenerateProtocolOutputSchema},
+  input: { schema: GenerateProtocolInputSchema },
+  output: { schema: GenerateProtocolOutputSchema },
   prompt: `Você é um assistente de IA especialista em endocrinologia, focado na criação de protocolos de emagrecimento. Sua tarefa é converter uma descrição em linguagem natural em um protocolo de acompanhamento estruturado em JSON.
 
   **Instruções:**
@@ -73,10 +73,10 @@ const generateProtocolFlow = ai.defineFlow(
     try {
       let response;
       const isRateLimitOrOverloaded = (e: any) => e instanceof Error && (e.message.includes('503') || e.message.includes('429'));
-      
+
       try {
         // 1. Try with the primary (most powerful) model.
-        response = await prompt(input, { model: googleAI.model('gemini-2.5-flash') });
+        response = await prompt(input, { model: googleAI.model('gemini-2.0-flash') });
       } catch (e: any) {
         if (isRateLimitOrOverloaded(e)) {
           console.warn("Flash model unavailable for protocol generation, falling back to pro model.");
@@ -85,11 +85,11 @@ const generateProtocolFlow = ai.defineFlow(
             response = await prompt(input, { model: googleAI.model('gemini-pro-latest') });
           } catch (e2: any) {
             if (isRateLimitOrOverloaded(e2)) {
-                console.warn("Pro model also unavailable, falling back to 1.0-pro model.");
-                // 3. Last resort fallback.
-                response = await prompt(input, { model: googleAI.model('gemini-1.0-pro') });
+              console.warn("Pro model also unavailable, falling back to 1.0-pro model.");
+              // 3. Last resort fallback.
+              response = await prompt(input, { model: googleAI.model('gemini-1.0-pro') });
             } else {
-                throw e2; // Re-throw other errors from flash model
+              throw e2; // Re-throw other errors from flash model
             }
           }
         } else {

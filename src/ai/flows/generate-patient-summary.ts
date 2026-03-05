@@ -104,7 +104,7 @@ const generatePatientSummaryFlow = ai.defineFlow(
 
             try {
                 // 1. Try with the primary (most powerful) model as this is a high-value task.
-                response = await prompt(promptInput, { model: googleAI.model('gemini-2.5-flash') });
+                response = await prompt(promptInput, { model: googleAI.model('gemini-2.0-flash') });
             } catch (e: any) {
                 if (isRateLimitOrOverloaded(e)) {
                     console.warn("Flash model unavailable for summary, falling back to pro model.");

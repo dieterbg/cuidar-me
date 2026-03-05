@@ -10,12 +10,12 @@
  * - GetChatAnalysisOutput - The return type for the getChatAnalysis function.
  */
 
-import {ai} from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import {
-    GetChatAnalysisInputSchema,
-    GetChatAnalysisOutputSchema,
-    SummarizePatientRiskOutputSchema,
-    ExtractPatientDataOutputSchema,
+  GetChatAnalysisInputSchema,
+  GetChatAnalysisOutputSchema,
+  SummarizePatientRiskOutputSchema,
+  ExtractPatientDataOutputSchema,
 } from '@/lib/schemas';
 import type { GetChatAnalysisInput, GetChatAnalysisOutput } from '@/lib/schemas'; // Importa os tipos
 import { z } from 'zod';
@@ -38,10 +38,10 @@ const CombinedAnalysisSchema = z.object({
 });
 
 const analysisPrompt = ai.definePrompt({
-    name: "getChatAnalysisPrompt",
-    input: { schema: GetChatAnalysisInputSchema },
-    output: { schema: CombinedAnalysisSchema },
-    prompt: `Você é um assistente de IA especialista em endocrinologia. Sua tarefa é analisar a mensagem de um paciente para extrair dados estruturados e avaliar riscos clínicos em uma única operação.
+  name: "getChatAnalysisPrompt",
+  input: { schema: GetChatAnalysisInputSchema },
+  output: { schema: CombinedAnalysisSchema },
+  prompt: `Você é um assistente de IA especialista em endocrinologia. Sua tarefa é analisar a mensagem de um paciente para extrair dados estruturados e avaliar riscos clínicos em uma única operação.
 
     **Histórico da Conversa:**
     "{{messages}}"
@@ -71,50 +71,50 @@ const getChatAnalysisFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-        let response;
-        const isRateLimitOrOverloaded = (e: any) => e instanceof Error && (e.message.includes('503') || e.message.includes('429'));
+      let response;
+      const isRateLimitOrOverloaded = (e: any) => e instanceof Error && (e.message.includes('503') || e.message.includes('429'));
 
-        try {
-            // 1. Try with the cost-effective model first.
-            response = await analysisPrompt(input, { model: googleAI.model('gemini-2.5-flash') });
-        } catch (e: any) {
-            if (isRateLimitOrOverloaded(e)) {
-                console.warn("Flash model unavailable for chat analysis, falling back to pro model.");
-                try {
-                    // 2. Fallback to the more powerful model.
-                    response = await analysisPrompt(input, { model: googleAI.model('gemini-pro-latest') });
-                } catch (e2: any) {
-                    if (isRateLimitOrOverloaded(e2)) {
-                        console.warn("Pro model also unavailable, falling back to 1.0-pro.");
-                         // 3. Last resort fallback.
-                        response = await analysisPrompt(input, { model: googleAI.model('gemini-1.0-pro') });
-                    } else {
-                        throw e2; // Re-throw other errors from flash model
-                    }
-                }
+      try {
+        // 1. Try with the cost-effective model first.
+        response = await analysisPrompt(input, { model: googleAI.model('gemini-2.0-flash') });
+      } catch (e: any) {
+        if (isRateLimitOrOverloaded(e)) {
+          console.warn("Flash model unavailable for chat analysis, falling back to pro model.");
+          try {
+            // 2. Fallback to the more powerful model.
+            response = await analysisPrompt(input, { model: googleAI.model('gemini-pro-latest') });
+          } catch (e2: any) {
+            if (isRateLimitOrOverloaded(e2)) {
+              console.warn("Pro model also unavailable, falling back to 1.0-pro.");
+              // 3. Last resort fallback.
+              response = await analysisPrompt(input, { model: googleAI.model('gemini-1.0-pro') });
             } else {
-                throw e; // Re-throw other errors from primary model
+              throw e2; // Re-throw other errors from flash model
             }
+          }
+        } else {
+          throw e; // Re-throw other errors from primary model
         }
+      }
 
-        const { output: combinedAnalysis } = response;
+      const { output: combinedAnalysis } = response;
 
-        if (!combinedAnalysis) {
-          console.error("Combined analysis returned null from AI.");
-          return { extractedData: null, riskAnalysis: null };
-        }
+      if (!combinedAnalysis) {
+        console.error("Combined analysis returned null from AI.");
+        return { extractedData: null, riskAnalysis: null };
+      }
 
-        // Return the nullable fields directly, defaulting to null if they are missing.
-        return {
-          extractedData: combinedAnalysis.extractedData || null,
-          riskAnalysis: combinedAnalysis.riskAnalysis || null,
-        };
+      // Return the nullable fields directly, defaulting to null if they are missing.
+      return {
+        extractedData: combinedAnalysis.extractedData || null,
+        riskAnalysis: combinedAnalysis.riskAnalysis || null,
+      };
     } catch (error) {
-        if (error instanceof Error && (error.message.includes('503') || error.message.includes('429'))) {
-            throw new Error("Nossos modelos de IA estão indisponíveis no momento. Por favor, tente novamente mais tarde.");
-        }
-        // Re-throw other types of errors
-        throw error;
+      if (error instanceof Error && (error.message.includes('503') || error.message.includes('429'))) {
+        throw new Error("Nossos modelos de IA estão indisponíveis no momento. Por favor, tente novamente mais tarde.");
+      }
+      // Re-throw other types of errors
+      throw error;
     }
   }
 );
