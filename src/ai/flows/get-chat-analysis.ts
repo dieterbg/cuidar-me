@@ -76,7 +76,7 @@ const getChatAnalysisFlow = ai.defineFlow(
 
       try {
         // 1. Try with the cost-effective model first.
-        response = await analysisPrompt(input, { model: googleAI.model('gemini-2.0-flash') });
+        response = await analysisPrompt(input, { model: googleAI.model('gemini-2.0-flash-exp') });
       } catch (e: any) {
         if (isRateLimitOrOverloaded(e)) {
           console.warn("Flash model unavailable for chat analysis, falling back to pro model.");

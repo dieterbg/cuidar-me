@@ -76,7 +76,7 @@ const generateProtocolFlow = ai.defineFlow(
 
       try {
         // 1. Try with the primary (most powerful) model.
-        response = await prompt(input, { model: googleAI.model('gemini-2.0-flash') });
+        response = await prompt(input, { model: googleAI.model('gemini-2.0-flash-exp') });
       } catch (e: any) {
         if (isRateLimitOrOverloaded(e)) {
           console.warn("Flash model unavailable for protocol generation, falling back to pro model.");
