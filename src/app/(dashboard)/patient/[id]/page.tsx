@@ -2,7 +2,7 @@
 
 import { notFound, useRouter, useParams } from 'next/navigation';
 import { useMemo, useState, useEffect, useCallback, useTransition } from 'react';
-import { ArrowLeft, MessageSquare, Video, Calendar, Send, ClipboardList, PlayCircle, StopCircle, Loader2, ShieldOff, ThumbsUp, ThumbsDown, UserCog, ShieldAlert, Star, Target, Pencil, Save, Clock, CheckCircle, AlertTriangle, Activity } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Video, Calendar, Send, ClipboardList, PlayCircle, StopCircle, Loader2, ShieldOff, ThumbsUp, ThumbsDown, UserCog, ShieldAlert, Star, Target, Pencil, Save, Clock, CheckCircle, AlertTriangle, Activity, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { format, formatDistanceToNow, differenceInDays, parseISO } from 'date-fns';
@@ -16,7 +16,7 @@ import { ChatPanel } from '@/components/chat-panel';
 import type { Patient, Protocol, SentVideo, Message, HealthMetric, PatientPlan, ScheduledMessage, Video as VideoType } from '@/lib/types';
 import { assignProtocolToPatient, unassignProtocolFromPatient, getProtocols } from '@/ai/actions/protocols';
 import { getPatientDetails } from '@/ai/actions/patients';
-import { getScheduledMessagesForPatient, updateScheduledMessage, getMessages } from '@/ai/actions/messages';
+import { getScheduledMessagesForPatient, updateScheduledMessage, getMessages, deleteMessages } from '@/ai/actions/messages';
 import { updateSentVideoFeedback, getVideos } from '@/ai/actions/videos';
 import { HealthMetricsChart } from '@/components/health-metrics-chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,6 +34,17 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { PatientAnalysisPanel } from '@/components/patient-analysis-panel';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase-client';
@@ -126,8 +137,27 @@ export default function PatientProfilePage() {
     const [weightGoal, setWeightGoal] = useState<string>('');
     const [activeTab, setActiveTab] = useState('conversation');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeletingHistory, setIsDeletingHistory] = useState(false);
 
     const patientId = params.id as string;
+
+    const handleDeleteHistory = async () => {
+        setIsDeletingHistory(true);
+        try {
+            const res = await deleteMessages(patientId);
+            if (res.success) {
+                toast({ title: "✅ Histórico apagado", description: "O histórico de mensagens do paciente foi excluído permanentemente.", className: "bg-green-50" });
+                setConversation([]);
+                fetchData(false);
+            } else {
+                throw new Error(res.error || "Erro desconhecido ao apagar histórico");
+            }
+        } catch (err: any) {
+            toast({ variant: "destructive", title: "❌ Erro", description: err.message });
+        } finally {
+            setIsDeletingHistory(false);
+        }
+    };
 
     const fetchData = useCallback(async (isInitialLoad = false) => {
         if (!patientId) return;
@@ -449,6 +479,29 @@ export default function PatientProfilePage() {
                                     <PatientEditForm patient={patient} onSave={handleSaveSuccess} context="admin" />
                                 </DialogContent>
                             </Dialog>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" className="flex-1 lg:flex-none border-red-200 hover:bg-red-50 text-red-700">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Apagar Histórico
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Esta ação não pode ser desfeita. Isso irá excluir permanentemente todo o histórico de mensagens deste paciente do banco de dados.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteHistory} className="bg-red-600 hover:bg-red-700" disabled={isDeletingHistory}>
+                                            {isDeletingHistory ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                            Sim, apagar histórico
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     )}
                 </div>

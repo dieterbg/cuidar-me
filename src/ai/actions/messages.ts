@@ -185,3 +185,33 @@ export async function getMessages(patientId: string): Promise<Message[]> {
         timestamp: msg.created_at
     })) as Message[];
 }
+export async function deleteMessages(patientId: string): Promise<{ success: boolean; error?: string }> {
+    const supabase = createClient();
+
+    // 1. Delete all messages for the patient
+    const { error: deleteError } = await supabase
+        .from('messages')
+        .delete()
+        .eq('patient_id', patientId);
+
+    if (deleteError) {
+        console.error('Error deleting messages:', deleteError);
+        return { success: false, error: deleteError.message };
+    }
+
+    // 2. Clear last message info in patients table
+    const { error: updateError } = await supabase
+        .from('patients')
+        .update({
+            last_message: null,
+            last_message_timestamp: null,
+        })
+        .eq('id', patientId);
+
+    if (updateError) {
+        console.error('Error clearing patient last message:', updateError);
+        // We don't return false because the primary action (deleting messages) succeeded
+    }
+
+    return { success: true };
+}
