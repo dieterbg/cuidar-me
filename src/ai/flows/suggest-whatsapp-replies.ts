@@ -9,8 +9,8 @@
  * - SuggestWhatsappRepliesOutput - The return type for the suggestWhatsappReplies function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'zod';
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 
 const SuggestWhatsappRepliesInputSchema = z.object({
   patientMessage: z
@@ -32,8 +32,8 @@ export async function suggestWhatsappReplies(input: SuggestWhatsappRepliesInput)
 
 const prompt = ai.definePrompt({
   name: 'suggestWhatsappRepliesPrompt',
-  input: {schema: SuggestWhatsappRepliesInputSchema},
-  output: {schema: SuggestWhatsappRepliesOutputSchema},
+  input: { schema: SuggestWhatsappRepliesInputSchema },
+  model: 'googleai/gemini-flash-latest',
   prompt: `Você é um assistente de IA que ajuda profissionais de saúde a responder mensagens de pacientes no WhatsApp.
 
   Com base na mensagem do paciente, gere um rascunho de resposta que seja útil, empático e profissional.
@@ -51,7 +51,7 @@ const suggestWhatsappRepliesFlow = ai.defineFlow(
     outputSchema: SuggestWhatsappRepliesOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const { output } = await prompt(input);
     return output!;
   }
 );

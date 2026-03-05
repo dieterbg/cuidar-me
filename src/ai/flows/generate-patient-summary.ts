@@ -104,13 +104,13 @@ const generatePatientSummaryFlow = ai.defineFlow(
 
             try {
                 // 1. Try with the primary (most powerful) model as this is a high-value task.
-                response = await prompt(promptInput, { model: googleAI.model('gemini-pro-latest') });
+                response = await prompt(promptInput, { model: googleAI.model('googleai/gemini-pro-latest') });
             } catch (e: any) {
                 if (isRateLimitOrOverloaded(e)) {
                     console.warn("Flash model unavailable for summary, falling back to pro model.");
                     try {
                         // 2. Fallback to pro model.
-                        response = await prompt(promptInput, { model: googleAI.model('gemini-pro-latest') });
+                        response = await prompt(promptInput, { model: googleAI.model('googleai/gemini-pro-latest') });
                     } catch (e2: any) {
                         if (isRateLimitOrOverloaded(e2)) {
                             console.warn("Pro model also unavailable for summary, falling back to 1.0-pro.");

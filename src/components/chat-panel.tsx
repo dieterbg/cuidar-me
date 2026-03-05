@@ -118,6 +118,7 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
     }, [conversation]);
 
     const handleSuggestReply = () => {
+        // Find the last message FROM THE PATIENT, regardless of subsequent system/staff messages
         const lastPatientMessage = [...conversation].reverse().find(m => m.sender === 'patient');
         if (!lastPatientMessage) {
             toast({ variant: 'destructive', title: 'Nenhuma mensagem do paciente para responder.' });

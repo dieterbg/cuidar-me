@@ -259,14 +259,9 @@ export async function handlePatientReply(
         }
 
         // 5.2 SOCIAL - Resposta rápida
-        if (classification.intent === MessageIntent.SOCIAL) {
-            await sendWhatsappMessage(whatsappNumber, "Olá! 😊 Como posso te ajudar?");
-            await supabase.from('messages').insert({
-                patient_id: patient.id,
-                sender: 'me',
-                text: "Olá! 😊 Como posso te ajudar?",
-            });
-            return { success: true };
+        if (classification.intent === MessageIntent.SOCIAL || classification.intent === MessageIntent.QUESTION) {
+            const { handleAIConversation } = await import('./handlers/conversation-handler');
+            return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
         }
 
         // 5.3 PROTOCOLOS + GAMIFICAÇÃO (se ativo)
