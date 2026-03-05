@@ -12,7 +12,7 @@ import { scheduleReminder } from '@/ai/actions/messages';
 import { z } from 'zod';
 import type { Patient } from '@/lib/types';
 import { GenerateChatbotReplyInputSchema, GenerateChatbotReplyOutputSchema } from '@/lib/types';
-import { googleAI } from '@genkit-ai/google-genai';
+import { gemini15Flash } from '@genkit-ai/google-genai';
 
 
 export async function generateChatbotReply(input: z.infer<typeof GenerateChatbotReplyInputSchema>): Promise<z.infer<typeof GenerateChatbotReplyOutputSchema>> {
@@ -55,6 +55,7 @@ const prompt = ai.definePrompt({
   input: { schema: GenerateChatbotReplyInputSchema },
   output: { schema: GenerateChatbotReplyOutputSchema },
   tools: [scheduleReminderTool],
+  model: gemini15Flash,
   config: {
     temperature: 0.3,
   },
