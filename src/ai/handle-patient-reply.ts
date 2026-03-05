@@ -22,19 +22,8 @@ export async function handlePatientReply(
     try {
         console.log(`[handlePatientReply] Processing msg (len: ${messageText.length}, from: ...${whatsappNumber.slice(-4)}, SID: ${messageSid || 'N/A'})`);
 
-        // 0. Idempotency check: se o MessageSid já foi processado, ignorar
-        if (messageSid) {
-            const { data: existingMessage } = await supabase
-                .from('messages')
-                .select('id')
-                .eq('twilio_sid', messageSid)
-                .maybeSingle();
-
-            if (existingMessage) {
-                console.log(`[handlePatientReply] Message already processed (SID: ${messageSid}). Skipping.`);
-                return { success: true };
-            }
-        }
+        // 0. Idempotency check: Removido pois twilio_sid não existe no DB.
+        // Se houver necessidade de idempotência rigorosa, deve-se adicionar a coluna twilio_sid (texto, único) na tabela messages.
 
         // 1. Buscar paciente (agora APENAS busca, não cria)
         const { findPatientByPhone } = await import('@/services/patient-service');
@@ -95,19 +84,15 @@ export async function handlePatientReply(
         }
 
         // 2. Salvar mensagem (incluindo twilio_sid para idempotência futura)
-        try {
-            await supabase.from('messages').insert({
-                patient_id: patient.id,
-                sender: 'patient',
-                text: messageText,
-                twilio_sid: messageSid,
-            });
-        } catch (insertError: any) {
-            // Se falhar por duplicidade de SID (23505), apenas ignora (idempotência)
-            if (insertError.code === '23505') {
-                console.log(`[handlePatientReply] Duplicate MessageSid detected on insert (SID: ${messageSid}). Skipping.`);
-                return { success: true };
-            }
+        // 2. Salvar mensagem (sem twilio_sid pois a coluna não existe no banco atual)
+        const { error: insertError } = await supabase.from('messages').insert({
+            patient_id: patient.id,
+            sender: 'patient',
+            text: messageText,
+        });
+
+        if (insertError) {
+            console.error(`[handlePatientReply] Insert message error:`, insertError);
             throw insertError;
         }
 
