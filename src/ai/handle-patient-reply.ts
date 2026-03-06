@@ -240,12 +240,24 @@ export async function handlePatientReply(
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
-        // 4. CLASSIFICAR INTENÇÃO usando IA (fallback — emergências já foram tratadas acima)
+        // 4. CLASSIFICAR INTENÇÃO usando IA
         const { classifyMessageIntent, MessageIntent } = await import('./message-intent-classifier');
+
+        await supabase.from('messages').insert({
+            patient_id: patient.id,
+            sender: 'system',
+            text: `[DIAGNOSTIC] Classifying intent for: "${messageText.substring(0, 30)}..."`
+        });
 
         const classification = await classifyMessageIntent(messageText, {
             hasActiveCheckin,
             checkinTitle,
+        });
+
+        await supabase.from('messages').insert({
+            patient_id: patient.id,
+            sender: 'system',
+            text: `[DIAGNOSTIC] Intent classified as: ${classification.intent} (Confidence: ${classification.confidence})`
         });
 
         console.log(`[Intent] ${classification.intent} (${classification.confidence})`);
@@ -291,6 +303,17 @@ export async function handlePatientReply(
 
     } catch (error: any) {
         console.error('[handlePatientReply] Error:', error);
+        // Log deep error to database for mapping
+        try {
+            const supabase = createServiceRoleClient();
+            await supabase.from('messages').insert({
+                sender: 'system',
+                text: `[FATAL-ERROR] handlePatientReply: ${error.message || error}`,
+                metadata: { stack: error.stack, whatsappNumber }
+            });
+        } catch (logErr) {
+            console.error('Failed to log error to DB:', logErr);
+        }
         return { success: false, error: error.message };
     }
 }
