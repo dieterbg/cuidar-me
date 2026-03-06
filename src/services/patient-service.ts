@@ -13,11 +13,14 @@ export async function findPatientByPhone(
     supabase: SupabaseClient,
     whatsappNumber: string
 ) {
+    // DIAGNOSTIC LOG (SERVER-SIDE CONSOLE)
+    console.log(`[findPatientByPhone] Target: ${whatsappNumber}`);
+
     // ==========================================
     // FASE 1: Exact match com variações
     // ==========================================
     const candidates = generatePhoneVariants(whatsappNumber);
-    console.log(`[findPatientByPhone] Trying ${candidates.length} variants for ...${whatsappNumber.slice(-4)}`);
+    console.log(`[findPatientByPhone] Candidates (${candidates.length}): ${candidates.slice(0, 3).join(', ')}...`);
 
     // Busca todas as variações em uma única query com IN
     const { data: exactMatch } = await supabase
@@ -28,7 +31,7 @@ export async function findPatientByPhone(
         .maybeSingle();
 
     if (exactMatch) {
-        console.log(`[findPatientByPhone] ✅ Exact match found: patient ${exactMatch.id}`);
+        console.log(`[findPatientByPhone] ✅ Exact match found PID: ${exactMatch.id}`);
         return exactMatch;
     }
 
@@ -39,7 +42,8 @@ export async function findPatientByPhone(
     const last8 = digits.slice(-8);
 
     if (last8.length === 8) {
-        console.log(`[findPatientByPhone] ⚠️ No exact match. Trying last-8 fallback: ...${last8}`);
+        console.log(`[findPatientByPhone] Checking fallback last8: ${last8}`);
+
         const { data: fuzzyMatch } = await supabase
             .from('patients')
             .select('*')
@@ -48,12 +52,12 @@ export async function findPatientByPhone(
             .maybeSingle();
 
         if (fuzzyMatch) {
-            console.log(`[findPatientByPhone] ✅ Fuzzy match found: patient ${fuzzyMatch.id} (stored: ${fuzzyMatch.whatsapp_number})`);
+            console.log(`[findPatientByPhone] ✅ Fuzzy match found PID: ${fuzzyMatch.id}`);
             return fuzzyMatch;
         }
     }
 
-    console.log(`[findPatientByPhone] ❌ No patient found for any variant of ...${whatsappNumber.slice(-4)}`);
+    console.log(`[findPatientByPhone] ❌ No patient found for: ${whatsappNumber}`);
     return null;
 }
 
