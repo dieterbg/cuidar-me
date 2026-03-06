@@ -1,34 +1,39 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase-middleware'
 
-export async function middleware(request: NextRequest) {
-    // 1. Update session (refresh tokens if needed)
-    const { response, user } = await updateSession(request)
+// 1. Skip session update for Public API routes (like WhatsApp Webhook)
+const isPublicApi = request.nextUrl.pathname.startsWith('/api/')
+if (isPublicApi) {
+    return NextResponse.next()
+}
 
-    // 2. Define protected routes
-    // Any route starting with these prefixes requires authentication
-    const protectedPrefixes = ['/dashboard', '/portal', '/admin']
-    const isProtectedRoute = protectedPrefixes.some(prefix =>
-        request.nextUrl.pathname.startsWith(prefix)
-    )
+// 2. Update session (refresh tokens if needed) for other routes
+const { response, user } = await updateSession(request)
 
-    // 3. Define explicitly public routes (optional, but good for clarity)
-    // These are routes that should NEVER be blocked by this middleware logic
-    // Note: The matcher config already excludes static files, but we double check here for safety
-    const isPublicApi = request.nextUrl.pathname.startsWith('/api/')
+// 3. Define protected routes
+// Any route starting with these prefixes requires authentication
+const protectedPrefixes = ['/dashboard', '/portal', '/admin']
+const isProtectedRoute = protectedPrefixes.some(prefix =>
+    request.nextUrl.pathname.startsWith(prefix)
+)
 
-    // 4. Security Check
-    if (isProtectedRoute && !user) {
-        // Redirect to login page if trying to access protected route without user
-        const redirectUrl = request.nextUrl.clone()
-        redirectUrl.pathname = '/paciente'
-        // Add a query param to indicate why they were redirected (optional)
-        redirectUrl.searchParams.set('redirected', 'true')
-        return NextResponse.redirect(redirectUrl)
-    }
+// 3. Define explicitly public routes (optional, but good for clarity)
+// These are routes that should NEVER be blocked by this middleware logic
+// Note: The matcher config already excludes static files, but we double check here for safety
+const isPublicApi = request.nextUrl.pathname.startsWith('/api/')
 
-    // 5. Return the response (which might have updated cookies)
-    return response
+// 4. Security Check
+if (isProtectedRoute && !user) {
+    // Redirect to login page if trying to access protected route without user
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/paciente'
+    // Add a query param to indicate why they were redirected (optional)
+    redirectUrl.searchParams.set('redirected', 'true')
+    return NextResponse.redirect(redirectUrl)
+}
+
+// 5. Return the response (which might have updated cookies)
+return response
 }
 
 export const config = {
