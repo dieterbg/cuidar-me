@@ -112,16 +112,27 @@ B. **Decidir a Ação da Conversa:**
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper function to create a typed response for overload scenarios
+// Helper function to create a typed response for overload/quota scenarios
 function getOverloadFallbackResponse(input: z.infer<typeof GenerateChatbotReplyInputSchema>, error: Error): Promise<z.infer<typeof GenerateChatbotReplyOutputSchema>> {
+  const message = input.patientMessage.toLowerCase();
+
+  // Local logic for common phrases to avoid dead silence during API outages
+  let standbyReply = "Oi! Notifiquei a equipe sobre sua mensagem e em breve daremos atenção total a você. Como posso ajudar com a plataforma enquanto isso?";
+
+  if (message.includes("olá") || message.includes("oi") || message.includes("bom dia") || message.includes("boatarde") || message.includes("boa noite")) {
+    standbyReply = `Olá ${input.patient.name}! Sou a Deia. Nossos sistemas de inteligência estão em manutenção rápida, mas já avisei a Dra. Bruna que você chamou. Em breve ela ou a equipe te respondem por aqui! 😊`;
+  } else if (message.includes("heineken") || message.includes("cerveja") || message.includes("beber") || message.includes("comer")) {
+    standbyReply = `Entendi sua dúvida sobre alimentação! Como estamos com uma instabilidade momentânea na minha IA, prefiro que a equipe médica te dê essa orientação exata para sua segurança. Eles já foram avisados!`;
+  }
+
   return Promise.resolve({
     decision: 'escalate' as const,
-    chatbotReply: "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    chatbotReply: standbyReply,
     attentionRequest: {
-      reason: "Falha Geral da IA",
+      reason: "API Quota/Error Standby",
       triggerMessage: input.patientMessage,
-      aiSummary: `Todos os modelos de IA falharam em processar a mensagem. Erro: ${error.message}`,
-      aiSuggestedReply: "A IA está indisponível. Por favor, verifique a conversa e responda manualmente ao paciente.",
+      aiSummary: `FALHA TÉCNICA (Gemini 429/404). O sistema entrou em modo de espera local. Erro: ${error.message}`,
+      aiSuggestedReply: "A API do Gemini está fora do ar ou sem saldo. Responda manualmente.",
       priority: input.patient.subscription.priority,
       createdAt: new Date(),
     }

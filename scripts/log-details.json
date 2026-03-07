@@ -1,0 +1,112 @@
+[
+  {
+    "id": "4522746c-e1ed-41f6-b9e3-8756abdf56d5",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Tudo bem?",
+    "profile_name": "DBG",
+    "message_sid": "SM2996415bd826f9a638422ef3089c2c3d",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T17:26:34.246859+00:00",
+    "updated_at": "2026-03-07T17:26:35.364+00:00"
+  },
+  {
+    "id": "8e27534a-1e5c-4862-9f50-52b594e0da3c",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "tudo bem?",
+    "profile_name": "DBG",
+    "message_sid": "SMd91f0347eb4e8084744ec6c2ef3ac418",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T17:26:27.885855+00:00",
+    "updated_at": "2026-03-07T17:26:29.745+00:00"
+  },
+  {
+    "id": "07fa03f1-6c0f-4b8f-8af2-0ad972265ae2",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Olá",
+    "profile_name": "DBG",
+    "message_sid": "SMa161751ed3ab3f28783f3dcaeda6802a",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T17:26:14.420001+00:00",
+    "updated_at": "2026-03-07T17:26:16.926+00:00"
+  },
+  {
+    "id": "5bee26e6-0bd2-4c8d-bca1-61d17f3a0857",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Olá",
+    "profile_name": "DBG",
+    "message_sid": "SMeabe69720d282f7cbd18b9b5d70dd332",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T17:14:06.84952+00:00",
+    "updated_at": "2026-03-07T17:14:20.991+00:00"
+  },
+  {
+    "id": "51bbd261-d5ac-4965-8941-3c45a38dc121",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Hj é sábado e gostaria de tomar uma Heineken no meio dia. O que acha?",
+    "profile_name": "DBG",
+    "message_sid": "SM431644605301b2136ad9330554234470",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T17:11:40.046484+00:00",
+    "updated_at": "2026-03-07T17:11:42.489+00:00"
+  },
+  {
+    "id": "6117daaa-c0b2-4bdf-b422-f35724cbf92f",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Hj é sábado e gostaria de tomar uma Heineken no meio dia. O que acha?",
+    "profile_name": "DBG",
+    "message_sid": "SM5f362471b8601132d9cf414c96b7a652",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T17:05:55.667514+00:00",
+    "updated_at": "2026-03-07T17:06:03.065+00:00"
+  },
+  {
+    "id": "1ef98163-97ef-4d67-be5d-0260d9c8b848",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Hj é sábado e gostaria de tomar uma Heineken no meio dia. O que acha?",
+    "profile_name": "DBG",
+    "message_sid": "SMc7b7b60c6c90570ac21a6cefca9c4a07",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T17:05:33.379528+00:00",
+    "updated_at": "2026-03-07T17:05:39.302+00:00"
+  },
+  {
+    "id": "cd73dca8-b4da-4e25-b5ac-f1365b14a173",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Hj é sábado e gostaria de tomar uma Heineken no meio dia. O que acha?",
+    "profile_name": "DBG",
+    "message_sid": "SM34c39b937dd494c7928aacaed32c68cd",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T14:39:45.87941+00:00",
+    "updated_at": "2026-03-07T14:39:51.803+00:00"
+  },
+  {
+    "id": "77c47ae7-bb1e-460e-bfcf-a62a482d7a09",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Hj é sábado e gostaria de tomar uma Heineken no meio dia. O que acha?",
+    "profile_name": "DBG",
+    "message_sid": "SM392839d21b644e673e362ae6561312f3",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T14:05:31.942767+00:00",
+    "updated_at": "2026-03-07T14:05:33.523+00:00"
+  },
+  {
+    "id": "c58e40b5-254b-47af-91a0-7c1652b6c7f4",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Hj é sábado e gostaria de tomar uma Heineken no meio dia. O que acha?",
+    "profile_name": "DBG",
+    "message_sid": "SMbcb3c0220e510de453883e88704764dc",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T14:05:02.730047+00:00",
+    "updated_at": "2026-03-07T14:05:04.694+00:00"
+  }
+]
