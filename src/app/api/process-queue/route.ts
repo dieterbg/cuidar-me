@@ -4,9 +4,9 @@ import { handlePatientReply } from '@/ai/handle-patient-reply';
 
 // This forces Next.js to not cache the response, ensuring it always processes the queue
 export const dynamic = 'force-dynamic';
-// Vercel Hobby allows up to 10s for Serverless Functions. 
+// Vercel Hobby allows up to 60s for Serverless Functions. 
 // We process MAX 1 message per invocation to minimize timeout risk.
-export const maxDuration = 10;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
     // 1. Validate authorization

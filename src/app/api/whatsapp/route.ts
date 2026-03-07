@@ -59,13 +59,17 @@ export async function POST(request: NextRequest) {
 
       const expectedToken = process.env.CRON_SECRET || 'fallback-secret';
 
+      const { waitUntil } = require('@vercel/functions');
+
       // Dispara o worker assíncrono.
-      fetch(processUrl, {
+      const runBgQueue = fetch(processUrl, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${expectedToken}` }
       }).catch(err => {
         console.error("[Twilio Webhook] Failed to trigger background processor:", err);
       });
+
+      waitUntil(runBgQueue);
     }
 
     // 3. Respond to Twilio with empty TwiML in < 200ms to confirm receipt.
