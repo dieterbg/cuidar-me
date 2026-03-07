@@ -140,11 +140,11 @@ const generateChatbotReplyFlow = ai.defineFlow(
     try {
       console.log(`[generateChatbotReplyFlow] Processing msg (len: ${input.patientMessage.length}, patient: ${input.patient.id})`);
 
-      // Using generate directly with explicit configuration to avoid citation bugs
+      // Using Gemini 2.0 Flash directly for speed and reliability
       const response = await ai.generate({
-        model: 'googleai/gemini-1.5-flash-002', // Using a specific version
-        prompt: `Você é a "Equipe Bruna", um assistente virtual de uma clinica de endocrinologia e especialista da plataforma Cuidar.me.
-Seu tom é sempre acolhedor, profissional e prestativo.
+        model: 'googleai/gemini-2.0-flash',
+        prompt: `Você é a "Deia", a secretária virtual e braço direito da Dra. Bruna na plataforma Cuidar.me.
+Seu objetivo é ser prestativa, empática e proativa, ajudando o paciente em sua jornada de saúde.
 
 # CONTEXTO:
 - **Paciente:** ${input.patient.name} (ID: ${input.patient.id})
@@ -152,24 +152,38 @@ Seu tom é sempre acolhedor, profissional e prestativo.
 - **Jornada (Gamificação):** Nível: ${input.patient.gamification.level}
 - **Protocolo Ativo:** ${input.patient.protocol ? `${input.patient.protocol.protocolId} (Dia ${input.patient.protocol.currentDay})` : 'Nenhum'}
 - **Mensagem do Paciente:** "${input.patientMessage}"
-- **Data/Hora Atual:** ${new Date().toISOString()}
+- **Data/Hora Atual:** ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
 
 # SUA TAREFA:
-Analise a mensagem do paciente e responda de acordo:
-1. ESCALATE: Para sintomas clínicos, dor, medicamentos ou desespero emocional.
-2. REPLY: Para dúvidas gerais, saudações, incentivo ou uso da plataforma.
+Analise a mensagem do paciente e responda de acordo com as categorias abaixo:
+
+1. **ESCALATE (Escalar para Equipe Médica):**
+   - Menção a SINTOMAS (dor, tontura, febre, sangramento, etc).
+   - Dúvidas sobre MEDICAMENTOS ou DOSAGENS.
+   - Relatos de EXAMES ou resultados clínicos.
+   - Estado emocional de CRISES ou desespero.
+   - *Ação:* Informe que a Dra. Bruna e a equipe médica foram notificadas e responderão em breve.
+
+2. **REPLY (Responder Diretamente):**
+   - **Estilo de Vida (Alimentação, Bebidas, Exercícios):** Seja proativa! Explique os impactos (ex: como álcool ou certos alimentos afetam a glicemia ou perda de peso), dê incentivo, mas SEMPRE adicione o aviso: "Lembre-se: cada metabolismo é único. Esta é uma explicação educativa e você deve validar o consumo com sua equipe médica."
+   - **Dúvidas da Plataforma/App:** Ajude a encontrar as abas (Jornada, Educação, Comunidade).
+   - **Social:** Saudações, agradecimentos e incentivo motivacional.
 
 # REGRAS DE SEGURANÇA:
-- NUNCA prescreva medicamentos ou altere dosagens.
-- Se pedirem orientação médica, peça para consultar a equipe Dornelles.
-- Sua saída DEVE seguir o esquema JSON abaixo.
+- NÃO dê diagnósticos ou prescrições.
+- Se perguntarem sobre remédios, ESCALE imediatamente.
+- Mantenha o tom de uma secretária atenciosa e organizada.
 
-Retorne SOMENTE o JSON:
+Retorne no formato JSON rigoroso:
 {
   "decision": "reply" | "escalate",
-  "chatbotReply": "texto da resposta aqui",
-  "attentionRequest": { ... } | null,
-  "extractedData": { ... } | null
+  "chatbotReply": "Sua resposta aqui",
+  "attentionRequest": { 
+     "reason": "Título curto", 
+     "aiSummary": "Resumo para o médico", 
+     "aiSuggestedReply": "Sugestão de resposta clínica (pensando como médico)" 
+  } | null,
+  "extractedData": { "weight": number, "mealCheckin": "A"|"B"|"C" } | null
 }`,
         output: {
           format: 'json',
@@ -180,23 +194,23 @@ Retorne SOMENTE o JSON:
         }
       });
 
-      console.log('[generateChatbotReplyFlow] AI Generation success');
+      console.log('[generateChatbotReplyFlow] AI Generation success (Gemini 2.0 Flash)');
       return response.output!;
 
     } catch (error: any) {
-      console.error('[generateChatbotReplyFlow] Generation Error:', error);
+      console.error('[generateChatbotReplyFlow] Primary Model Error:', error);
 
-      // Secondary fallback attempt with a different model if flash fails
+      // Simple fallback to 1.5 Flash 002 if 2.0 has any transient issue
       try {
-        console.log('[generateChatbotReplyFlow] Attempting fallback with pro model...');
+        console.log('[generateChatbotReplyFlow] Attempting fallback to 1.5 Flash 002...');
         const fallbackResponse = await ai.generate({
-          model: 'googleai/gemini-1.5-pro',
-          prompt: `Message: ${input.patientMessage}. Decision: reply or escalate? Output JSON only.`,
+          model: 'googleai/gemini-1.5-flash-002',
+          prompt: `Message: ${input.patientMessage}. As Deia (Secretary), should I reply or escalate for medical help? Return JSON only with decision and chatbotReply.`,
           output: { format: 'json', schema: GenerateChatbotReplyOutputSchema }
         });
         return fallbackResponse.output!;
       } catch (fallbackError: any) {
-        console.error('[generateChatbotReplyFlow] Fallback failed:', fallbackError);
+        console.error('[generateChatbotReplyFlow] All models failed:', fallbackError);
         return getOverloadFallbackResponse(input, error);
       }
     }
