@@ -140,18 +140,65 @@ const generateChatbotReplyFlow = ai.defineFlow(
     try {
       console.log(`[generateChatbotReplyFlow] Processing msg (len: ${input.patientMessage.length}, patient: ${input.patient.id})`);
 
-      // Padrão correto: destructure {output} from await prompt(input)
-      const { output } = await prompt(input);
+      // Using generate directly with explicit configuration to avoid citation bugs
+      const response = await ai.generate({
+        model: 'googleai/gemini-1.5-flash-002', // Using a specific version
+        prompt: `Você é a "Equipe Bruna", um assistente virtual de uma clinica de endocrinologia e especialista da plataforma Cuidar.me.
+Seu tom é sempre acolhedor, profissional e prestativo.
 
-      console.log('[generateChatbotReplyFlow] AI Decision:', output?.decision);
+# CONTEXTO:
+- **Paciente:** ${input.patient.name} (ID: ${input.patient.id})
+- **Plano:** ${input.patient.subscription.plan}
+- **Jornada (Gamificação):** Nível: ${input.patient.gamification.level}
+- **Protocolo Ativo:** ${input.patient.protocol ? `${input.patient.protocol.protocolId} (Dia ${input.patient.protocol.currentDay})` : 'Nenhum'}
+- **Mensagem do Paciente:** "${input.patientMessage}"
+- **Data/Hora Atual:** ${new Date().toISOString()}
 
-      // Retornar output (com null assertion operator)
-      return output!;
+# SUA TAREFA:
+Analise a mensagem do paciente e responda de acordo:
+1. ESCALATE: Para sintomas clínicos, dor, medicamentos ou desespero emocional.
+2. REPLY: Para dúvidas gerais, saudações, incentivo ou uso da plataforma.
+
+# REGRAS DE SEGURANÇA:
+- NUNCA prescreva medicamentos ou altere dosagens.
+- Se pedirem orientação médica, peça para consultar a equipe Dornelles.
+- Sua saída DEVE seguir o esquema JSON abaixo.
+
+Retorne SOMENTE o JSON:
+{
+  "decision": "reply" | "escalate",
+  "chatbotReply": "texto da resposta aqui",
+  "attentionRequest": { ... } | null,
+  "extractedData": { ... } | null
+}`,
+        output: {
+          format: 'json',
+          schema: GenerateChatbotReplyOutputSchema
+        },
+        config: {
+          temperature: 0.2,
+        }
+      });
+
+      console.log('[generateChatbotReplyFlow] AI Generation success');
+      return response.output!;
+
     } catch (error: any) {
-      console.error('[generateChatbotReplyFlow] Error:', error);
+      console.error('[generateChatbotReplyFlow] Generation Error:', error);
 
-      // Fallback se IA falhar - escalar para segurança
-      return getOverloadFallbackResponse(input, error);
+      // Secondary fallback attempt with a different model if flash fails
+      try {
+        console.log('[generateChatbotReplyFlow] Attempting fallback with pro model...');
+        const fallbackResponse = await ai.generate({
+          model: 'googleai/gemini-1.5-pro',
+          prompt: `Message: ${input.patientMessage}. Decision: reply or escalate? Output JSON only.`,
+          output: { format: 'json', schema: GenerateChatbotReplyOutputSchema }
+        });
+        return fallbackResponse.output!;
+      } catch (fallbackError: any) {
+        console.error('[generateChatbotReplyFlow] Fallback failed:', fallbackError);
+        return getOverloadFallbackResponse(input, error);
+      }
     }
   }
 );
