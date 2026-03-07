@@ -53,15 +53,16 @@ export async function POST(request: NextRequest) {
     } else {
       // 2. Fire and Forget: Trigger the queue processor in the background
       // We don't await this so Vercel can return the response to Twilio instantly.
-      const protocol = request.headers.get('x-forwarded-proto') || 'https';
-      const host = request.headers.get('host');
-      const processUrl = `${protocol}://${host}/api/process-queue`;
+      const protocolValue = request.headers.get('x-forwarded-proto') || 'https';
+      const hostValue = request.headers.get('host');
+      const processUrl = `${protocolValue}://${hostValue}/api/process-queue`;
+      const unifiedUrl = `${protocolValue}://${hostValue}/api/cron/unified`;
 
       const expectedToken = process.env.CRON_SECRET || 'fallback-secret';
 
       const { waitUntil } = require('@vercel/functions');
 
-      // Dispara o worker assíncrono.
+      // AI Processor
       const runBgQueue = fetch(processUrl, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${expectedToken}` }
@@ -69,7 +70,16 @@ export async function POST(request: NextRequest) {
         console.error("[Twilio Webhook] Failed to trigger background processor:", err);
       });
 
-      waitUntil(runBgQueue);
+      // Pulse: Use any interaction to check the protocol scheduled message queue
+      // This is necessary because Vercel Hobby only allows daily crons.
+      const runPulseQueue = fetch(unifiedUrl, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${expectedToken}` }
+      }).catch(err => {
+        console.error("[Twilio Webhook] Failed to trigger pulse orchestrator:", err);
+      });
+
+      waitUntil(Promise.all([runBgQueue, runPulseQueue]));
     }
 
     // 3. Respond to Twilio with empty TwiML in < 200ms to confirm receipt.
