@@ -17,18 +17,12 @@ const SuggestWhatsappRepliesInputSchema = z.object({
     .string()
     .describe('The message from the patient that requires a response.'),
 });
-export type SuggestWhatsappRepliesInput = z.infer<typeof SuggestWhatsappRepliesInputSchema>;
 
 const SuggestWhatsappRepliesOutputSchema = z.object({
   suggestedReply: z
     .string()
     .describe('The suggested reply to the patient message.'),
 });
-export type SuggestWhatsappRepliesOutput = z.infer<typeof SuggestWhatsappRepliesOutputSchema>;
-
-export async function suggestWhatsappReplies(input: SuggestWhatsappRepliesInput): Promise<SuggestWhatsappRepliesOutput> {
-  return suggestWhatsappRepliesFlow(input);
-}
 
 const prompt = ai.definePrompt({
   name: 'suggestWhatsappRepliesPrompt',
@@ -55,3 +49,12 @@ const suggestWhatsappRepliesFlow = ai.defineFlow(
     return output!;
   }
 );
+
+// We define types below just for local usage if needed, avoiding direct export of Zod objects.
+export type SuggestWhatsappRepliesInput = z.infer<typeof SuggestWhatsappRepliesInputSchema>;
+export type SuggestWhatsappRepliesOutput = z.infer<typeof SuggestWhatsappRepliesOutputSchema>;
+
+// THE ONLY EXPORT ALLOWED AS A FUNCTION IN A `use server` FILE
+export async function suggestWhatsappReplies(input: SuggestWhatsappRepliesInput): Promise<SuggestWhatsappRepliesOutput> {
+  return suggestWhatsappRepliesFlow(input);
+}
