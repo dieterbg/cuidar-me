@@ -54,9 +54,10 @@ const prompt = ai.definePrompt({
   input: { schema: GenerateChatbotReplyInputSchema },
   output: { schema: GenerateChatbotReplyOutputSchema },
   tools: [scheduleReminderTool],
-  model: 'googleai/gemini-flash-latest',
+  model: 'googleai/gemini-1.5-flash',
   config: {
     temperature: 0.3,
+    topP: 0.8,
   },
   prompt: `Você é a "Equipe Bruna", um assistente virtual de uma clinica de endocrinologia e especialista da plataforma Cuidar.me.
 Seu tom é sempre acolhedor, profissional e prestativo.
