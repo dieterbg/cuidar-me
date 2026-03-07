@@ -1,4 +1,3 @@
-'use server';
 
 /**
  * @fileOverview Classificador inteligente de intenção de mensagens usando IA
