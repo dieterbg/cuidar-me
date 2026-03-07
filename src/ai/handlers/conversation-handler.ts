@@ -12,24 +12,12 @@ export async function handleAIConversation(
     whatsappNumber: string,
     supabase: SupabaseClient
 ): Promise<{ success: boolean }> {
-    await supabase.from('messages').insert({
-        patient_id: patient.id,
-        sender: 'system',
-        text: `[DIAGNOSTIC] Entering handleAIConversation. Calling Gemini...`
-    });
-
     try {
         const transformedPatient = transformPatientFromSupabase(patient);
         const aiResponse = await generateChatbotReply({
             patient: transformedPatient,
             patientMessage: messageText,
             protocolContext: '',
-        });
-
-        await supabase.from('messages').insert({
-            patient_id: patient.id,
-            sender: 'system',
-            text: `[DIAGNOSTIC] Gemini responded. Decision: ${aiResponse.decision}. Has reply: ${!!aiResponse.chatbotReply}`
         });
 
         if (aiResponse.decision === 'escalate' && aiResponse.attentionRequest) {
@@ -45,34 +33,24 @@ export async function handleAIConversation(
         }
 
         if (aiResponse.chatbotReply) {
-            await supabase.from('messages').insert({
-                patient_id: patient.id,
-                sender: 'system',
-                text: `[DIAGNOSTIC] Attempting to send WhatsApp via Twilio...`
-            });
+            console.log(`[handleAIConversation] AI Response: ${aiResponse.chatbotReply.substring(0, 30)}...`);
 
             const sent = await sendWhatsappMessage(whatsappNumber, aiResponse.chatbotReply);
 
-            await supabase.from('messages').insert({
-                patient_id: patient.id,
-                sender: 'system',
-                text: `[DIAGNOSTIC] Twilio send result: ${sent ? 'SUCCESS' : 'FAILURE'}`
-            });
-
-            await supabase.from('messages').insert({
-                patient_id: patient.id,
-                sender: 'me',
-                text: aiResponse.chatbotReply,
-            });
+            if (sent) {
+                await supabase.from('messages').insert({
+                    patient_id: patient.id,
+                    sender: 'me',
+                    text: aiResponse.chatbotReply,
+                });
+            } else {
+                console.error(`[handleAIConversation] Failed to send WhatsApp to ${whatsappNumber}`);
+            }
         }
 
         return { success: true };
     } catch (err: any) {
-        await supabase.from('messages').insert({
-            patient_id: patient.id,
-            sender: 'system',
-            text: `[ERROR] handleAIConversation CRASHED: ${err.message}`
-        });
+        console.error('[handleAIConversation] Error:', err);
         throw err;
     }
 }
