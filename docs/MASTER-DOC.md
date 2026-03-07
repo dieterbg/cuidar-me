@@ -218,32 +218,40 @@ graph TD
 - **Processamento:** `src/ai/protocol-response-processor.ts`
 - **Handler:** `src/ai/handlers/gamification-handler.ts`
 
-### 📨 Recebimento de Mensagens (Webhook Twilio)
+### 📨 Recebimento de Mensagens (Webhook Twilio) - Arquitetura Desacoplada
+
+Para evitar timeouts de 10s no plano Vercel Hobby, a arquitetura de recebimento foi **desacoplada**:
 
 ```mermaid
 graph TD
     A[WhatsApp msg] --> B[/api/whatsapp POST]
     B --> C[validateTwilioWebhook]
-    C --> D[handlePatientReply]
-    D --> E{Opt-out?}
-    E -->|SAIR| F[opt-out-handler]
-    E -->|Não| G{Onboarding ativo?}
-    G -->|Sim| H[handleOnboardingReply]
-    G -->|Não| I{Primeiro contato?}
-    I -->|Sim| J[welcome-handler]
-    I -->|Não| K{Freemium?}
-    K -->|Sim| L{Emergência?}
-    L -->|Sim| M[safety-msg]
-    L -->|Não| N[upsell Premium]
-    K -->|Não| O[Classificar Intenção IA]
-    O --> P{Intenção}
-    P -->|Emergency| Q[emergency-handler]
-    P -->|Social| R[Resposta rápida]
-    P -->|Check-in| S[gamification-handler]
-    P -->|Outro| T[conversation-handler IA]
+    C --> D[Salva em message_queue 'pending']
+    B -->|Retorna 200 OK imediato| E[Twilio]
+    D --> F[Dispara /api/process-queue assíncrono]
+    F -->|waitUntil| G[handlePatientReply (IA Backend)]
+    G --> H{Opt-out?}
+    H -->|SAIR| I[opt-out-handler]
+    H -->|Não| J{Onboarding ativo?}
+    J -->|Sim| K[handleOnboardingReply]
+    J -->|Não| L{Primeiro contato?}
+    L -->|Sim| M[welcome-handler]
+    L -->|Não| N{Freemium?}
+    N -->|Sim| O{Emergência?}
+    O -->|Sim| P[safety-msg]
+    O -->|Não| Q[upsell Premium]
+    N -->|Não| R[Classificar Intenção IA]
+    R --> S{Intenção}
+    S -->|Emergency| T[emergency-handler]
+    S -->|Social| U[Resposta rápida]
+    S -->|Check-in| V[gamification-handler]
+    S -->|Outro| W[conversation-handler IA]
 ```
 
-**Arquivo principal:** `src/ai/handle-patient-reply.ts` (482 linhas — o orquestrador central)
+**Arquivos principais:** 
+- `src/app/api/whatsapp/route.ts` (Webhook rápido O(1))
+- `src/app/api/process-queue/route.ts` (Background Worker protegido com token)
+- `src/ai/handle-patient-reply.ts` (Orquestrador central de regras de negócio)
 
 ### 🎬 Vídeos Educacionais
 
@@ -524,6 +532,16 @@ Cuidar-me/
 | `transactions` | Transações de pontos (loja) |
 | `community_topics` | Tópicos da comunidade |
 | `community_comments` | Comentários da comunidade |
+| `message_queue` | Fila assíncrona de webhooks do Twilio (evita timeout na Vercel) |
+
+### Schema da Tabela `message_queue`
+
+```sql
+-- Colunas: id, whatsapp_number, message_text, profile_name, message_sid (UNIQUE),
+--          status ('pending'|'processing'|'completed'|'error'), error_log,
+--          created_at, updated_at
+-- Índice GIN: idx_message_queue_status_pending (status, created_at)
+```
 
 ### Schema da Tabela `messages`
 

@@ -1,0 +1,39 @@
+﻿--- LAST 5 MESSAGES IN DATABASE ---
+[
+  {
+    "id": "e8bbe0a2-83f7-4ca5-8e3a-366dbe9bf770",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T20:59:17.613284+00:00"
+  },
+  {
+    "id": "ca24ba1f-9a0e-46d5-88d2-9867a2b4b851",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T20:59:06.300889+00:00"
+  },
+  {
+    "id": "8b39a99c-57e9-4e14-b877-c728a52bcc1f",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T20:57:08.063612+00:00"
+  },
+  {
+    "id": "25d460e2-74af-437b-871a-c07086ef865b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T20:46:41.638617+00:00"
+  },
+  {
+    "id": "fe73b4db-ed15-4b11-b404-257dc31cad49",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou um pouco triste",
+    "created_at": "2026-03-05T20:46:26.648936+00:00"
+  }
+]
+

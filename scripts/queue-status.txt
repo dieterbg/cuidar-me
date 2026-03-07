@@ -1,0 +1,2 @@
+--- CHECKING MESSAGE QUEUE ---
+Found 6 recent messages in queue:

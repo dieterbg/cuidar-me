@@ -1,0 +1,56 @@
+[
+  {
+    "id": "295207c2-c90d-49ad-8043-344a06afa808",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Devo fazer o que hj?",
+    "status": "processing",
+    "error_log": null,
+    "created_at": "2026-03-07T13:18:08.497679+00:00",
+    "updated_at": "2026-03-07T13:20:04.316+00:00"
+  },
+  {
+    "id": "0a993573-7a24-44a0-b578-f361fdeee24a",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "vc consegue sugerir um exercicio?",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T13:17:48.165353+00:00",
+    "updated_at": "2026-03-07T13:18:18.66+00:00"
+  },
+  {
+    "id": "5dc907a3-9548-4d75-aa4c-32de27bb4379",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Olá",
+    "status": "processing",
+    "error_log": null,
+    "created_at": "2026-03-07T13:17:37.960178+00:00",
+    "updated_at": "2026-03-07T13:17:38.462+00:00"
+  },
+  {
+    "id": "45db58a9-c397-41ec-8398-d1bd41742684",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "vc n fala cmg",
+    "status": "completed",
+    "error_log": null,
+    "created_at": "2026-03-07T13:08:45.608729+00:00",
+    "updated_at": "2026-03-07T13:15:17.479+00:00"
+  },
+  {
+    "id": "c323b6c2-55be-4750-9c7e-536d0d8fcc40",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "vc consegue sugerir um exercicio?",
+    "status": "error",
+    "error_log": "A \"use server\" file can only export async functions, found object.\nRead more: https://nextjs.org/docs/messages/invalid-use-server-value",
+    "created_at": "2026-03-07T13:08:38.124802+00:00",
+    "updated_at": "2026-03-07T13:08:46.513+00:00"
+  },
+  {
+    "id": "6956ebe0-81d9-4789-996f-497e23d885de",
+    "whatsapp_number": "whatsapp:+555198770099",
+    "message_text": "Oi",
+    "status": "error",
+    "error_log": "A \"use server\" file can only export async functions, found object.\nRead more: https://nextjs.org/docs/messages/invalid-use-server-value",
+    "created_at": "2026-03-07T13:08:16.649148+00:00",
+    "updated_at": "2026-03-07T13:08:18.226+00:00"
+  }
+]

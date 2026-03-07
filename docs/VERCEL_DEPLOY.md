@@ -75,6 +75,18 @@ CRON_SECRET=seu-secret-aleatorio-aqui
 
 ---
 
+## ⏳ Limites do Vercel (Timeouts e Filas)
+
+O plano Vercel Hobby possui um **limite rígido de 10 segundos** de execução para rotas *Serverless*. O processamento da IA do Cuidar.me (Gemini) costuma levar de 10 a 15 segundos para extrair intenção e formular uma resposta, o que causava **timeouts silenciosos**.
+
+**Como isso foi resolvido (Arquitetura Desacoplada):**
+1. O recebimento do WhatsApp (`/api/whatsapp`) apenas salva a mensagem no banco de dados Supabase na tabela `message_queue`.
+2. Essa rota dispara a rota paralela `/api/process-queue` e envia imediatamente a resposta `200 OK` pro Twilio (evitando repetições).
+3. Usamos o pacote `@vercel/functions` e a API `waitUntil(fetch(...))` para avisar ao Vercel que o processo da fila rodando em background não deve ser "morto" ao enviar a resposta inicial.
+4. Definimos `export const maxDuration = 60;` na rota `/api/process-queue` para garantir que o *worker* tenha até 60 segundos (limite máximo possível) no Vercel Hobby para concluir a fila.
+
+---
+
 ## 📊 Checklist Pré-Deploy
 
 - [x] Código limpo e sem Firebase

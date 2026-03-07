@@ -1,0 +1,450 @@
+[
+  {
+    "id": "b64bcc88-9d05-4d17-8121-732befffebfd",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Dê uma sugestão de exercício",
+    "created_at": "2026-03-07T12:10:12.089764+00:00"
+  },
+  {
+    "id": "07b13ad5-e41c-4a69-b411-62195b5c5012",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Perfeito! 🌅\n\nA partir de amanhã, seu acompanhamento será:\n🌅 8h — Dica personalizada do dia\n🌙 20h — Check-in consolidado (água, alimentação, exercício)\n💬 Assistente de saúde com IA — disponível 24h\n\n🎮 Seus pontos e conquistas começam a contar a partir do primeiro check-in!\n\nVamos juntos nessa jornada de transformação! 💪",
+    "created_at": "2026-03-07T12:09:07.748998+00:00"
+  },
+  {
+    "id": "608c702f-9480-4863-9a3a-ec3a38fe2a2f",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "A",
+    "created_at": "2026-03-07T12:09:07.31753+00:00"
+  },
+  {
+    "id": "f12d4288-977c-4b57-86ba-5b7c4a6dff80",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Ótimo! Quando prefere receber suas mensagens diárias?\n\nA) 🌅 Manhã (8h)\nB) 🌞 Tarde (14h)\nC) 🌙 Noite (20h)\n\nResponda A, B ou C",
+    "created_at": "2026-03-07T12:08:48.883418+00:00"
+  },
+  {
+    "id": "2d299f8b-6468-400f-9d95-eed4bb9db15d",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Sim",
+    "created_at": "2026-03-07T12:08:48.497913+00:00"
+  },
+  {
+    "id": "f529c6b4-ef93-44cb-8e80-9dbcb1f1d404",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Olá Dieter BG! Vi que você se cadastrou no Cuidar.me 👋\n\n💎 Plano: Premium\n\nNo seu plano **Premium**, você terá:\n🌅 Dicas personalizadas pela manhã\n🌙 Check-in consolidado à noite (20h)\n💬 Assistente de saúde com IA 24h\n🎮 Gamificação e protocolos personalizados\n\nTudo certo para começarmos?\n\nResponda \"Sim\" para continuar ou \"Ajustar\" se precisar alterar algo no cadastro.\n\n_Para parar de receber mensagens, envie SAIR a qualquer momento._",
+    "created_at": "2026-03-07T12:08:27.49227+00:00"
+  },
+  {
+    "id": "d8388680-1004-4ef5-abd8-1223a1c9bee2",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "consegue sugerir um exercicio?",
+    "created_at": "2026-03-06T13:04:48.879734+00:00"
+  },
+  {
+    "id": "df87f319-05b3-4f0f-84ed-63748ec70633",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "consegue sugerir um exercício?",
+    "created_at": "2026-03-06T13:04:29.585181+00:00"
+  },
+  {
+    "id": "9c0ce701-4b8c-4b4f-9671-1c888a2f8fbd",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Consegue sugerir um exercício?",
+    "created_at": "2026-03-06T12:51:50.283252+00:00"
+  },
+  {
+    "id": "98f5fdbd-b7a4-457e-9aec-4ad29966a46e",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Obrigado",
+    "created_at": "2026-03-06T12:51:30.252224+00:00"
+  },
+  {
+    "id": "f7fddbcc-f02b-45c4-8204-11acc054ccc2",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "obrigado",
+    "created_at": "2026-03-06T12:51:20.939296+00:00"
+  },
+  {
+    "id": "0a9000a7-7823-4736-b5a9-0d91c9cfd436",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Perfeito! 🌅\n\nA partir de amanhã, seu acompanhamento será:\n🌅 8h — Dica personalizada do dia\n🌙 20h — Check-in consolidado (água, alimentação, exercício)\n💬 Assistente de saúde com IA — disponível 24h\n\n🎮 Seus pontos e conquistas começam a contar a partir do primeiro check-in!\n\nVamos juntos nessa jornada de transformação! 💪",
+    "created_at": "2026-03-06T12:51:07.723472+00:00"
+  },
+  {
+    "id": "f60f6239-2d2f-43de-9809-6864e3155362",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "A",
+    "created_at": "2026-03-06T12:51:07.104725+00:00"
+  },
+  {
+    "id": "acf2b742-0603-4c10-acf0-11f5180bdff0",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Ótimo! Quando prefere receber suas mensagens diárias?\n\nA) 🌅 Manhã (8h)\nB) 🌞 Tarde (14h)\nC) 🌙 Noite (20h)\n\nResponda A, B ou C",
+    "created_at": "2026-03-06T12:50:56.149121+00:00"
+  },
+  {
+    "id": "28d75e34-bd3d-4f60-b40c-90688d491895",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Sim",
+    "created_at": "2026-03-06T12:50:55.252705+00:00"
+  },
+  {
+    "id": "0b6c1250-df53-479d-aeda-d2ed673c423c",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Olá Dieter BG! Vi que você se cadastrou no Cuidar.me 👋\n\n💎 Plano: Premium\n\nNo seu plano **Premium**, você terá:\n🌅 Dicas personalizadas pela manhã\n🌙 Check-in consolidado à noite (20h)\n💬 Assistente de saúde com IA 24h\n🎮 Gamificação e protocolos personalizados\n\nTudo certo para começarmos?\n\nResponda \"Sim\" para continuar ou \"Ajustar\" se precisar alterar algo no cadastro.\n\n_Para parar de receber mensagens, envie SAIR a qualquer momento._",
+    "created_at": "2026-03-06T12:50:31.98491+00:00"
+  },
+  {
+    "id": "57250cd7-a194-4beb-ab14-25041002d5ca",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "poderia me sugerir um exercicio?",
+    "created_at": "2026-03-05T23:39:47.904428+00:00"
+  },
+  {
+    "id": "e0cdcf20-f80f-4de9-a0f8-5f064c69f308",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou gostando do app",
+    "created_at": "2026-03-05T23:39:37.043197+00:00"
+  },
+  {
+    "id": "3e254f2a-86fd-43ac-b584-7487dfc2ebb9",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T23:39:07.078328+00:00"
+  },
+  {
+    "id": "6d054784-6473-4338-a806-341419616209",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Sugira um exercicio para mim",
+    "created_at": "2026-03-05T21:58:18.710134+00:00"
+  },
+  {
+    "id": "ffd43d23-f90d-445e-b82e-34418b10e72d",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Muito obrigado pelo atendimento",
+    "created_at": "2026-03-05T21:57:52.872325+00:00"
+  },
+  {
+    "id": "9d835b02-4b1e-4c4d-a202-1965af4ca609",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:56:49.527499+00:00"
+  },
+  {
+    "id": "cb2c2ffb-f8c9-4f71-8121-c9c77f21290b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Olá! 😊 Como posso te ajudar?",
+    "created_at": "2026-03-05T21:53:10.814161+00:00"
+  },
+  {
+    "id": "87f588a3-2038-4f2d-a614-8591a23fa2c6",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:53:00.865057+00:00"
+  },
+  {
+    "id": "9bdb9a72-102c-4a21-8213-f5c969600444",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:49:21.235912+00:00"
+  },
+  {
+    "id": "95cc1da2-d5b9-407f-a406-0d96426d318e",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:49:14.817238+00:00"
+  },
+  {
+    "id": "90f6a9a1-0a10-48d5-ad49-9086f4ed1a72",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:47:35.796348+00:00"
+  },
+  {
+    "id": "bdfe7f53-dd9b-4235-bc58-4148b968d9ea",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:47:28.782514+00:00"
+  },
+  {
+    "id": "f08ecd65-2dec-482a-a3fc-7c2b336eb43a",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:44:27.979987+00:00"
+  },
+  {
+    "id": "163f1d91-c694-4155-be1e-020c6085631a",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:44:21.371557+00:00"
+  },
+  {
+    "id": "63c4d478-51d0-4715-a967-ba4119e5447a",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:43:32.313002+00:00"
+  },
+  {
+    "id": "a21a873b-f5e5-4e09-9108-c1500264fd54",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:43:25.766487+00:00"
+  },
+  {
+    "id": "aee8a443-f361-4152-bd2c-2182626c7c7b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:40:31.42573+00:00"
+  },
+  {
+    "id": "b8be4a91-381f-4578-be66-53fab9e87d7b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:40:24.955634+00:00"
+  },
+  {
+    "id": "66aad5c0-ff54-4d83-b17c-f2f0403ed453",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:33:59.932276+00:00"
+  },
+  {
+    "id": "b04c9594-a0e5-4e75-b467-eb00d078928f",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:33:53.551018+00:00"
+  },
+  {
+    "id": "7a6b3d51-5c1a-4443-a4d5-6812b0a08e63",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:28:48.901601+00:00"
+  },
+  {
+    "id": "276fd602-cf2c-45b0-abce-65fd409baa20",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:28:41.717412+00:00"
+  },
+  {
+    "id": "ba7d1a8c-f2dc-48f0-bcbe-512ca64c25b5",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:26:08.032446+00:00"
+  },
+  {
+    "id": "6b1a95a6-79d8-4be1-aa68-a8d1b3170a29",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:26:01.36826+00:00"
+  },
+  {
+    "id": "9cd118d0-67d5-408b-9c91-60a73349d390",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T21:19:59.754701+00:00"
+  },
+  {
+    "id": "03940a0a-0e32-4c16-be71-2b027995607c",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T21:19:53.356014+00:00"
+  },
+  {
+    "id": "e8bbe0a2-83f7-4ca5-8e3a-366dbe9bf770",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T20:59:17.613284+00:00"
+  },
+  {
+    "id": "ca24ba1f-9a0e-46d5-88d2-9867a2b4b851",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T20:59:06.300889+00:00"
+  },
+  {
+    "id": "8b39a99c-57e9-4e14-b877-c728a52bcc1f",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Olá",
+    "created_at": "2026-03-05T20:57:08.063612+00:00"
+  },
+  {
+    "id": "25d460e2-74af-437b-871a-c07086ef865b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T20:46:41.638617+00:00"
+  },
+  {
+    "id": "fe73b4db-ed15-4b11-b404-257dc31cad49",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou um pouco triste",
+    "created_at": "2026-03-05T20:46:26.648936+00:00"
+  },
+  {
+    "id": "380b50b7-4314-4954-b5cd-946f79921814",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T20:45:25.507578+00:00"
+  },
+  {
+    "id": "e95756dc-4940-4442-91b3-4a28b993329d",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou um pouco triste",
+    "created_at": "2026-03-05T20:45:16.863459+00:00"
+  },
+  {
+    "id": "18775247-9fe8-441a-9908-d25d31e580c7",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T20:44:51.385632+00:00"
+  },
+  {
+    "id": "6bf390f2-a7d3-429c-b25c-57639e48cef9",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou um pouco triste",
+    "created_at": "2026-03-05T20:44:42.27765+00:00"
+  },
+  {
+    "id": "dbbb7627-1086-4616-bb4e-5c0cdb30a372",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T20:42:25.160241+00:00"
+  },
+  {
+    "id": "4e601b3c-a7cb-4acc-b459-24e2bc18aa1a",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou um pouco triste",
+    "created_at": "2026-03-05T20:42:15.72283+00:00"
+  },
+  {
+    "id": "9fce0f9c-12e8-4f0a-b02b-51182f1d3460",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou um pouco triste",
+    "created_at": "2026-03-05T20:39:43.052929+00:00"
+  },
+  {
+    "id": "57dad3c5-995c-4e25-a314-28c6a396065d",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Muito obrigado pelo suporte",
+    "created_at": "2026-03-05T20:39:18.318449+00:00"
+  },
+  {
+    "id": "b6d8ec35-a4c9-4f55-bb26-5e4a5c8818a2",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA estão enfrentando uma instabilidade. Já notifiquei nossa equipe humana para que possam te ajudar o mais rápido possível.",
+    "created_at": "2026-03-05T20:18:05.835589+00:00"
+  },
+  {
+    "id": "c7c12fa5-0a24-4dfa-a7c2-daffcdfe588e",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou me sentindo um pouco tonto em função dos exercicios",
+    "created_at": "2026-03-05T20:17:50.286954+00:00"
+  },
+  {
+    "id": "900e65fa-280e-4f72-95f6-5b9f717eca10",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "estou me sentindo um pouco tonto em função dos exercicios",
+    "created_at": "2026-03-05T20:11:22.198207+00:00"
+  },
+  {
+    "id": "e192d295-04ca-47a6-a13a-2aa7d451eef4",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Obrigado",
+    "created_at": "2026-03-05T20:10:50.097859+00:00"
+  },
+  {
+    "id": "c8277833-68e5-4adc-9b3d-230c03a88c4c",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Perfeito! 🌅\n\nA partir de amanhã, seu acompanhamento será:\n🌅 8h — Dica personalizada do dia\n🌙 20h — Check-in consolidado (água, alimentação, exercício)\n💬 Assistente de saúde com IA — disponível 24h\n\n🎮 Seus pontos e conquistas começam a contar a partir do primeiro check-in!\n\nVamos juntos nessa jornada de transformação! 💪",
+    "created_at": "2026-03-05T20:10:13.062485+00:00"
+  },
+  {
+    "id": "ddf4e486-388a-4fa7-91a3-738495df362c",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "A",
+    "created_at": "2026-03-05T20:10:12.115865+00:00"
+  },
+  {
+    "id": "4c2a3578-a0ce-4015-980a-97b08000a855",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Ótimo! Quando prefere receber suas mensagens diárias?\n\nA) 🌅 Manhã (8h)\nB) 🌞 Tarde (14h)\nC) 🌙 Noite (20h)\n\nResponda A, B ou C",
+    "created_at": "2026-03-05T17:30:26.634219+00:00"
+  },
+  {
+    "id": "19bd0ef9-78ad-4c69-ad9f-aacc8ce1f5b7",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Sim",
+    "created_at": "2026-03-05T17:30:26.123294+00:00"
+  },
+  {
+    "id": "63020caa-a143-4ef6-8abf-dce75d51c92f",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "system",
+    "text": "Olá Dieter BG! Vi que você se cadastrou no Cuidar.me 👋\n\n💎 Plano: Premium\n\nNo seu plano **Premium**, você terá:\n🌅 Dicas personalizadas pela manhã\n🌙 Check-in consolidado à noite (20h)\n💬 Assistente de saúde com IA 24h\n🎮 Gamificação e protocolos personalizados\n\nTudo certo para começarmos?\n\nResponda \"Sim\" para continuar ou \"Ajustar\" se precisar alterar algo no cadastro.\n\n_Para parar de receber mensagens, envie SAIR a qualquer momento._",
+    "created_at": "2026-03-05T17:29:58.110781+00:00"
+  }
+]

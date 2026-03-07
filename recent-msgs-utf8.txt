@@ -1,0 +1,143 @@
+﻿[
+  {
+    "id": "6d054784-6473-4338-a806-341419616209",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Sugira um exercicio para mim",
+    "created_at": "2026-03-05T21:58:18.710134+00:00"
+  },
+  {
+    "id": "ffd43d23-f90d-445e-b82e-34418b10e72d",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Muito obrigado pelo atendimento",
+    "created_at": "2026-03-05T21:57:52.872325+00:00"
+  },
+  {
+    "id": "9d835b02-4b1e-4c4d-a202-1965af4ca609",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:56:49.527499+00:00"
+  },
+  {
+    "id": "cb2c2ffb-f8c9-4f71-8121-c9c77f21290b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Ol├í! ­ƒÿè Como posso te ajudar?",
+    "created_at": "2026-03-05T21:53:10.814161+00:00"
+  },
+  {
+    "id": "87f588a3-2038-4f2d-a614-8591a23fa2c6",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:53:00.865057+00:00"
+  },
+  {
+    "id": "9bdb9a72-102c-4a21-8213-f5c969600444",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:49:21.235912+00:00"
+  },
+  {
+    "id": "95cc1da2-d5b9-407f-a406-0d96426d318e",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:49:14.817238+00:00"
+  },
+  {
+    "id": "90f6a9a1-0a10-48d5-ad49-9086f4ed1a72",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:47:35.796348+00:00"
+  },
+  {
+    "id": "bdfe7f53-dd9b-4235-bc58-4148b968d9ea",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:47:28.782514+00:00"
+  },
+  {
+    "id": "f08ecd65-2dec-482a-a3fc-7c2b336eb43a",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:44:27.979987+00:00"
+  },
+  {
+    "id": "163f1d91-c694-4155-be1e-020c6085631a",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:44:21.371557+00:00"
+  },
+  {
+    "id": "63c4d478-51d0-4715-a967-ba4119e5447a",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:43:32.313002+00:00"
+  },
+  {
+    "id": "a21a873b-f5e5-4e09-9108-c1500264fd54",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:43:25.766487+00:00"
+  },
+  {
+    "id": "aee8a443-f361-4152-bd2c-2182626c7c7b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:40:31.42573+00:00"
+  },
+  {
+    "id": "b8be4a91-381f-4578-be66-53fab9e87d7b",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:40:24.955634+00:00"
+  },
+  {
+    "id": "66aad5c0-ff54-4d83-b17c-f2f0403ed453",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:33:59.932276+00:00"
+  },
+  {
+    "id": "b04c9594-a0e5-4e75-b467-eb00d078928f",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:33:53.551018+00:00"
+  },
+  {
+    "id": "7a6b3d51-5c1a-4443-a4d5-6812b0a08e63",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:28:48.901601+00:00"
+  },
+  {
+    "id": "276fd602-cf2c-45b0-abce-65fd409baa20",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "patient",
+    "text": "Ol├í",
+    "created_at": "2026-03-05T21:28:41.717412+00:00"
+  },
+  {
+    "id": "ba7d1a8c-f2dc-48f0-bcbe-512ca64c25b5",
+    "patient_id": "2fbe9232-22f1-4201-8cec-beefb0f8e3c8",
+    "sender": "me",
+    "text": "Desculpe, nossos assistentes de IA est├úo enfrentando uma instabilidade. J├í notifiquei nossa equipe humana para que possam te ajudar o mais r├ípido poss├¡vel.",
+    "created_at": "2026-03-05T21:26:08.032446+00:00"
+  }
+]
+

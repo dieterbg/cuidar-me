@@ -1,0 +1,531 @@
+﻿Starting model string tests...
+Testing gemini-1.5-flash...
+node : GenkitError: 
+UNKNOWN: Error 
+fetching from https://g
+enerativelanguage.googl
+eapis.com/v1beta/models
+/gemini-1.5-flash:gener
+ateContent: [404 Not 
+Found] models/gemini-1.
+5-flash is not found 
+for API version 
+v1beta, or is not 
+supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods.
+No linha:1 caractere:1
++ node scripts/test-mod
+els-plain.js > 
+test-results.log 2>&1; 
+Get-Conten ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (GenkitError:    
+ UN...ported method    
+s.:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+    at makeRequest (C:\
+Users\Usuario\.gemini\a
+ntigravity\scratch\Cuid
+ar-me\node_modules\@gen
+kit-ai\google-genai\lib
+\googleai\client.js:231
+:13)
+    at process.processT
+icksAndRejections (node
+:internal/process/task_
+queues:105:5)
+    at async 
+generateContent (C:\Use
+rs\Usuario\.gemini\anti
+gravity\scratch\Cuidar-
+me\node_modules\@genkit
+-ai\google-genai\lib\go
+ogleai\client.js:62:20)
+    at async 
+callGemini (C:\Users\Us
+uario\.gemini\antigravi
+ty\scratch\Cuidar-me\no
+de_modules\@genkit-ai\g
+oogle-genai\lib\googlea
+i\gemini.js:520:22)
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+google-genai\lib\google
+ai\gemini.js:573:11
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\action.js:171:
+27
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\tracing\instru
+mentation.js:91:24
+    at async 
+runInNewSpan (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\tracing\instr
+umentation.js:63:10)
+    at async 
+actionFn.run (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\action.js:127
+:18)
+    at async dispatch (
+C:\Users\Usuario\.gemin
+i\antigravity\scratch\C
+uidar-me\node_modules\@
+genkit-ai\core\lib\acti
+on.js:78:24) {
+  source: undefined,
+  status: 'UNKNOWN',
+  detail: undefined,
+  code: 500,
+  originalMessage: 
+'Error fetching from ht
+tps://generativelanguag
+e.googleapis.com/v1beta
+/models/gemini-1.5-flas
+h:generateContent: 
+[404 Not Found] models/
+gemini-1.5-flash is 
+not found for API 
+version v1beta, or is 
+not supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods.'
+}
+- gemini-1.5-flash Failed: UNKNOWN: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Testing gemini-1.5-flash-latest...
+GenkitError: UNKNOWN: 
+Error fetching from htt
+ps://generativelanguage
+.googleapis.com/v1beta/
+models/gemini-1.5-flash
+-latest:generateContent
+: [404 Not Found] model
+s/gemini-1.5-flash-late
+st is not found for 
+API version v1beta, or 
+is not supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods.
+    at makeRequest (C:\
+Users\Usuario\.gemini\a
+ntigravity\scratch\Cuid
+ar-me\node_modules\@gen
+kit-ai\google-genai\lib
+\googleai\client.js:231
+:13)
+    at process.processT
+icksAndRejections (node
+:internal/process/task_
+queues:105:5)
+    at async 
+generateContent (C:\Use
+rs\Usuario\.gemini\anti
+gravity\scratch\Cuidar-
+me\node_modules\@genkit
+-ai\google-genai\lib\go
+ogleai\client.js:62:20)
+    at async 
+callGemini (C:\Users\Us
+uario\.gemini\antigravi
+ty\scratch\Cuidar-me\no
+de_modules\@genkit-ai\g
+oogle-genai\lib\googlea
+i\gemini.js:520:22)
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+google-genai\lib\google
+ai\gemini.js:573:11
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\action.js:171:
+27
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\tracing\instru
+mentation.js:91:24
+    at async 
+runInNewSpan (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\tracing\instr
+umentation.js:63:10)
+    at async 
+actionFn.run (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\action.js:127
+:18)
+    at async dispatch (
+C:\Users\Usuario\.gemin
+i\antigravity\scratch\C
+uidar-me\node_modules\@
+genkit-ai\core\lib\acti
+on.js:78:24) {
+  source: undefined,
+  status: 'UNKNOWN',
+  detail: undefined,
+  code: 500,
+  originalMessage: 
+'Error fetching from ht
+tps://generativelanguag
+e.googleapis.com/v1beta
+/models/gemini-1.5-flas
+h-latest:generateConten
+t: [404 Not Found] mode
+ls/gemini-1.5-flash-lat
+est is not found for 
+API version v1beta, or 
+is not supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods.'
+}
+- gemini-1.5-flash-latest Failed: UNKNOWN: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent: [404 Not Found] models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Testing gemini-flash-latest...
+- gemini-flash-latest Success: OK
+Testing gemini-pro-latest...
+- gemini-pro-latest Success: OK
+Testing gemini-2.0-flash...
+GenkitError: UNKNOWN: 
+Error fetching from htt
+ps://generativelanguage
+.googleapis.com/v1beta/
+models/gemini-2.0-flash
+:generateContent: [404 
+Not Found] This model m
+odels/gemini-2.0-flash 
+is no longer available 
+to new users. Please 
+update your code to 
+use a newer model for 
+the latest features 
+and improvements.
+    at makeRequest (C:\
+Users\Usuario\.gemini\a
+ntigravity\scratch\Cuid
+ar-me\node_modules\@gen
+kit-ai\google-genai\lib
+\googleai\client.js:231
+:13)
+    at process.processT
+icksAndRejections (node
+:internal/process/task_
+queues:105:5)
+    at async 
+generateContent (C:\Use
+rs\Usuario\.gemini\anti
+gravity\scratch\Cuidar-
+me\node_modules\@genkit
+-ai\google-genai\lib\go
+ogleai\client.js:62:20)
+    at async 
+callGemini (C:\Users\Us
+uario\.gemini\antigravi
+ty\scratch\Cuidar-me\no
+de_modules\@genkit-ai\g
+oogle-genai\lib\googlea
+i\gemini.js:520:22)
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+google-genai\lib\google
+ai\gemini.js:573:11
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\action.js:171:
+27
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\tracing\instru
+mentation.js:91:24
+    at async 
+runInNewSpan (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\tracing\instr
+umentation.js:63:10)
+    at async 
+actionFn.run (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\action.js:127
+:18)
+    at async dispatch (
+C:\Users\Usuario\.gemin
+i\antigravity\scratch\C
+uidar-me\node_modules\@
+genkit-ai\core\lib\acti
+on.js:78:24) {
+  source: undefined,
+  status: 'UNKNOWN',
+  detail: undefined,
+  code: 500,
+  originalMessage: 
+'Error fetching from ht
+tps://generativelanguag
+e.googleapis.com/v1beta
+/models/gemini-2.0-flas
+h:generateContent: 
+[404 Not Found] This 
+model models/gemini-2.0
+-flash is no longer 
+available to new 
+users. Please update 
+your code to use a 
+newer model for the 
+latest features and 
+improvements.'
+}
+- gemini-2.0-flash Failed: UNKNOWN: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [404 Not Found] This model models/gemini-2.0-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.
+Testing gemini-2.0-flash-001...
+GenkitError: UNKNOWN: 
+Error fetching from htt
+ps://generativelanguage
+.googleapis.com/v1beta/
+models/gemini-2.0-flash
+-001:generateContent: 
+[404 Not Found] This 
+model models/gemini-2.0
+-flash-001 is no 
+longer available to 
+new users. Please 
+update your code to 
+use a newer model for 
+the latest features 
+and improvements.
+    at makeRequest (C:\
+Users\Usuario\.gemini\a
+ntigravity\scratch\Cuid
+ar-me\node_modules\@gen
+kit-ai\google-genai\lib
+\googleai\client.js:231
+:13)
+    at process.processT
+icksAndRejections (node
+:internal/process/task_
+queues:105:5)
+    at async 
+generateContent (C:\Use
+rs\Usuario\.gemini\anti
+gravity\scratch\Cuidar-
+me\node_modules\@genkit
+-ai\google-genai\lib\go
+ogleai\client.js:62:20)
+    at async 
+callGemini (C:\Users\Us
+uario\.gemini\antigravi
+ty\scratch\Cuidar-me\no
+de_modules\@genkit-ai\g
+oogle-genai\lib\googlea
+i\gemini.js:520:22)
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+google-genai\lib\google
+ai\gemini.js:573:11
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\action.js:171:
+27
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\tracing\instru
+mentation.js:91:24
+    at async 
+runInNewSpan (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\tracing\instr
+umentation.js:63:10)
+    at async 
+actionFn.run (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\action.js:127
+:18)
+    at async dispatch (
+C:\Users\Usuario\.gemin
+i\antigravity\scratch\C
+uidar-me\node_modules\@
+genkit-ai\core\lib\acti
+on.js:78:24) {
+  source: undefined,
+  status: 'UNKNOWN',
+  detail: undefined,
+  code: 500,
+  originalMessage: 
+'Error fetching from ht
+tps://generativelanguag
+e.googleapis.com/v1beta
+/models/gemini-2.0-flas
+h-001:generateContent: 
+[404 Not Found] This 
+model models/gemini-2.0
+-flash-001 is no 
+longer available to 
+new users. Please 
+update your code to 
+use a newer model for 
+the latest features 
+and improvements.'
+}
+- gemini-2.0-flash-001 Failed: UNKNOWN: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent: [404 Not Found] This model models/gemini-2.0-flash-001 is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.
+Testing gemini-2.0-flash-exp...
+GenkitError: UNKNOWN: 
+Error fetching from htt
+ps://generativelanguage
+.googleapis.com/v1beta/
+models/gemini-2.0-flash
+-exp:generateContent: 
+[404 Not Found] models/
+gemini-2.0-flash-exp 
+is not found for API 
+version v1beta, or is 
+not supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods.
+    at makeRequest (C:\
+Users\Usuario\.gemini\a
+ntigravity\scratch\Cuid
+ar-me\node_modules\@gen
+kit-ai\google-genai\lib
+\googleai\client.js:231
+:13)
+    at process.processT
+icksAndRejections (node
+:internal/process/task_
+queues:105:5)
+    at async 
+generateContent (C:\Use
+rs\Usuario\.gemini\anti
+gravity\scratch\Cuidar-
+me\node_modules\@genkit
+-ai\google-genai\lib\go
+ogleai\client.js:62:20)
+    at async 
+callGemini (C:\Users\Us
+uario\.gemini\antigravi
+ty\scratch\Cuidar-me\no
+de_modules\@genkit-ai\g
+oogle-genai\lib\googlea
+i\gemini.js:520:22)
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+google-genai\lib\google
+ai\gemini.js:573:11
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\action.js:171:
+27
+    at async C:\Users\U
+suario\.gemini\antigrav
+ity\scratch\Cuidar-me\n
+ode_modules\@genkit-ai\
+core\lib\tracing\instru
+mentation.js:91:24
+    at async 
+runInNewSpan (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\tracing\instr
+umentation.js:63:10)
+    at async 
+actionFn.run (C:\Users\
+Usuario\.gemini\antigra
+vity\scratch\Cuidar-me\
+node_modules\@genkit-ai
+\core\lib\action.js:127
+:18)
+    at async dispatch (
+C:\Users\Usuario\.gemin
+i\antigravity\scratch\C
+uidar-me\node_modules\@
+genkit-ai\core\lib\acti
+on.js:78:24) {
+  source: undefined,
+  status: 'UNKNOWN',
+  detail: undefined,
+  code: 500,
+  originalMessage: 
+'Error fetching from ht
+tps://generativelanguag
+e.googleapis.com/v1beta
+/models/gemini-2.0-flas
+h-exp:generateContent: 
+[404 Not Found] models/
+gemini-2.0-flash-exp 
+is not found for API 
+version v1beta, or is 
+not supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods.'
+}
+- gemini-2.0-flash-exp Failed: UNKNOWN: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent: [404 Not Found] models/gemini-2.0-flash-exp is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Tests finished.
+

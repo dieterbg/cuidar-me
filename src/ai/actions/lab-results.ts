@@ -101,7 +101,7 @@ export async function processLabResultUpload(
         if (hasAlerts) {
             // Criar attention_request para médico
             for (const alert of extraction.alerts!) {
-                const priority = getAlertPriority(
+                const priority = await getAlertPriority(
                     alert.type,
                     alert.parameter,
                     patient.comorbidities
@@ -145,10 +145,10 @@ export async function processLabResultUpload(
         } else {
             // Sem alertas - exame normal
             const normalMessage = `✅ Exame recebido e analisado!\n\nTodos os valores estão dentro da normalidade. Continue assim! 👏\n\n${patient.plan === 'vip'
-                    ? 'Vamos discutir os detalhes na sua próxima consultoria.'
-                    : patient.plan === 'premium'
-                        ? 'Você pode ver os detalhes no portal.'
-                        : 'Upgrade para Premium para acessar análises detalhadas!'
+                ? 'Vamos discutir os detalhes na sua próxima consultoria.'
+                : patient.plan === 'premium'
+                    ? 'Você pode ver os detalhes no portal.'
+                    : 'Upgrade para Premium para acessar análises detalhadas!'
                 }`;
 
             await sendWhatsappMessage(whatsappNumber, normalMessage);

@@ -9,14 +9,14 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 // Schema de entrada
-export const ExtractLabResultsInputSchema = z.object({
+const ExtractLabResultsInputSchema = z.object({
     imageBase64: z.string().describe('Imagem do exame em base64'),
     patientId: z.string().describe('ID do paciente'),
     patientComorbidities: z.array(z.string()).optional().describe('Comorbidades do paciente'),
 });
 
 // Schema de saída
-export const ExtractLabResultsOutputSchema = z.object({
+const ExtractLabResultsOutputSchema = z.object({
     success: z.boolean(),
     extractedData: z.object({
         // Glicemia
@@ -177,11 +177,11 @@ export async function extractLabResults(
 /**
  * Determina a severidade de um alerta baseado no tipo e comorbidades
  */
-export function getAlertPriority(
+export async function getAlertPriority(
     alertType: 'critical' | 'warning' | 'info',
     parameter: string,
     patientComorbidities?: string[]
-): number {
+): Promise<number> {
     // Prioridade base por tipo
     let priority = alertType === 'critical' ? 3 : alertType === 'warning' ? 2 : 1;
 
