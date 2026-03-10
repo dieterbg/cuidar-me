@@ -59,7 +59,8 @@ export function getStepMessage(
     step: OnboardingStep,
     plan: 'freemium' | 'premium' | 'vip',
     data: OnboardingState['data'],
-    patientName?: string
+    patientName?: string,
+    includeDetails: boolean = true
 ): string {
     switch (step) {
         case 'welcome':
@@ -69,20 +70,22 @@ export function getStepMessage(
             let welcomeMsg = `Olá${patientName ? ` ${patientName}` : ''}! Vi que você se cadastrou no Cuidar.me 👋\n\n`;
             welcomeMsg += `${planEmoji} Plano: ${planName}\n\n`;
 
-            if (plan === 'freemium') {
-                welcomeMsg += `Como você está no plano **Gratuito**, você receberá uma dica de saúde todo dia pela manhã (8h). 🌅\n\n`;
-                welcomeMsg += `_Quer acompanhamento completo com IA e check-ins diários? Conheça o Plano Premium!_\n\n`;
-            } else if (plan === 'premium') {
-                welcomeMsg += `No seu plano **Premium**, você terá:\n`;
-                welcomeMsg += `🌅 Dicas personalizadas pela manhã\n`;
-                welcomeMsg += `🌙 Check-in consolidado à noite (20h)\n`;
-                welcomeMsg += `💬 Assistente de saúde com IA 24h\n`;
-                welcomeMsg += `🎮 Gamificação e protocolos personalizados\n\n`;
-            } else {
-                welcomeMsg += `No seu plano **VIP**, você terá acesso total:\n`;
-                welcomeMsg += `💬 Assistente IA ilimitado 24h\n`;
-                welcomeMsg += `⭐ Escalação prioritária para equipe de saúde\n`;
-                welcomeMsg += `🎯 Protocolos de elite bio-individualizados\n\n`;
+            if (includeDetails) {
+                if (plan === 'freemium') {
+                    welcomeMsg += `Como você está no plano **Gratuito**, você receberá uma dica de saúde todo dia pela manhã (8h). 🌅\n\n`;
+                    welcomeMsg += `_Quer acompanhamento completo com IA e check-ins diários? Conheça o Plano Premium!_\n\n`;
+                } else if (plan === 'premium') {
+                    welcomeMsg += `No seu plano **Premium**, você terá:\n`;
+                    welcomeMsg += `🌅 Dicas personalizadas pela manhã\n`;
+                    welcomeMsg += `🌙 Check-in consolidado à noite (20h)\n`;
+                    welcomeMsg += `💬 Assistente de saúde com IA 24h\n`;
+                    welcomeMsg += `🎮 Gamificação e protocolos personalizados\n\n`;
+                } else {
+                    welcomeMsg += `No seu plano **VIP**, você terá acesso total:\n`;
+                    welcomeMsg += `💬 Assistente IA ilimitado 24h\n`;
+                    welcomeMsg += `⭐ Escalação prioritária para equipe de saúde\n`;
+                    welcomeMsg += `🎯 Protocolos de elite bio-individualizados\n\n`;
+                }
             }
 
             welcomeMsg += `Tudo certo para começarmos?\n\n`;

@@ -94,6 +94,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Gerar mensagem
+        // Se houver template, o histórico deve refletir a mensagem curta (realidade do WhatsApp)
+        const hasTemplate = !!process.env.TWILIO_WELCOME_TEMPLATE_SID;
 
         let welcomeMessage = '';
         try {
@@ -101,10 +103,10 @@ export async function POST(request: NextRequest) {
                 initialStep,
                 patient.plan as 'freemium' | 'premium' | 'vip',
                 {},
-                patient.full_name
+                patient.full_name,
+                !hasTemplate // se não tem template, envia mensagem completa. se tem, histórico = mensagem curta
             );
         } catch (e: any) {
-
             // Fallback for onboarding.ts v1 (without plan/data args)
             welcomeMessage = (getStepMessage as any)(initialStep, patient.full_name);
         }
