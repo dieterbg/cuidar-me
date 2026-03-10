@@ -150,6 +150,7 @@ export interface Patient {
     gender?: 'masculino' | 'feminino' | 'outro' | null;
     height?: number | null; // in cm
     initialWeight?: number | null; // in kg
+    weightGoal?: number | null; // target weight in kg
     healthConditions?: string | null;
     allergies?: string | null;
     communityUsername?: string;

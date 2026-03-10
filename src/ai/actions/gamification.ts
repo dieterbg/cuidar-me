@@ -56,26 +56,50 @@ export async function registerQuickAction(
 
     if (perspectiveKey) {
         // ✨ ANTI-CHEAT (RATE LIMITING) ✨
-        // Evita que o paciente clique no botão 50 vezes seguidas no painel web para "farmar" pontos.
         const now = Date.now();
-        const COOLDOWN_MS = 60 * 60 * 1000; // 1 hora de espera entre cliques no mesmo botão
+        const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 horas de espera entre cliques no mesmo botão
+        const DAILY_LIMIT = 5;
 
         if (!patient.gamification.lastActionLogs) {
             patient.gamification.lastActionLogs = {};
         }
 
+        // 1. Cooldown Check
         const lastActionTime = patient.gamification.lastActionLogs[perspectiveKey];
         if (lastActionTime && (now - lastActionTime) < COOLDOWN_MS) {
             const minutesLeft = Math.ceil((COOLDOWN_MS - (now - lastActionTime)) / 60000);
+            const hoursLeft = Math.floor(minutesLeft / 60);
+            const remainingMins = minutesLeft % 60;
+            const timeStr = hoursLeft > 0 ? `${hoursLeft}h e ${remainingMins}min` : `${minutesLeft} minutos`;
+
             return {
                 success: false,
-                message: `Você já registrou isso há pouco tempo! Tente novamente em ${minutesLeft} minutos. ⏳`,
+                message: `Você já registrou isso há pouco tempo! Tente novamente em ${timeStr}. ⏳`,
                 pointsEarned: 0
             };
         }
 
-        // Registrar a hora do novo clique
+        // 2. Daily Limit Check
+        const todayKey = new Date().toISOString().split('T')[0];
+        if (!patient.gamification.dailyActionCounts) {
+            patient.gamification.dailyActionCounts = {};
+        }
+        if (!patient.gamification.dailyActionCounts[todayKey]) {
+            patient.gamification.dailyActionCounts[todayKey] = {};
+        }
+
+        const todayCount = patient.gamification.dailyActionCounts[todayKey][perspectiveKey] || 0;
+        if (todayCount >= DAILY_LIMIT) {
+            return {
+                success: false,
+                message: `Você já atingiu o limite diário de 5 registros para esta categoria. Volte amanhã! 🌟`,
+                pointsEarned: 0
+            };
+        }
+
+        // Registrar a hora do novo clique e incrementar contador diário
         patient.gamification.lastActionLogs[perspectiveKey] = now;
+        patient.gamification.dailyActionCounts[todayKey][perspectiveKey] = todayCount + 1;
 
         // Atualizar progresso semanal
         const currentProgress = patient.gamification.weeklyProgress?.perspectives?.[perspectiveKey] || { current: 0, goal: 5, isComplete: false };

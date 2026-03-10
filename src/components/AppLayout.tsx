@@ -39,7 +39,6 @@ const allMenuItems = [
   { href: '/welcome', label: 'Apresentação', icon: Home, roles: ['admin', 'equipe_saude', 'assistente', 'pendente'] },
   { href: '/overview', label: 'Visão Geral', icon: LayoutDashboard, roles: ['admin', 'equipe_saude', 'assistente'] },
   { href: '/patients', label: 'Pacientes', icon: MessageSquareText, roles: ['admin', 'equipe_saude', 'assistente'] },
-  { href: '/protocols', label: 'Protocolos', icon: ClipboardList, roles: ['admin'] },
   { href: '/education', label: 'Educação', icon: VideoIcon, roles: ['admin', 'equipe_saude'] },
   { href: '/community', label: 'Comunidade', icon: Users, roles: ['admin', 'equipe_saude'] },
   { href: '/campaigns', label: 'Campanhas', icon: Megaphone, roles: ['admin', 'assistente'] },

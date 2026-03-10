@@ -63,6 +63,7 @@ export function transformPatientFromSupabase(supabasePatient: any): Patient {
         gender: supabasePatient.gender,
         height: supabasePatient.height_cm,
         initialWeight: supabasePatient.initial_weight_kg,
+        weightGoal: supabasePatient.weight_goal_kg,
         healthConditions: supabasePatient.health_conditions,
         allergies: supabasePatient.allergies,
         communityUsername: supabasePatient.community_username,

@@ -58,7 +58,9 @@ export default function PortalProfilePage() {
           (updatedPatient as any).goal
         );
 
-        if (isComplete) {
+        const wasAlreadyActive = patient.status === 'active';
+
+        if (isComplete && !wasAlreadyActive) {
           // Initiate WhatsApp onboarding
           try {
             fetch('/api/onboarding/initiate', {

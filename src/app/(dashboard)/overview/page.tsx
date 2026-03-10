@@ -361,9 +361,12 @@ export default function ClinicDashboardPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   {stats.planDistribution.map(item => (
-                    <div key={item.plan} className="text-center p-2 rounded-lg" style={{ backgroundColor: `${PLAN_COLORS[item.plan as keyof typeof PLAN_COLORS]}20` }}>
-                      <div className="font-bold capitalize">{PLAN_NAMES[item.plan as keyof typeof PLAN_NAMES]}</div>
-                      <div className="text-muted-foreground">{item.count} pac.</div>
+                    <div key={item.plan} className="text-center p-2 rounded-lg relative group/item" style={{ backgroundColor: `${PLAN_COLORS[item.plan as keyof typeof PLAN_COLORS]}15` }}>
+                      <div className="flex items-center justify-center gap-1.5 font-bold capitalize mb-0.5">
+                        <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: PLAN_COLORS[item.plan as keyof typeof PLAN_COLORS] }} />
+                        {PLAN_NAMES[item.plan as keyof typeof PLAN_NAMES]}
+                      </div>
+                      <div className="text-muted-foreground font-medium">{item.count} pac.</div>
                     </div>
                   ))}
                 </div>

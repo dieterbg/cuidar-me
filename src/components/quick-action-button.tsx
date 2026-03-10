@@ -15,6 +15,7 @@ interface QuickActionButtonProps {
     icon: LucideIcon;
     label: string;
     color: 'green' | 'red' | 'blue' | 'purple' | 'orange';
+    onSuccess?: () => void;
 }
 
 const colorClasses = {
@@ -30,8 +31,9 @@ export function QuickActionButton({
     type,
     perspective,
     icon: Icon,
-    label,
-    color
+    label: label,
+    color,
+    onSuccess
 }: QuickActionButtonProps) {
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
@@ -50,6 +52,7 @@ export function QuickActionButton({
                     description: result.message,
                     className: `${colorClasses[color].split(' ')[0]} text-white border-none`
                 });
+                if (onSuccess) onSuccess();
                 router.refresh();
             } else {
                 toast({

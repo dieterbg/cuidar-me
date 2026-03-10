@@ -1,0 +1,44 @@
+[
+  {
+    "id": "613a4a63-ed4b-4cbf-9c64-49fe98074032",
+    "name": "Protocolo Fundamentos (Completo)",
+    "description": "Protocolo de 90 Dias focado em construir a base: hidratação, sono e introdução ao movimento. Sem radicalismos.",
+    "duration_days": 90,
+    "eligible_plans": [
+      "premium",
+      "vip"
+    ],
+    "is_active": true,
+    "created_by": null,
+    "created_at": "2026-03-04T17:49:19.881602+00:00",
+    "updated_at": "2026-03-07T20:13:55.726645+00:00"
+  },
+  {
+    "id": "b9a33669-05c3-4316-b669-f9d0a84c4a83",
+    "name": "Protocolo Evolução (Completo)",
+    "description": "Protocolo focado em consistência de longo prazo para quem já domina o básico. Trabalha qualidade alimentar, constância de exercícios e higiene do sono. Tom educativo e de parceria.",
+    "duration_days": 90,
+    "eligible_plans": [
+      "premium",
+      "vip"
+    ],
+    "is_active": true,
+    "created_by": null,
+    "created_at": "2026-03-04T17:52:41.191839+00:00",
+    "updated_at": "2026-03-07T20:13:55.91793+00:00"
+  },
+  {
+    "id": "63e69258-ca73-4a6f-bd64-13031fa140f2",
+    "name": "Protocolo Performance (Completo)",
+    "description": "Protocolo técnico e exigente para quebrar platôs. Foco em contagem de macros, treino intenso, falha muscular e alta restrição de exceções. Tom de voz de treinador esportivo.",
+    "duration_days": 90,
+    "eligible_plans": [
+      "premium",
+      "vip"
+    ],
+    "is_active": true,
+    "created_by": null,
+    "created_at": "2026-03-04T17:55:36.897564+00:00",
+    "updated_at": "2026-03-07T20:13:56.189237+00:00"
+  }
+]

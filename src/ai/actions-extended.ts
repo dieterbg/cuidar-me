@@ -234,7 +234,7 @@ export async function sendCampaignMessage(
     patientIds: string[],
     message: string
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     // Buscar pacientes
     const { data: patients, error: fetchError } = await supabase

@@ -51,11 +51,22 @@ export async function POST(request: NextRequest) {
 
 
 
-        // 2. Apagar qualquer estado de onboarding anterior (ativo ou concluído) para este paciente
+        // 2. Verificar se já tem onboarding CONCLUÍDO
+        if (existingOnboarding?.completed_at) {
+            console.log(`[POST /api/onboarding/initiate] Onboarding already completed for ${patientId}. Skipping.`);
+            return NextResponse.json({
+                success: true,
+                message: 'Onboarding already completed',
+                skipped: true
+            });
+        }
+
+        // Apagar qualquer estado de onboarding anterior (PENDENTE) para este paciente
         const { error: deleteError } = await supabase
             .from('onboarding_states')
             .delete()
-            .eq('patient_id', patientId);
+            .eq('patient_id', patientId)
+            .is('completed_at', null);
 
         if (deleteError) {
             console.error('[POST /api/onboarding/initiate] Error resetting onboarding state:', deleteError);

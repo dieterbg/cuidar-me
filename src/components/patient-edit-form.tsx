@@ -12,11 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Trash2, Upload, MessageSquare } from 'lucide-react';
+import { Loader2, Trash2, Upload, MessageSquare, ClipboardList } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { updatePatient, deletePatient as deletePatientAction } from '@/ai/actions/patients';
-import { unassignProtocolFromPatient } from '@/ai/actions/protocols';
+import { unassignProtocolFromPatient, assignProtocolToPatient, getProtocols } from '@/ai/actions/protocols';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +32,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { Textarea } from './ui/textarea';
 
-const formSchema = z.object({
+const createFormSchema = (isAdmin: boolean) => z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
   whatsappNumber: z.string().min(10, { message: "O número de WhatsApp é obrigatório e deve ter pelo menos 10 dígitos." }).optional().nullable(),
   plan: z.enum(['freemium', 'premium', 'vip']),
@@ -59,6 +60,23 @@ const formSchema = z.object({
   ),
   medications: z.string().optional().nullable(),
   whatsappConsent: z.boolean().optional().nullable(),
+  protocolId: z.string().optional().nullable(),
+  weightGoal: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
+    z.number().positive().optional().nullable()
+  ),
+}).refine((data) => {
+  if (!isAdmin) return true; // Pacientes não gerenciam protocolos, então não bloqueamos o salvamento do perfil deles
+  if (data.plan === 'freemium' && data.protocolId) {
+    return false;
+  }
+  if ((data.plan === 'premium' || data.plan === 'vip') && !data.protocolId) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Planos Premium/VIP exigem um protocolo. Plano Freemium não pode ter protocolo.",
+  path: ["protocolId"],
 });
 
 
@@ -73,10 +91,22 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
   const [isDeleting, startDeletingTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
+  const [availableProtocols, setAvailableProtocols] = useTransition(); // Using transition for fetching if needed, or just state
+  const [protocols, setProtocols] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchProtocols() {
+      const data = await getProtocols();
+      setProtocols(data);
+    }
+    fetchProtocols();
+  }, []);
 
   const isPatientContext = context === 'patient';
   const isAdminContext = context === 'admin';
 
+  // Geramos o schema com base no contexto para aplicar validações corretas
+  const formSchema = createFormSchema(isAdminContext);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -91,16 +121,26 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
       gender: patient.gender || undefined,
       healthConditions: patient.healthConditions || undefined,
       allergies: patient.allergies || undefined,
+      protocolId: patient.protocol?.protocolId || '',
+      weightGoal: patient.weightGoal || undefined,
     },
   });
+
+  const selectedPlan = form.watch('plan');
+  const filteredProtocols = protocols.filter(p => p.eligiblePlans.includes(selectedPlan));
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     startSavingTransition(async () => {
       try {
 
-        // Explicitly unassign protocol if plan is downgraded to freemium
-        if (values.plan === 'freemium' && patient.protocol) {
-          await unassignProtocolFromPatient(patient.id);
+        // Protocol management logic
+        if (values.plan === 'freemium') {
+          if (patient.protocol) {
+            await unassignProtocolFromPatient(patient.id);
+          }
+        } else if (values.protocolId) {
+          // Assign or update protocol (weightGoal is now on patient record, but we sync it if needed)
+          await assignProtocolToPatient(patient.id, values.protocolId, values.weightGoal || null);
         }
 
         const updateResult = await updatePatient(patient.id, values as Partial<Patient>);
@@ -293,6 +333,42 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                 </FormItem>
               )}
             />
+
+            {/* Protocol Management Section in Admin Context */}
+            <div className="space-y-4 pt-4 border-t border-border/50">
+              <h3 className="text-sm font-semibold text-[#2D3B2D] flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" /> Gestão de Protocolo
+              </h3>
+
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={form.control}
+                  name="protocolId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Protocolo Ativo</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
+                        disabled={selectedPlan === 'freemium'}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="rounded-xl border-input/60 focus:ring-[#899d5e]/20">
+                            <SelectValue placeholder={selectedPlan === 'freemium' ? "N/A (Freemium)" : "Selecione um protocolo"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {filteredProtocols.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
           </>
         )}
 
@@ -333,13 +409,13 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="height"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Altura (em cm)</FormLabel>
+                    <FormLabel>Altura (cm)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -363,6 +439,26 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
                       <Input
                         type="number"
                         placeholder="Ex: 95.5"
+                        step="0.1"
+                        {...field}
+                        value={field.value ?? ''}
+                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="weightGoal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Meta de Peso (kg)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 85.0"
                         step="0.1"
                         {...field}
                         value={field.value ?? ''}

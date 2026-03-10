@@ -95,18 +95,42 @@ export function PointsStore({ userId, initialBalance, initialTransactions }: Poi
                     </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="store" className="mt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {STORE_CATALOG.map((item) => (
-                            <StoreItemCard
-                                key={item.id}
-                                item={item}
-                                canAfford={balance >= item.cost}
-                                onPurchase={() => handlePurchase(item)}
-                                isLoading={loadingId === item.id}
-                            />
-                        ))}
-                    </div>
+                <TabsContent value="store" className="mt-6 space-y-12">
+                    {/* Agrupamento por Tiers */}
+                    {['Comum', 'Bronze', 'Prata', 'Ouro', 'Diamante'].map((tier) => {
+                        const tierItems = STORE_CATALOG.filter(item => item.tier === tier);
+                        if (tierItems.length === 0) return null;
+
+                        return (
+                            <div key={tier} className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <h3 className={cn(
+                                        "text-xl font-black uppercase tracking-widest px-4 py-1 rounded-lg border",
+                                        tier === 'Bronze' ? "bg-amber-100/50 text-amber-700 border-amber-200" :
+                                            tier === 'Prata' ? "bg-slate-100/50 text-slate-700 border-slate-200" :
+                                                tier === 'Ouro' ? "bg-yellow-100/50 text-yellow-700 border-yellow-200" :
+                                                    tier === 'Diamante' ? "bg-cyan-100/50 text-cyan-700 border-cyan-200" :
+                                                        "bg-muted text-muted-foreground border-border"
+                                    )}>
+                                        {tier === 'Comum' ? 'Apoio Diário' : `Nível ${tier}`}
+                                    </h3>
+                                    <div className="h-px flex-1 bg-border/40" />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {tierItems.map((item) => (
+                                        <StoreItemCard
+                                            key={item.id}
+                                            item={item}
+                                            balance={balance}
+                                            canAfford={balance >= item.cost}
+                                            onPurchase={() => handlePurchase(item)}
+                                            isLoading={loadingId === item.id}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </TabsContent>
 
                 <TabsContent value="history" className="mt-6">
@@ -144,50 +168,71 @@ export function PointsStore({ userId, initialBalance, initialTransactions }: Poi
 
 function StoreItemCard({
     item,
+    balance,
     canAfford,
     onPurchase,
     isLoading
 }: {
     item: StoreItem;
+    balance: number;
     canAfford: boolean;
     onPurchase: () => void;
     isLoading: boolean;
 }) {
     return (
-        <Card className={cn("flex flex-col h-full transition-all hover:shadow-md", !canAfford && "opacity-80")}>
-            <CardHeader className="pb-2">
+        <Card className={cn(
+            "flex flex-col h-full transition-all duration-300 hover:shadow-xl border-border/40 overflow-hidden relative group",
+            !canAfford && "grayscale-[0.5] opacity-90",
+            item.tier === 'Diamante' ? "border-cyan-500/30 shadow-cyan-500/5" :
+                item.tier === 'Ouro' ? "border-amber-500/30 shadow-amber-500/5" : ""
+        )}>
+            {item.tier !== 'Comum' && (
+                <div className={cn(
+                    "absolute -top-12 -right-12 w-24 h-24 rotate-45 z-0 opacity-10 transition-transform group-hover:scale-110",
+                    item.tier === 'Bronze' ? "bg-amber-500" :
+                        item.tier === 'Prata' ? "bg-slate-500" :
+                            item.tier === 'Ouro' ? "bg-yellow-500" :
+                                item.tier === 'Diamante' ? "bg-cyan-500" : ""
+                )} />
+            )}
+
+            <CardHeader className="pb-2 relative z-10">
                 <div className="flex justify-between items-start">
-                    <div className="text-4xl mb-2">{item.icon}</div>
-                    <Badge variant={item.type === 'instant' ? 'default' : 'secondary'}>
-                        {item.type === 'instant' ? 'Instantâneo' : 'Resgatável'}
+                    <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-300">{item.icon}</div>
+                    <Badge variant={item.type === 'instant' ? 'default' : 'secondary'} className="font-bold">
+                        {item.type === 'instant' ? 'Instantâneo' : 'Voucher'}
                     </Badge>
                 </div>
-                <CardTitle className="text-xl">{item.name}</CardTitle>
+                <CardTitle className="text-xl font-black leading-tight">{item.name}</CardTitle>
             </CardHeader>
-            <CardContent className="flex-1">
-                <p className="text-muted-foreground text-sm mb-4">
+            <CardContent className="flex-1 relative z-10">
+                <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
                     {item.description}
                 </p>
-                <div className="flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
-                    <Star className="w-4 h-4 fill-current" />
-                    {item.cost} pontos
+                <div className="flex items-center gap-2 bg-muted/50 w-fit px-3 py-1.5 rounded-lg border border-border/50">
+                    <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                    <span className="font-black text-amber-600 dark:text-amber-400">{item.cost.toLocaleString()}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Health Coins</span>
                 </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="relative z-10">
                 <Button
-                    className="w-full"
+                    className={cn(
+                        "w-full h-12 rounded-xl font-bold transition-all",
+                        canAfford ? "shadow-lg shadow-primary/20 hover:scale-[1.02]" : ""
+                    )}
                     disabled={!canAfford || isLoading}
                     onClick={onPurchase}
                     variant={canAfford ? 'default' : 'outline'}
                 >
                     {isLoading ? (
                         <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verificando...
                         </>
                     ) : canAfford ? (
-                        'Comprar'
+                        'Resgatar Recompensa'
                     ) : (
-                        'Saldo Insuficiente'
+                        `Faltam ${(item.cost - balance).toLocaleString()} pts`
                     )}
                 </Button>
             </CardFooter>

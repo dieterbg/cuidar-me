@@ -67,7 +67,7 @@ export async function scheduleReminder(
     message: string,
     sendAt: Date
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
         .from('scheduled_messages')

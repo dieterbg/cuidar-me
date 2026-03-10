@@ -69,8 +69,9 @@ export async function getPatientDetails(patientId: string): Promise<{
     // Fetch patient
     const { data: patientData, error: patientError } = await supabase
         .from('patients')
-        .select('*')
+        .select('*, patient_protocols(*)')
         .eq('id', patientId)
+        .eq('patient_protocols.is_active', true)
         .single();
 
     if (patientError || !patientData) {
@@ -108,6 +109,22 @@ export async function getPatientDetails(patientId: string): Promise<{
         .limit(50); // Limit to last 50 messages for performance
 
     const patient = transformPatientFromSupabase(patientData);
+
+    // Map protocol from join if exists
+    if (patientData.patient_protocols && patientData.patient_protocols.length > 0) {
+        const activeProtocol = patientData.patient_protocols[0];
+        patient.protocol = {
+            protocolId: activeProtocol.protocol_id,
+            startDate: activeProtocol.start_date,
+            currentDay: activeProtocol.current_day,
+            isActive: activeProtocol.is_active,
+            weightGoal: activeProtocol.weight_goal_kg
+        };
+        // If the patient record doesn't have a weightGoal yet, use the one from the protocol for UI continuity
+        if (!patient.weightGoal) {
+            patient.weightGoal = activeProtocol.weight_goal_kg;
+        }
+    }
 
     const metrics = metricsData?.map(m => ({
         id: m.id,
@@ -164,6 +181,7 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
     if (updates.allergies !== undefined) dbUpdates.allergies = updates.allergies;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.riskLevel !== undefined) dbUpdates.risk_level = updates.riskLevel;
+    if (updates.weightGoal !== undefined) dbUpdates.weight_goal_kg = updates.weightGoal;
 
     // Handle subscription if present (it's a JSON column usually, but let's check schema)
     // Assuming subscription is stored in columns or a jsonb column. 

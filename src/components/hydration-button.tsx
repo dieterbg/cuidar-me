@@ -7,7 +7,7 @@ import { Droplet, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { registerQuickAction } from "@/ai/actions/gamification";
 
-export function HydrationButton({ userId }: { userId: string }) {
+export function HydrationButton({ userId, onSuccess }: { userId: string, onSuccess?: () => void }) {
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
@@ -24,6 +24,7 @@ export function HydrationButton({ userId }: { userId: string }) {
                     description: result.message,
                     className: "bg-blue-500 text-white border-none"
                 });
+                if (onSuccess) onSuccess();
                 router.refresh(); // Force UI update
             } else {
                 toast({
@@ -49,14 +50,14 @@ export function HydrationButton({ userId }: { userId: string }) {
             onClick={handleRegister}
             disabled={loading}
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all active:scale-95"
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all active:scale-95 flex flex-col h-auto py-3 gap-1"
         >
             {loading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-                <Droplet className="w-4 h-4 mr-2" />
+                <Droplet className="w-5 h-5" />
             )}
-            {loading ? "Registrando..." : "Registrar Água"}
+            <span className="text-xs font-medium">{loading ? "Registrando..." : "Registrar Água"}</span>
         </Button>
     );
 }

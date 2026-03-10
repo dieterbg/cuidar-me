@@ -1,0 +1,37 @@
+[
+  {
+    "id": "3dcebfd0-84f3-4265-8919-f19381cf87ef",
+    "name": "Protocolo Fundamentos (30 Dias)",
+    "steps": 4
+  },
+  {
+    "id": "3a88b243-f9d7-41bb-ba3e-4d851ffa8941",
+    "name": "Protocolo Performance (90 Dias)",
+    "steps": 4
+  },
+  {
+    "id": "63d5e7c2-bffb-4639-8460-c5287cc0d218",
+    "name": "Protocolo Fundamentos (90 Dias)",
+    "steps": 4
+  },
+  {
+    "id": "5582c338-06de-4231-b2cb-bb30ea112bdf",
+    "name": "Protocolo Evolução (90 Dias)",
+    "steps": 4
+  },
+  {
+    "id": "613a4a63-ed4b-4cbf-9c64-49fe98074032",
+    "name": "Fundamentos (Iniciante)",
+    "steps": 90
+  },
+  {
+    "id": "b9a33669-05c3-4316-b669-f9d0a84c4a83",
+    "name": "Evolução (Intermediário)",
+    "steps": 90
+  },
+  {
+    "id": "63e69258-ca73-4a6f-bd64-13031fa140f2",
+    "name": "Performance (Avançado)",
+    "steps": 90
+  }
+]

@@ -1,42 +1,71 @@
-import { createServiceRoleClient } from '../src/lib/supabase-server-utils';
 
-async function run() {
-    const supabase = createServiceRoleClient();
+import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
-    // Fetch all active protocols
-    const { data: protocols, error } = await supabase.from('protocols').select('id, name').eq('is_active', true);
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+async function cleanupProtocols() {
+    console.log('🧹 Cleaning up incomplete protocols...');
+
+    // 1. Identify protocols with 0 steps
+    const { data: protocols, error } = await supabase
+        .from('protocols')
+        .select(`
+      id,
+      name,
+      protocol_steps (count)
+    `);
 
     if (error) {
         console.error('Error fetching protocols:', error);
         return;
     }
 
-    console.log('Active Protocols Before Cleanup:');
-    console.table(protocols);
+    const toDelete = protocols.filter(p => (p.protocol_steps?.[0]?.count || 0) === 0);
 
-    const idsToKeepString = ['Fundamentos (30', 'Evolução (30', 'Performance (30']; // Usually they have this in the name
-    const idsToKeep = ['fundamentos_iniciante', 'evolucao_intermediario', 'performance_avancado'];
-
-    // Instead of guessing IDs, let's keep ones that DON'T have "90 Dias" in the name
-    // and DO have "30 Dias" or don't have "90". Let's explicitly search for "90 Dias" and deactivate them.
-    for (const p of protocols || []) {
-        if (p.name.includes('90 Dias')) {
-            console.log(`Deactivating ${p.name} (${p.id})`);
-            await supabase.from('protocols').update({ is_active: false }).eq('id', p.id);
-        } else {
-            // Let's also deactivate "Performance (Avançado)", "Evolução (Intermediário)", "Fundamentos (Iniciante)" if the ones we want are the 30 Dias ones.
-            // Wait, the ones we built using the golden rules say "Protocolo Fundamentos (30 Dias)".
-            // Let's only keep exactly the ones that have `(30 Dias)` in the name, since those are our Golden Rule protocols.
-            if (!p.name.includes('(30 Dias)')) {
-                console.log(`Deactivating ${p.name} (${p.id})`);
-                await supabase.from('protocols').update({ is_active: false }).eq('id', p.id);
-            }
-        }
+    if (toDelete.length === 0) {
+        console.log('✨ No incomplete protocols found.');
+        return;
     }
 
-    const { data: after } = await supabase.from('protocols').select('id, name').eq('is_active', true);
-    console.log('Active Protocols After Cleanup:');
-    console.table(after);
+    console.log(`Found ${toDelete.length} protocols to remove:`);
+    toDelete.forEach(p => console.log(`- ${p.name} (${p.id})`));
+
+    const idsToDelete = toDelete.map(p => p.id);
+
+    // 2. Check if any patient is using them (to be extra safe)
+    const { data: assignments, error: assignError } = await supabase
+        .from('patient_protocols')
+        .select('protocol_id')
+        .in('protocol_id', idsToDelete)
+        .eq('is_active', true);
+
+    if (assignError) {
+        console.error('Error checking assignments:', assignError);
+        return;
+    }
+
+    if (assignments && assignments.length > 0) {
+        console.warn('⚠️ Warning: Some protocols to be deleted are currently assigned to patients. Skipping deletion for those.');
+        // We could filter idsToDelete here if we wanted to be more granular
+    }
+
+    // 3. Perform hard delete (or soft delete by setting is_active = false)
+    // User asked to "exclua" (delete), so let's use the actual delete for the empty ones.
+    const { error: deleteError } = await supabase
+        .from('protocols')
+        .delete()
+        .in('id', idsToDelete);
+
+    if (deleteError) {
+        console.error('Error deleting protocols:', deleteError);
+    } else {
+        console.log(`✅ Successfully deleted ${idsToDelete.length} incomplete protocols.`);
+    }
 }
 
-run().catch(console.error);
+cleanupProtocols();

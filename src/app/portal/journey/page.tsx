@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from 'next/link';
 import { getPatientProfileByUserId } from '@/ai/actions/patients';
 import type { Patient, Perspective } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
@@ -16,14 +18,7 @@ import { GamificationPointsDisplay, PerspectiveProgress } from '@/components/gam
 import { Badge } from '@/components/ui/badge';
 import { HydrationButton } from '@/components/hydration-button';
 import { QuickActionButton } from '@/components/quick-action-button';
-import { getLevelTier, getLevelName } from '@/lib/level-system';
-
-const levelConfig: { [key: string]: { nextLevel: string, goal: number } } = {
-    'Bronze': { nextLevel: 'Prata', goal: 4000 },
-    'Prata': { nextLevel: 'Ouro', goal: 8000 },
-    'Ouro': { nextLevel: 'Diamante', goal: 15000 },
-    'Diamante': { nextLevel: 'Diamante', goal: 25000 }, // Max level
-}
+import { getLevelInfo, getLevelName } from '@/lib/level-system';
 
 const badgeImages: Record<string, string> = {
     pe_direito_badge: '/badges/pe_direito.svg',
@@ -94,6 +89,9 @@ export default function JourneyPage() {
     const { toast } = useToast();
     const [patient, setPatient] = useState<Patient | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+    const refetch = () => setRefetchTrigger(prev => prev + 1);
 
     useEffect(() => {
         if (authLoading || !user) return;
@@ -114,7 +112,7 @@ export default function JourneyPage() {
             }
         };
         fetchData();
-    }, [user, authLoading, toast]);
+    }, [user, authLoading, toast, refetchTrigger]);
 
     const radarChartData = useMemo(() => {
         if (!patient) return [];
@@ -139,18 +137,76 @@ export default function JourneyPage() {
         return <JourneySkeleton />;
     }
 
-    // Buscar tier do nível (Iniciante, Praticante, etc.)
-    const levelTier = typeof patient.gamification.level === 'number'
-        ? getLevelTier(patient.gamification.level)
-        : patient.gamification.level;
-    const currentLevelInfo = levelConfig[levelTier] || levelConfig['Mestre'];
-    const levelProgressPercentage = (patient.gamification.totalPoints / currentLevelInfo.goal) * 100;
+    const levelInfo = getLevelInfo(patient.gamification.totalPoints);
+    const levelProgressPercentage = levelInfo.progress;
+    const goalPoints = patient.gamification.totalPoints + levelInfo.pointsForNext;
     const weeklyPerspectives = patient.gamification.weeklyProgress.perspectives;
     const perspectivesCompleted = Object.values(weeklyPerspectives).filter(p => p.isComplete).length;
 
+    const isFreemium = patient.subscription.plan === 'freemium';
+
     return (
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen">
-            <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen relative overflow-hidden">
+            {isFreemium && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-md p-4">
+                    <Card className="max-w-lg w-full border-primary/20 shadow-2xl bg-gradient-to-br from-card to-primary/5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                            <Trophy className="w-48 h-48 text-primary" />
+                        </div>
+                        <CardHeader className="text-center pb-2 relative z-10">
+                            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 ring-8 ring-background">
+                                <Lock className="w-8 h-8 text-primary" />
+                            </div>
+                            <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+                                Jornada Premium
+                            </CardTitle>
+                            <CardDescription className="text-base mt-2">
+                                A gamificação exclusiva do Cuidar.me
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6 relative z-10 pt-4">
+                            <div className="space-y-4 text-left">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg text-green-600 shrink-0">
+                                        <Target className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-foreground">Protocolos Gamificados</h4>
+                                        <p className="text-sm text-muted-foreground">Cumpra missões diárias, acumule Health Coins e avance de níveis (Bronze ao Diamante).</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-600 shrink-0">
+                                        <Sparkles className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-foreground">Recompensas Reais</h4>
+                                        <p className="text-sm text-muted-foreground">Troque pontos por descontos, consultas VIP e presentes físicos enviados no nível Diamante.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 shrink-0">
+                                        <HeartPulse className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-foreground">Assistente 24h & Dados</h4>
+                                        <p className="text-sm text-muted-foreground">Chat liberado com nossa inteligência para tirar dúvidas e registrar métricas no seu portal.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter className="relative z-10 pt-2 pb-6">
+                            <Button asChild className="w-full text-lg h-14 rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.02] transition-transform">
+                                <Link href="/portal/plans">
+                                    Fazer Upgrade Agora <Sparkles className="ml-2 w-5 h-5" />
+                                </Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                </div>
+            )}
+
+            <div className={cn("max-w-6xl mx-auto space-y-8", isFreemium && "pointer-events-none opacity-30 blur-md select-none")}>
 
                 {/* HEADER */}
                 <div className="flex flex-col md:flex-row justify-between items-end gap-4">
@@ -165,24 +221,51 @@ export default function JourneyPage() {
                     </div>
 
                     {/* LEVEL CAPSULE */}
-                    <div className="bg-card border shadow-sm rounded-2xl p-4 min-w-[240px]">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-muted-foreground">
-                                {typeof patient.gamification.level === 'number'
-                                    ? getLevelName(patient.gamification.level)
-                                    : `Nível ${patient.gamification.level}`}
-                            </span>
-                            <span className="text-xs font-bold text-primary">{patient.gamification.totalPoints} / {currentLevelInfo.goal} pts</span>
+                    <div className={cn(
+                        "border shadow-lg rounded-2xl p-5 min-w-[300px] relative overflow-hidden transition-all duration-300",
+                        levelInfo.tier === 'Ouro' || levelInfo.tier === 'Diamante'
+                            ? "bg-gradient-to-br from-amber-100/50 via-background to-amber-500/10 border-amber-200/50 dark:from-amber-950/30 dark:to-amber-900/20"
+                            : "bg-card"
+                    )}>
+                        {levelInfo.tier === 'Diamante' && (
+                            <div className="absolute -top-6 -right-6 text-cyan-500/10">
+                                <Trophy className="w-32 h-32" />
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center mb-4 relative z-10">
+                            <div className="flex flex-col">
+                                <span className={cn("text-xs font-bold uppercase tracking-wider mb-1", levelInfo.color)}>
+                                    Nível Atual
+                                </span>
+                                <span className={cn("text-2xl font-black text-foreground flex items-center gap-2", levelInfo.color)}>
+                                    {getLevelName(levelInfo.level)}
+                                    {levelInfo.tier === 'Diamante' ? <Sparkles className="w-5 h-5" /> : null}
+                                </span>
+                            </div>
+                            <div className="text-right flex flex-col items-end">
+                                <span className="text-sm text-muted-foreground font-medium">Pontuação</span>
+                                <span className="text-lg font-bold text-primary">{patient.gamification.totalPoints} <span className="text-sm font-normal text-muted-foreground">/ {goalPoints} pts</span></span>
+                            </div>
                         </div>
-                        <Progress value={levelProgressPercentage} className="h-2" />
+                        <div className="relative z-10">
+                            <div className="flex justify-between text-xs mb-1.5 font-medium">
+                                <span className="text-muted-foreground">Progresso para {getLevelName(levelInfo.level + 1)}</span>
+                                <span>{levelProgressPercentage}%</span>
+                            </div>
+                            <Progress
+                                value={levelProgressPercentage}
+                                className={cn("h-3", levelInfo.tier === 'Diamante' ? "bg-cyan-950/20 [&>div]:bg-gradient-to-r [&>div]:from-cyan-500 [&>div]:to-blue-600" : "")}
+                            />
+                        </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     {/* RADAR CHART CARD */}
-                    <Card className="lg:col-span-7 bg-card/80 backdrop-blur-sm border-border/60 shadow-sm">
-                        <CardHeader>
+                    <Card className="lg:col-span-7 bg-card/60 backdrop-blur-xl border-border/60 shadow-lg overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/5 pointer-events-none transition-opacity duration-500 group-hover:opacity-100 opacity-50" />
+                        <CardHeader className="relative z-10 pb-2">
                             <CardTitle className="flex items-center justify-between">
                                 <span>Estrela do Cuidado</span>
                                 <Badge variant={perspectivesCompleted === 5 ? "default" : "secondary"} className="text-sm px-3 py-1">
@@ -194,8 +277,8 @@ export default function JourneyPage() {
                         </CardHeader>
                         <CardContent className="flex items-center justify-center min-h-[350px]">
                             <ResponsiveContainer width="100%" height={350}>
-                                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarChartData}>
-                                    <PolarGrid stroke="hsl(var(--border))" />
+                                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarChartData}>
+                                    <PolarGrid stroke="hsl(var(--border))" strokeDasharray="3 3" />
                                     <PolarAngleAxis
                                         dataKey="subject"
                                         tick={({ payload, x, y, ...rest }) => {
@@ -230,7 +313,7 @@ export default function JourneyPage() {
                             <CardContent>
                                 <div className="grid grid-cols-2 gap-3">
                                     {/* Hidratação */}
-                                    <HydrationButton userId={user!.id} />
+                                    <HydrationButton userId={user!.id} onSuccess={refetch} />
 
                                     {/* Alimentação */}
                                     <QuickActionButton
@@ -240,6 +323,7 @@ export default function JourneyPage() {
                                         icon={UtensilsCrossed}
                                         label="Refeição Saudável"
                                         color="green"
+                                        onSuccess={refetch}
                                     />
 
                                     {/* Movimento */}
@@ -250,6 +334,7 @@ export default function JourneyPage() {
                                         icon={HeartPulse}
                                         label="Atividade Física"
                                         color="red"
+                                        onSuccess={refetch}
                                     />
 
                                     {/* Disciplina */}
@@ -260,6 +345,7 @@ export default function JourneyPage() {
                                         icon={Target}
                                         label="Tarefa Cumprida"
                                         color="purple"
+                                        onSuccess={refetch}
                                     />
 
                                     {/* Bem-Estar */}
@@ -270,6 +356,7 @@ export default function JourneyPage() {
                                         icon={Brain}
                                         label="Momento Zen"
                                         color="orange"
+                                        onSuccess={refetch}
                                     />
                                 </div>
                             </CardContent>

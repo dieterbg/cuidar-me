@@ -45,7 +45,7 @@ export async function handlePatientReply(
         // Protege contra abuso e controla custos Gemini/Twilio
         // =====================================================
         const DAILY_LIMITS: Record<string, number> = {
-            freemium: 50,    // Increased from 5 to avoid blocking tests
+            freemium: 5,     // Restored as per user request
             premium: 100,    // Increased from 30
             vip: Infinity,
         };
