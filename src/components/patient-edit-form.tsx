@@ -102,6 +102,14 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
     fetchProtocols();
   }, []);
 
+  // Clear protocolId when plan is set to freemium
+  const selectedPlan = form.watch('plan');
+  useEffect(() => {
+    if (selectedPlan === 'freemium') {
+      form.setValue('protocolId', '');
+    }
+  }, [selectedPlan, form]);
+
   const isPatientContext = context === 'patient';
   const isAdminContext = context === 'admin';
 

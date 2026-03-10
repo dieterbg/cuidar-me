@@ -11,9 +11,16 @@ import { protocols, mandatoryGamificationSteps } from '@/lib/data';
 
 /**
  * Determina o horário de envio baseado no tipo de mensagem
+ * Suporta horários fixos ou intervalos relativos para protocolos de teste
  */
-function getScheduledTime(messageTitle: string, baseDate: Date): Date {
+function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boolean = false, offsetMinutes: number = 0): Date {
     const date = new Date(baseDate);
+
+    // Se for fast track, retorna apenas o offset
+    if (isFastTrack) {
+        date.setMinutes(date.getMinutes() + offsetMinutes);
+        return date;
+    }
 
     // Pesagem: 7h (jejum, ao acordar)
     if (messageTitle.includes('Peso')) {
@@ -43,7 +50,7 @@ function getScheduledTime(messageTitle: string, baseDate: Date): Date {
     else if (messageTitle.includes('Hidratação')) {
         date.setHours(22, 0, 0, 0);
     }
-    // Bem-Estar (Sono): 9h (manhã seguinte)
+    // Bem-Estar (Sono): 9h (manhã depois)
     else if (messageTitle.includes('Bem-Estar') && messageTitle.includes('sono')) {
         date.setHours(9, 0, 0, 0);
     }
@@ -59,7 +66,7 @@ function getScheduledTime(messageTitle: string, baseDate: Date): Date {
  * Agenda mensagens de protocolo para todos os pacientes com protocolo ativo
  * Deve ser chamado uma vez por dia às 6h da manhã
  */
-export async function scheduleProtocolMessages(): Promise<{
+export async function scheduleProtocolMessages(isPulse: boolean = false): Promise<{
     success: boolean;
     messagesScheduled: number;
     protocolsCompleted: number;
@@ -68,7 +75,7 @@ export async function scheduleProtocolMessages(): Promise<{
     const supabase = createServiceRoleClient();
     const today = new Date();
 
-    console.log('[SCHEDULER] Starting protocol message scheduling...');
+    console.log(`[SCHEDULER] Starting protocol message scheduling (Pulse: ${isPulse})...`);
     console.log(`[SCHEDULER] Date: ${today.toLocaleDateString('pt-BR')}`);
 
     try {
@@ -96,17 +103,23 @@ export async function scheduleProtocolMessages(): Promise<{
             return { success: false, messagesScheduled: 0, protocolsCompleted: 0, error: fetchError.message };
         }
 
-        if (!activeProtocols || activeProtocols.length === 0) {
-            console.log('[SCHEDULER] No active protocols found');
+        // Se for Pulse, filtrar apenas protocolos de teste/rápidos
+        const fastTrackProtocols = ['2412145d-c346-4012-9040-65e9d43073a3'];
+        const protocolsToProcess = isPulse
+            ? activeProtocols.filter((p: any) => fastTrackProtocols.includes(p.protocol.id))
+            : activeProtocols;
+
+        if (!protocolsToProcess || protocolsToProcess.length === 0) {
+            console.log(`[SCHEDULER] No protocols to process (Pulse: ${isPulse})`);
             return { success: true, messagesScheduled: 0, protocolsCompleted: 0 };
         }
 
-        console.log(`[SCHEDULER] Found ${activeProtocols.length} active protocols`);
+        console.log(`[SCHEDULER] Processing ${protocolsToProcess.length} protocols`);
 
         let messagesScheduled = 0;
         let protocolsCompleted = 0;
 
-        for (const patientProtocol of activeProtocols) {
+        for (const patientProtocol of protocolsToProcess) {
             const currentDay = patientProtocol.current_day;
             const protocolId = patientProtocol.protocol.id;
             const durationDays = patientProtocol.protocol.duration_days;
@@ -173,7 +186,23 @@ export async function scheduleProtocolMessages(): Promise<{
 
             // Agendar cada mensagem no horário específico
             for (const message of allMessages) {
-                const sendTime = getScheduledTime(message.title, today);
+                const isFastTrack = patientProtocol.protocol.id === '2412145d-c346-4012-9040-65e9d43073a3';
+                const sendTime = getScheduledTime(message.title, today, isFastTrack, 5); // 5 min de intervalo no teste
+
+                // Verificar se já existe mensagem pendente para este paciente deste protocolo
+                // Isso evita duplicar agendamentos em 'pulses' frequentes
+                if (isFastTrack) {
+                    const { count } = await supabase
+                        .from('scheduled_messages')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('patient_id', patientProtocol.patient.id)
+                        .eq('status', 'pending');
+
+                    if (count && count > 0) {
+                        console.log(`[SCHEDULER]   ⏭ Ignorando ${message.title} - Já existe mensagem pendente`);
+                        continue;
+                    }
+                }
 
                 // Verificar se é mensagem de gamificação
                 const isGamification = message.title?.includes('[GAMIFICAÇÃO]') || false;

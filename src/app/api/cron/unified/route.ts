@@ -44,7 +44,18 @@ async function handleCronRequest(request: NextRequest) {
 
         console.log(`[UNIFIED CRON] Starting execution at ${brazilTime.toISOString()} (${currentHour}h BRT)`);
 
-        // TASK 1: Process Message Queue (Always runs to send any pending protocol/system messages)
+        // TASK 1: Pulse Protocol Scheduling (Runs every time to handle fast-track protocols like "Protocolo Teste")
+        if (currentHour !== 6) {
+            try {
+                results.protocolSchedulingPulse = await scheduleProtocolMessages(true);
+                console.log(`[UNIFIED CRON] Protocol pulse results:`, results.protocolSchedulingPulse);
+            } catch (e: any) {
+                console.error('[UNIFIED CRON] Protocol pulse error:', e);
+                results.protocolSchedulingPulse = { success: false, error: e.message };
+            }
+        }
+
+        // TASK 2: Process Message Queue (Always runs to send any pending protocol/system messages)
         try {
             results.messageQueue = await processMessageQueue();
             console.log(`[UNIFIED CRON] Queue results:`, results.messageQueue);
@@ -53,10 +64,10 @@ async function handleCronRequest(request: NextRequest) {
             results.messageQueue = { success: false, error: e.message };
         }
 
-        // TASK 2: Schedule Protocol Messages (Runs at 6 AM BRT)
+        // TASK 3: Regular Protocol Scheduling (Runs at 6 AM BRT)
         if (currentHour === 6) {
             try {
-                results.protocolScheduling = await scheduleProtocolMessages();
+                results.protocolScheduling = await scheduleProtocolMessages(false);
                 console.log(`[UNIFIED CRON] Protocol scheduling results:`, results.protocolScheduling);
             } catch (e: any) {
                 console.error('[UNIFIED CRON] Protocol scheduling error:', e);
