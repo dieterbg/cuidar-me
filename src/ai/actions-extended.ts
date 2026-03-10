@@ -247,7 +247,7 @@ export async function sendCampaignMessage(
     }
 
     // Agendar mensagens
-    const scheduledMessages = patients.map(p => ({
+    const scheduledMessages = (patients as any[]).map((p: any) => ({
         patient_id: p.id,
         patient_whatsapp_number: p.whatsapp_number,
         message_content: message,
