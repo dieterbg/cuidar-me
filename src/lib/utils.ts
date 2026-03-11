@@ -27,6 +27,18 @@ export function normalizeBrazilianNumber(phoneNumber: string): string {
     // For now, we standardize to +55 + digits.
 
     if (digits.length === 11 || digits.length === 10) {
+        // Handle Brazilian 9th digit rules:
+        // - DDD 11-28: keep/add 9th digit (mobile)
+        // - DDD 31-99: remove 9th digit for Twilio/WhatsApp compatibility
+        const ddd = parseInt(digits.substring(0, 2));
+        const has9th = digits.length === 11 && digits.charAt(2) === '9';
+
+        if (ddd >= 31 && has9th) {
+            // Remove 9th digit: DDD + remaining 8 digits
+            const normalized = digits.substring(0, 2) + digits.substring(3);
+            return `whatsapp:+55${normalized}`;
+        }
+
         return `whatsapp:+55${digits}`;
     }
 
