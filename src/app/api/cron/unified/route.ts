@@ -30,11 +30,16 @@ async function handleCronRequest(request: NextRequest) {
     };
 
     try {
-        // 1. Authentication
+        // 1. Authentication (supports both Bearer header and ?token= query param)
         const authHeader = request.headers.get('authorization');
+        const tokenParam = request.nextUrl.searchParams.get('token');
         const cronSecret = process.env.CRON_SECRET;
 
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        const isAuthorized = !cronSecret ||
+            authHeader === `Bearer ${cronSecret}` ||
+            tokenParam === cronSecret;
+
+        if (!isAuthorized) {
             console.error('[UNIFIED CRON] Unauthorized');
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
