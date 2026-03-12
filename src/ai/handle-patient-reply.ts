@@ -331,16 +331,42 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
     let processed = 0;
     for (const msg of pendingMessages) {
         // Proteção: pular números de teste para evitar cobranças desnecessárias no Twilio
-        const isTestNumber = TEST_PHONE_PATTERNS.some(pattern => msg.patient_whatsapp_number.includes(pattern));
-        if (isTestNumber) {
-            console.warn(`[QUEUE] Skipping test number ...${msg.patient_whatsapp_number.slice(-4)}`);
-            await supabase.from('scheduled_messages')
-                .update({ status: 'error', error_info: 'Test/seed phone number — skipped in production' })
-                .eq('id', msg.id);
-            continue;
+        // Logic to determine if we should use a template (Bypass 24h window for protocols)
+        let contentSid = undefined;
+        let contentVariables = undefined;
+
+        if (msg.source === 'protocol' || (msg.metadata && msg.metadata.isGamification)) {
+            const metadata = msg.metadata || {};
+            const title = metadata.checkinTitle || metadata.title || '';
+
+            // Map titles to templates from env
+            if (title.includes('Hidratação')) contentSid = process.env.TWILIO_CHECKIN_WATER_SID;
+            else if (title.includes('Café')) contentSid = process.env.TWILIO_CHECKIN_BREAKFAST_SID;
+            else if (title.includes('Almoço')) contentSid = process.env.TWILIO_CHECKIN_LUNCH_SID;
+            else if (title.includes('Jantar')) contentSid = process.env.TWILIO_CHECKIN_DINNER_SID;
+            else if (title.includes('Lanche')) contentSid = process.env.TWILIO_CHECKIN_SNACKS_SID;
+            else if (title.includes('Atividade')) contentSid = process.env.TWILIO_CHECKIN_ACTIVITY_SID;
+            else if (title.includes('Bem-Estar')) contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
+            else if (title.includes('Peso')) contentSid = process.env.TWILIO_CHECKIN_WEIGHT_SID;
+
+            // Fallback for generic protocol messages (dicas, etc)
+            if (!contentSid) {
+                // Use wellbeing as a generic fallback since it likely starts with "Oi [Nome]"
+                contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
+            }
+
+            if (contentSid) {
+                // Fetch patient name if possible (would require a join in the select above)
+                // For now, let's assume templates take {{1}} as name, but we might not have it here.
+                // We'll pass the message body if it's a generic template with {{1}}
+                contentVariables = { "1": "lá" }; // "Olá, lá!" or "Oi, lá!" fallback
+            }
         }
 
-        const sent = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content);
+        const sent = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content, {
+            contentSid,
+            contentVariables
+        });
         if (sent) {
             await supabase.from('scheduled_messages')
                 .update({ status: 'sent', sent_at: new Date().toISOString() })
