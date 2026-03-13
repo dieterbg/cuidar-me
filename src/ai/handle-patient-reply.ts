@@ -201,17 +201,20 @@ export async function handlePatientReply(
 
         // 3. DETECTAR CHECK-INS ATIVOS
         // Verificar se enviamos mensagem de protocolo nas últimas 24h
-        // Busca tanto pela tag legada [GAMIFICAÇÃO] quanto pelo novo metadado isGamification
-        const { data: recentProtocolMessage } = await supabase
+        // Buscamos as últimas mensagens do sistema e filtramos por [GAMIFICAÇÃO] ou metadado isGamification
+        const { data: recentSystemMessages } = await supabase
             .from('messages')
             .select('text, created_at, metadata')
             .eq('patient_id', patient.id)
             .eq('sender', 'me')
             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .or(`text.ilike.%[GAMIFICAÇÃO]%,metadata->isGamification.eq.true`)
             .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .limit(5);
+
+        const recentProtocolMessage = recentSystemMessages?.find(m =>
+            (m.text && m.text.includes('[GAMIFICAÇÃO]')) ||
+            (m.metadata && (m.metadata as any).isGamification === true)
+        );
 
         const hasActiveCheckin = !!recentProtocolMessage;
         const checkinTitle = recentProtocolMessage?.text || undefined;
