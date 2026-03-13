@@ -129,7 +129,7 @@ export async function classifyMessageIntent(
 export async function generateIntentResponse(intent: MessageIntent): Promise<string | null> {
     switch (intent) {
         case MessageIntent.SOCIAL:
-            return "Olá! 😊 Como posso te ajudar hoje?";
+            return "Deia: Olá! 😊 Como posso te ajudar hoje?";
 
         default:
             return null;

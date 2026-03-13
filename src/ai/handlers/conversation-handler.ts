@@ -33,15 +33,16 @@ export async function handleAIConversation(
         }
 
         if (aiResponse.chatbotReply) {
-            console.log(`[handleAIConversation] AI Response: ${aiResponse.chatbotReply.substring(0, 30)}...`);
+            const replyWithPrefix = `Deia: ${aiResponse.chatbotReply}`;
+            console.log(`[handleAIConversation] AI Response: ${replyWithPrefix.substring(0, 30)}...`);
 
-            const sent = await sendWhatsappMessage(whatsappNumber, aiResponse.chatbotReply);
+            const sent = await sendWhatsappMessage(whatsappNumber, replyWithPrefix);
 
             if (sent) {
                 await supabase.from('messages').insert({
                     patient_id: patient.id,
                     sender: 'me',
-                    text: aiResponse.chatbotReply,
+                    text: replyWithPrefix,
                 });
             } else {
                 console.error(`[handleAIConversation] Failed to send WhatsApp to ${whatsappNumber}`);

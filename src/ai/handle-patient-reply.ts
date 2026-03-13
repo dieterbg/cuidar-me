@@ -201,13 +201,14 @@ export async function handlePatientReply(
 
         // 3. DETECTAR CHECK-INS ATIVOS
         // Verificar se enviamos mensagem de protocolo nas últimas 24h
+        // Busca tanto pela tag legada [GAMIFICAÇÃO] quanto pelo novo metadado isGamification
         const { data: recentProtocolMessage } = await supabase
             .from('messages')
-            .select('text, created_at')
+            .select('text, created_at, metadata')
             .eq('patient_id', patient.id)
             .eq('sender', 'me')
             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .ilike('text', '%[GAMIFICAÇÃO]%')
+            .or(`text.ilike.%[GAMIFICAÇÃO]%,metadata->isGamification.eq.true`)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
