@@ -69,6 +69,7 @@ export async function handleProtocolGamification(
     if (isGamificationCheckin(activeProtocolStep)) {
         const perspective = extractPerspective(activeProtocolStep);
         if (perspective) {
+            const { processNumericResponse } = await import('../protocol-response-processor');
             const points = calculatePoints(activeProtocolStep.title, messageText, perspective);
 
             if (points > 0 && patient.user_id) {
@@ -81,6 +82,16 @@ export async function handleProtocolGamification(
                         generateConfirmationMessage(activeProtocolStep.title, points, perspective)
                     );
                     console.log(`[PROTOCOL-GAMIFICATION] +${points} pts (${perspective})`);
+
+                    // ✨ NOVO: Armazenar Dado Estruturado se for Peso ✨
+                    if (activeProtocolStep.title.includes('Peso')) {
+                        const { isValid, value } = processNumericResponse(messageText);
+                        if (isValid && value) {
+                            const { addHealthMetric } = await import('../actions/patients');
+                            await addHealthMetric(patient.id, { weight: value });
+                            console.log(`[PROTOCOL-GAMIFICATION] Weight ${value}kg saved for patient ${patient.id}`);
+                        }
+                    }
                 }
             }
         }
