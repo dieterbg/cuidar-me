@@ -206,12 +206,12 @@ export async function handlePatientReply(
             .from('messages')
             .select('text, created_at, metadata')
             .eq('patient_id', patient.id)
-            .eq('sender', 'me')
+            .in('sender', ['me', 'system'])
             .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
             .order('created_at', { ascending: false })
             .limit(5);
 
-        const recentProtocolMessage = recentSystemMessages?.find(m =>
+        const recentProtocolMessage = recentSystemMessages?.find((m: any) =>
             (m.text && m.text.includes('[GAMIFICAÇÃO]')) ||
             (m.metadata && (m.metadata as any).isGamification === true)
         );
