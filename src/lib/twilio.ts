@@ -24,11 +24,11 @@ export async function sendWhatsappMessage(
     to: string,
     body: string,
     options?: { contentSid?: string; contentVariables?: Record<string, string> }
-): Promise<boolean> {
+): Promise<string | null> {
     const twilioClient = await getTwilioClient();
     if (!twilioClient) {
         console.error("[Twilio] Falha ao enviar mensagem: Cliente Twilio não inicializado.");
-        return false;
+        return null;
     }
 
     // Normalizar o número de destino
@@ -41,7 +41,7 @@ export async function sendWhatsappMessage(
 
     if (!fromNumber) {
         console.error("[Twilio] ERRO: Nenhum número de telefone do Twilio configurado.");
-        return false;
+        return null;
     }
 
     try {
@@ -60,13 +60,13 @@ export async function sendWhatsappMessage(
                 };
                 const message = await twilioClient.messages.create(templateParams);
                 console.log(`[Twilio] Mensagem enviada via TEMPLATE para ${normalizedTo}. SID: ${message.sid}`);
-                return true;
+                return message.sid;
             } catch (templateError: any) {
                 // Erros fatais (como remetente inexistente/inválido) não devem tentar o fallback
                 const fatalCodes = [63007, 21211, 21606, 20003];
                 if (fatalCodes.includes(templateError.code)) {
                     console.error(`[Twilio Fatal Error]: ${templateError.message} (Code: ${templateError.code})`);
-                    return false;
+                    return null;
                 }
 
                 console.warn(`[Twilio] Falha no template (SID: ${options.contentSid}). Tentando body normal como fallback...`);
@@ -81,10 +81,10 @@ export async function sendWhatsappMessage(
         });
 
         console.log(`[Twilio] Mensagem enviada via BODY para ${normalizedTo}. SID: ${message.sid}`);
-        return true;
+        return message.sid;
     } catch (error: any) {
         console.error(`[Twilio Error]:`, error.message);
-        return false;
+        return null;
     }
 }
 

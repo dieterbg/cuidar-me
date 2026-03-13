@@ -363,13 +363,18 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
             }
         }
 
-        const sent = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content, {
+        const twilioSid = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content, {
             contentSid,
             contentVariables
         });
-        if (sent) {
+
+        if (twilioSid) {
             await supabase.from('scheduled_messages')
-                .update({ status: 'sent', sent_at: new Date().toISOString() })
+                .update({
+                    status: 'sent',
+                    sent_at: new Date().toISOString(),
+                    error_info: `Sent via Twilio SID: ${twilioSid}${contentSid ? ' (Template)' : ''}`
+                })
                 .eq('id', msg.id);
 
             // Record in chat history, propagating metadata for context-aware processing
@@ -380,6 +385,14 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
                 metadata: msg.metadata || null,
             });
             processed++;
+        } else {
+            // Se falhou, marcar como erro e registrar no log
+            await supabase.from('scheduled_messages')
+                .update({
+                    status: 'failed',
+                    error_info: `Failed to send via Twilio API`
+                })
+                .eq('id', msg.id);
         }
     }
 
