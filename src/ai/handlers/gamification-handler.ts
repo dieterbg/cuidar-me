@@ -25,8 +25,13 @@ export async function handleProtocolGamification(
 
     const currentDay = patientProtocol.current_day;
     const protocolData = protocols.find(p => p.id === patientProtocol.protocol.id);
-    const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
-    const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
+    
+    // ✨ FIX: Buscar mensagens do dia atual E do dia anterior ✨
+    // O agendador incrementa o dia no banco logo após o envio, mas o paciente responde minutos depois.
+    const daysToSearch = [currentDay, currentDay - 1].filter(d => d > 0);
+    
+    const contentMessages = protocolData?.messages.filter(m => daysToSearch.includes(m.day)) || [];
+    const gamificationMessages = mandatoryGamificationSteps.filter(m => daysToSearch.includes(m.day));
     const allMessages = [...gamificationMessages, ...contentMessages];
 
     // 1. Buscar a ÚLTIMA mensagem enviada pelo sistema para este paciente

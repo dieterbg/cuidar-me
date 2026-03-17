@@ -33,15 +33,50 @@ export function processABCResponse(response: string): {
     isValid: boolean;
     grade: 'A' | 'B' | 'C' | null;
 } {
-    const normalized = response.trim().toUpperCase();
+    const normalized = response.trim().toLowerCase();
 
-    if (normalized === 'A' || normalized.includes('A)') || normalized.startsWith('A ')) {
+    // Opção A: 100%, Sim, Treino feito, Bati a meta, ou apenas "A"
+    if (
+        normalized === 'a' || 
+        normalized.includes('a)') || 
+        normalized.startsWith('a ') ||
+        normalized.includes('100%') ||
+        normalized === 'sim' ||
+        normalized.includes('treino feito') ||
+        normalized.includes('bati a meta') ||
+        normalized.includes('me movimentei') ||
+        normalized.includes('tudo planejado')
+    ) {
         return { isValid: true, grade: 'A' };
     }
-    if (normalized === 'B' || normalized.includes('B)') || normalized.startsWith('B ')) {
+    
+    // Opção B: Adaptei, Regular, Média, ou apenas "B"
+    if (
+        normalized === 'b' || 
+        normalized.includes('b)') || 
+        normalized.startsWith('b ') ||
+        normalized.includes('adaptei') ||
+        normalized.includes('cheguei perto') ||
+        normalized.includes('razoável') ||
+        normalized.includes('não consegui') ||
+        normalized.includes('ainda não') ||
+        normalized.includes('dia de descanso')
+    ) {
         return { isValid: true, grade: 'B' };
     }
-    if (normalized === 'C' || normalized.includes('C)') || normalized.startsWith('C ')) {
+    
+    // Opção C: Fugi, Ruim, Esqueci, ou apenas "C"
+    if (
+        normalized === 'c' || 
+        normalized.includes('c)') || 
+        normalized.startsWith('c ') ||
+        normalized.includes('fugi') ||
+        normalized.includes('ruim') ||
+        normalized.includes('esqueci') ||
+        normalized.includes('não descansei') ||
+        normalized.includes('cansado') ||
+        normalized.includes('estressado')
+    ) {
         return { isValid: true, grade: 'C' };
     }
 
@@ -59,12 +94,14 @@ export function processYesNoResponse(response: string): {
 
     const positiveWords = [
         'sim', 's', 'yes', 'y', 'claro', 'com certeza',
-        'consegui', 'consigo', 'fiz', 'faço', 'ok', 'beleza'
+        'consegui', 'consigo', 'fiz', 'faço', 'ok', 'beleza',
+        '👍', '✅', '✔️', '🙌', '💪', 'tá feito', 'ta feito'
     ];
 
     const negativeWords = [
         'não', 'nao', 'n', 'no', 'não consegui',
-        'nao consegui', 'não fiz', 'nao fiz'
+        'nao consegui', 'não fiz', 'nao fiz',
+        '👎', '❌', '✖️', 'pulei'
     ];
 
     const isPositive = positiveWords.some(word => normalized.includes(word));
@@ -73,7 +110,8 @@ export function processYesNoResponse(response: string): {
     if (isPositive) return { isValid: true, isPositive: true };
     if (isNegative) return { isValid: true, isPositive: false };
 
-    if (normalized.length > 3) {
+    // Se a mensagem for longa o suficiente e não negativa, assume positivo (contexto educativo)
+    if (normalized.length > 5 && !isNegative) {
         return { isValid: true, isPositive: true };
     }
 
@@ -123,7 +161,10 @@ export function calculatePoints(
         if (grade === 'A') return 15;
         if (grade === 'B') return 10;
         if (grade === 'C') return 5;
-        return 0;
+        
+        // Fallback para Sim
+        const { isPositive } = processYesNoResponse(response);
+        return isPositive ? 15 : 0;
     }
 
     // Check-in de bem-estar - sono (A/B/C)
