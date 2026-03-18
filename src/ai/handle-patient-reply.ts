@@ -268,7 +268,28 @@ export async function handlePatientReply(
             return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
         }
 
-        // 5.3 PROTOCOLOS + GAMIFICAÇÃO (se ativo)
+        // 5.3 DAILY CHECK-IN (check-in diário genérico - para pacientes SEM protocolo ativo)
+        // Se o paciente está num check-in diário ativo, rotear para o handler correto
+        const { isDailyCheckinActive, handleDailyCheckinReply } = await import('./actions/daily-checkin');
+        const hasDailyCheckin = await isDailyCheckinActive(patient.id);
+
+        if (hasDailyCheckin) {
+            console.log(`[ROUTING] Patient ${patient.id} has active daily check-in. Routing to daily check-in handler.`);
+            const checkinResult = await handleDailyCheckinReply(
+                patient.id,
+                whatsappNumber,
+                messageText,
+                patient.name,
+                patientPlan as 'premium' | 'vip'
+            );
+
+            if (checkinResult.success) {
+                return { success: true };
+            }
+            // Se falhou (ex: check-in expirado), cai para o fluxo normal abaixo
+        }
+
+        // 5.4 PROTOCOLOS + GAMIFICAÇÃO (se ativo)
         const { data: patientProtocol } = await supabase
             .from('patient_protocols')
             .select('*, protocol:protocols(id, name, duration_days)')

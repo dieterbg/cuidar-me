@@ -56,12 +56,23 @@ export async function sendDailyCheckins() {
 
         // 3. Processar envios em lote
         const results = await batchProcess(patients, async (patient: any) => {
-            // Verificar se já tem check-in hoje (startDailyCheckin já verifica, mas bom evitar chamada)
-            // Vamos deixar o startDailyCheckin lidar com a verificação para garantir consistência
-
             if (!patient.whatsapp_number) {
                 logger.warn(`Paciente sem WhatsApp`, { patientId: patient.id });
                 return { success: false, reason: 'no_whatsapp' };
+            }
+
+            // ✨ NOVO: Se o paciente já tem protocolo ativo, pular.
+            // O protocolo já envia check-ins de hidratação, refeições e atividade via gamificação.
+            const { data: activeProtocol } = await supabase
+                .from('patient_protocols')
+                .select('id')
+                .eq('patient_id', patient.id)
+                .eq('is_active', true)
+                .maybeSingle();
+
+            if (activeProtocol) {
+                logger.info(`[DailyCheckin] Paciente ${patient.full_name} tem protocolo ativo — pulando check-in genérico.`);
+                return { success: false, reason: 'has_active_protocol' };
             }
 
             const result = await startDailyCheckin(
