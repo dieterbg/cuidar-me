@@ -3,11 +3,12 @@
 /**
  * @fileOverview Agendador de mensagens de protocolo
  * Agenda mensagens ao longo do dia em horários específicos
- * Roda uma vez por dia às 6h da manhã
+ * Roda uma vez por dia às 6h da manhã (com idempotência para evitar duplicatas)
  */
 
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { protocols, mandatoryGamificationSteps } from '@/lib/data';
+import { toZonedTime } from 'date-fns-tz';
 
 /**
  * Determina o horário de envio baseado no tipo de mensagem
@@ -74,6 +75,8 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
 }> {
     const supabase = createServiceRoleClient();
     const today = new Date();
+    const brazilNow = toZonedTime(today, 'America/Sao_Paulo');
+    const todayDateStr = brazilNow.toISOString().split('T')[0]; // YYYY-MM-DD
 
     console.log(`[SCHEDULER] Starting protocol message scheduling (Pulse: ${isPulse})...`);
     console.log(`[SCHEDULER] Date: ${today.toLocaleDateString('pt-BR')}`);
@@ -127,6 +130,31 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
 
             // Log detalhado: "Fulano está no dia X do protocolo Y"
             console.log(`[SCHEDULER] 👤 ${patientName} está no dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}`);
+
+            // ✨ IDEMPOTÊNCIA: Verificar se já agendamos mensagens para este paciente HOJE ✨
+            // Isso previne que o cron rode múltiplas vezes no mesmo dia e duplique/avance
+            const updatedAtDate = patientProtocol.updated_at
+                ? new Date(patientProtocol.updated_at).toISOString().split('T')[0]
+                : null;
+
+            if (updatedAtDate === todayDateStr && !isPulse) {
+                console.log(`[SCHEDULER] ⏭ Já processado hoje: ${patientName} (updated_at: ${updatedAtDate})`);
+                continue;
+            }
+
+            // Para pulsos fast-track, checar se já tem mensagens pendentes
+            if (isPulse) {
+                const { count } = await supabase
+                    .from('scheduled_messages')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('patient_id', patientProtocol.patient.id)
+                    .eq('status', 'pending');
+
+                if (count && count > 0) {
+                    console.log(`[SCHEDULER] ⏭ Pulse ignorado para ${patientName} - Já tem ${count} mensagens pendentes`);
+                    continue;
+                }
+            }
 
             // Verificar se completou o protocolo
             if (currentDay > durationDays) {
@@ -184,24 +212,18 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
 
             console.log(`[SCHEDULER] 📅 Agendando ${allMessages.length} mensagens para ${patientName}:`);
 
+            const isFastTrack = patientProtocol.protocol.id === '2412145d-c346-4012-9040-65e9d43073a3';
+            let scheduledCount = 0;
+
             // Agendar cada mensagem no horário específico
-            for (const message of allMessages) {
-                const isFastTrack = patientProtocol.protocol.id === '2412145d-c346-4012-9040-65e9d43073a3';
-                const sendTime = getScheduledTime(message.title, today, isFastTrack, 5); // 5 min de intervalo no teste
+            for (let idx = 0; idx < allMessages.length; idx++) {
+                const message = allMessages[idx];
+                const sendTime = getScheduledTime(message.title, today, isFastTrack, (idx + 1) * 5);
 
-                // Verificar se já existe mensagem pendente para este paciente deste protocolo
-                // Isso evita duplicar agendamentos em 'pulses' frequentes
-                if (isFastTrack) {
-                    const { count } = await supabase
-                        .from('scheduled_messages')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('patient_id', patientProtocol.patient.id)
-                        .eq('status', 'pending');
-
-                    if (count && count > 0) {
-                        console.log(`[SCHEDULER]   ⏭ Ignorando ${message.title} - Já existe mensagem pendente`);
-                        continue;
-                    }
+                // ✨ PROTEÇÃO: Nunca agendar mensagem para horário que já passou ✨
+                if (sendTime.getTime() < today.getTime() && !isFastTrack) {
+                    console.log(`[SCHEDULER]   ⏭ Horário já passou: ${message.title} (${sendTime.toLocaleTimeString('pt-BR')})`);
+                    continue;
                 }
 
                 // Verificar se é mensagem de gamificação
@@ -232,6 +254,7 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                         metadata
                     });
 
+                scheduledCount++;
                 messagesScheduled++;
 
                 const timeStr = sendTime.toLocaleTimeString('pt-BR', {
@@ -242,13 +265,17 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                 console.log(`[SCHEDULER]   ✓ ${timeStr} → ${message.title}`);
             }
 
-            // Incrementar current_day após agendar todas as mensagens
-            await supabase
-                .from('patient_protocols')
-                .update({ current_day: currentDay + 1 })
-                .eq('id', patientProtocol.id);
+            // Só incrementar current_day se realmente agendou alguma mensagem
+            if (scheduledCount > 0) {
+                await supabase
+                    .from('patient_protocols')
+                    .update({ current_day: currentDay + 1, updated_at: new Date().toISOString() })
+                    .eq('id', patientProtocol.id);
 
-            console.log(`[SCHEDULER]   ↗️ Dia atualizado: ${currentDay} → ${currentDay + 1}`);
+                console.log(`[SCHEDULER]   ↗️ Dia atualizado: ${currentDay} → ${currentDay + 1}`);
+            } else {
+                console.log(`[SCHEDULER]   ⚠️ Nenhuma mensagem agendada (horários já passaram). Dia NÃO avançado.`);
+            }
         }
 
         console.log(`[SCHEDULER] ✅ Agendamento concluído!`);
