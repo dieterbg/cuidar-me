@@ -343,7 +343,7 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
 
     const { data: pendingMessages } = await supabase
         .from('scheduled_messages')
-        .select('*')
+        .select('*, patient:patients(id, full_name, whatsapp_number)')
         .eq('status', 'pending')
         .lte('send_at', new Date().toISOString())
         .limit(50);
@@ -355,13 +355,12 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
 
     let processed = 0;
     for (const msg of pendingMessages) {
-        // Proteção: pular números de teste para evitar cobranças desnecessárias no Twilio
         // Logic to determine if we should use a template (Bypass 24h window for protocols)
         let contentSid = undefined;
         let contentVariables = undefined;
 
-        if (msg.source === 'protocol' || (msg.metadata && msg.metadata.isGamification)) {
-            const metadata = msg.metadata || {};
+        if (msg.source === 'protocol' || (msg.metadata && (msg.metadata as any).isGamification)) {
+            const metadata = (msg.metadata as any) || {};
             const title = metadata.checkinTitle || metadata.title || '';
 
             // Map titles to templates from env
@@ -376,15 +375,18 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
 
             // Fallback for generic protocol messages (dicas, etc)
             if (!contentSid) {
-                // Use wellbeing as a generic fallback since it likely starts with "Oi [Nome]"
                 contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
             }
 
             if (contentSid) {
-                // Fetch patient name if possible (would require a join in the select above)
-                // For now, let's assume templates take {{1}} as name, but we might not have it here.
-                // We'll pass the message body if it's a generic template with {{1}}
-                contentVariables = { "1": "lá" }; // "Olá, lá!" or "Oi, lá!" fallback
+                // Fetch patient name
+                const patientName = (msg as any).patient?.full_name?.split(' ')[0] || "lá";
+                
+                // templates normally expect: {{1}} = name, {{2}} = content
+                contentVariables = { 
+                    "1": patientName,
+                    "2": msg.message_content 
+                };
             }
         }
 
