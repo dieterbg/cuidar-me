@@ -40,7 +40,14 @@ export async function sendDailyCheckins() {
         // - Horário preferido bate com atual
         const { data: patients, error } = await supabase
             .from('patients')
-            .select('id, full_name, whatsapp_number, plan, preferred_message_time')
+            .select(`
+                id, 
+                full_name, 
+                whatsapp_number, 
+                plan, 
+                preferred_message_time,
+                patient_protocols(id, is_active)
+            `)
             .eq('status', 'active')
             .in('plan', ['premium', 'vip']) // Apenas planos pagos
             .eq('preferred_message_time', targetPreference);
@@ -61,17 +68,11 @@ export async function sendDailyCheckins() {
                 return { success: false, reason: 'no_whatsapp' };
             }
 
-            // ✨ NOVO: Se o paciente já tem protocolo ativo, pular.
-            // O protocolo já envia check-ins de hidratação, refeições e atividade via gamificação.
-            const { data: activeProtocol } = await supabase
-                .from('patient_protocols')
-                .select('id')
-                .eq('patient_id', patient.id)
-                .eq('is_active', true)
-                .maybeSingle();
-
-            if (activeProtocol) {
-                logger.info(`[DailyCheckin] Paciente ${patient.full_name} tem protocolo ativo — pulando check-in genérico.`);
+            // ✨ OTIMIZADO: Verificação de protocolo ativo agora feita via JOIN na query inicial (sem N+1)
+            const hasActiveProtocol = (patient.patient_protocols as any[])?.some(p => p.is_active);
+            
+            if (hasActiveProtocol) {
+                logger.info(`[DailyCheckin] Paciente ID ${patient.id} tem protocolo ativo — pulando check-in genérico.`);
                 return { success: false, reason: 'has_active_protocol' };
             }
 

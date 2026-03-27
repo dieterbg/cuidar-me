@@ -128,8 +128,8 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             const durationDays = patientProtocol.protocol.duration_days;
             const patientName = patientProtocol.patient.full_name;
 
-            // Log detalhado: "Fulano está no dia X do protocolo Y"
-            console.log(`[SCHEDULER] 👤 ${patientName} está no dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}`);
+            // Log detalhado: "ID do paciente está no dia X do protocolo Y"
+            console.log(`[SCHEDULER] 👤 ID: ${patientProtocol.patient.id} está no dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}`);
 
             // ✨ IDEMPOTÊNCIA: Verificar se já agendamos mensagens para este paciente HOJE ✨
             // Isso previne que o cron rode múltiplas vezes no mesmo dia e duplique/avance
@@ -138,7 +138,7 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                 : null;
 
             if (updatedAtDate === todayDateStr && !isPulse) {
-                console.log(`[SCHEDULER] ⏭ Já processado hoje: ${patientName} (updated_at: ${updatedAtDate})`);
+                console.log(`[SCHEDULER] ⏭ Já processado hoje: ID ${patientProtocol.patient.id} (updated_at: ${updatedAtDate})`);
                 continue;
             }
 
@@ -151,14 +151,14 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                     .eq('status', 'pending');
 
                 if (count && count > 0) {
-                    console.log(`[SCHEDULER] ⏭ Pulse ignorado para ${patientName} - Já tem ${count} mensagens pendentes`);
+                    console.log(`[SCHEDULER] ⏭ Pulse ignorado para ID ${patientProtocol.patient.id} - Já tem ${count} mensagens pendentes`);
                     continue;
                 }
             }
 
             // Verificar se completou o protocolo
             if (currentDay > durationDays) {
-                console.log(`[SCHEDULER] ✓ ${patientName} completou o protocolo! (Dia ${currentDay}/${durationDays})`);
+                console.log(`[SCHEDULER] ✓ ID ${patientProtocol.patient.id} completou o protocolo! (Dia ${currentDay}/${durationDays})`);
 
                 await supabase
                     .from('patient_protocols')
@@ -210,7 +210,7 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                 continue;
             }
 
-            console.log(`[SCHEDULER] 📅 Agendando ${allMessages.length} mensagens para ${patientName}:`);
+            console.log(`[SCHEDULER] 📅 Agendando ${allMessages.length} mensagens para ID ${patientProtocol.patient.id}:`);
 
             const isFastTrack = patientProtocol.protocol.id === '2412145d-c346-4012-9040-65e9d43073a3';
             let scheduledCount = 0;

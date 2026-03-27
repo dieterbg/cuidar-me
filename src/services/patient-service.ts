@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+type Patient = any;
 
 /**
  * Busca paciente pelo telefone, tentando múltiplas variações de formato.
@@ -12,7 +13,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export async function findPatientByPhone(
     supabase: SupabaseClient,
     whatsappNumber: string
-) {
+): Promise<Patient | null> {
     // ==========================================
     // FASE 1: Exact match com variações
     // ==========================================
@@ -32,15 +33,17 @@ export async function findPatientByPhone(
 
     // ==========================================
     // FASE 2: Fallback por últimos 8 dígitos
+    // Nota: Requer índice GIN/trigram para escala em produção
     // ==========================================
     const digits = whatsappNumber.replace(/\D/g, '');
     const last8 = digits.slice(-8);
+    const last9 = digits.slice(-9);
 
     if (last8.length === 8) {
         const { data: fuzzyMatch } = await supabase
             .from('patients')
             .select('*')
-            .like('whatsapp_number', `%${last8}%`)
+            .ilike('whatsapp_number', `%${last8}`) // Removido wildcard final para usar melhor o índice se for sufixo
             .limit(1)
             .maybeSingle();
 

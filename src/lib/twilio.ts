@@ -61,14 +61,14 @@ export async function sendWhatsappMessage(
                     contentVariables: options.contentVariables ? JSON.stringify(options.contentVariables) : undefined
                 };
                 const message = await twilioClient.messages.create(templateParams);
-                console.log(`[Twilio] ✅ Template enviado para ${normalizedTo}. SID: ${message.sid} (ContentSID: ${options.contentSid})`);
+                console.log(`[Twilio] ✅ Template enviado. SID: ${message.sid} (ContentSID: ${options.contentSid})`);
                 return message.sid;
             } catch (templateError: any) {
                 // 63016 = fora da janela de 24h → precisa de template aprovado
                 if (templateError.code === 63016) {
-                    console.error(`[Twilio] ❌ Fora da janela de 24h para ${normalizedTo}. Use um template aprovado pelo WhatsApp. (Code: 63016, ContentSID: ${options.contentSid})`);
+                    console.error(`[Twilio] ❌ Fora da janela de 24h. Use um template aprovado pelo WhatsApp. (Code: 63016, ContentSID: ${options.contentSid})`);
                 } else {
-                    console.error(`[Twilio] ❌ Falha no template (SID: ${options.contentSid}) para ${normalizedTo}: ${templateError.message} (Code: ${templateError.code})`);
+                    console.error(`[Twilio] ❌ Falha no template (SID: ${options.contentSid}): ${templateError.message} (Code: ${templateError.code})`);
                 }
                 // NÃO faz fallback para body — isso causaria mensagem duplicada.
                 return null;
@@ -81,7 +81,7 @@ export async function sendWhatsappMessage(
             body: body
         });
 
-        console.log(`[Twilio] Mensagem enviada via BODY para ${normalizedTo}. SID: ${message.sid}`);
+        console.log(`[Twilio] Mensagem enviada via BODY. SID: ${message.sid}`);
         return message.sid;
     } catch (error: any) {
         console.error(`[Twilio Error]:`, error.message);
