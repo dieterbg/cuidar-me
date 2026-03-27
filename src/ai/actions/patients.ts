@@ -381,7 +381,9 @@ export async function addHealthMetric(
         physicalActivity?: string;
     }
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+    // Usar service role para bypass de RLS — esta função roda server-side via webhook
+    const { createServiceRoleClient } = await import('@/lib/supabase-server-utils');
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
         .from('health_metrics')
@@ -391,8 +393,6 @@ export async function addHealthMetric(
             weight_kg: data.weight,
             glucose_level: data.glucoseLevel,
             waist_circumference_cm: data.waistCircumference,
-            // sleep_duration_hours: data.sleepDuration, // Adicionar coluna se necessário no futuro
-            // physical_activity_note: data.physicalActivity, // Adicionar coluna se necessário
         });
 
     if (error) {

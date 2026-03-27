@@ -196,7 +196,15 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
             const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
 
-            const allMessages = [...gamificationMessages, ...contentMessages];
+            // Limite de 3 mensagens/dia para não cansar o paciente
+            // Prioridade: gamificação primeiro, depois conteúdo
+            const MAX_MESSAGES_PER_DAY = 3;
+            const totalRaw = gamificationMessages.length + contentMessages.length;
+            const allMessages = [...gamificationMessages, ...contentMessages].slice(0, MAX_MESSAGES_PER_DAY);
+
+            if (allMessages.length < totalRaw) {
+                console.log(`[SCHEDULER] ⚠️ Limite de ${MAX_MESSAGES_PER_DAY} msgs/dia: cortando ${totalRaw - allMessages.length} mensagem(ns) de conteúdo para ${patientName}.`);
+            }
 
             if (allMessages.length === 0) {
                 console.log(`[SCHEDULER] ⚠️ Nenhuma mensagem para o dia ${currentDay}`);
