@@ -240,6 +240,7 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                     protocolDay: currentDay,
                     perspective: message.perspective || null,
                     checkinTitle: isGamification ? message.title : null,
+                    messageTitle: message.title, // Sempre salvar título para logging e fallback de template
                 };
 
                 await supabase

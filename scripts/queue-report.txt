@@ -1,0 +1,12 @@
+=== RELATÓRIO 24/03/2026, 17:14:13 ===
+
+--- PROTOCOLOS ATIVOS ---
+• Dieter BG (premium) → Protocolo Fundamentos (Completo): dia 12/90 | updated_at: 2026-03-24T09:00:03.987082+00:00
+
+--- MENSAGENS AGENDADAS ---
+[PASSADO] 23/03/2026, 19:00:00 | pending | Dieter BG (premium) | whatsapp:+29232221420180838
+[FUTURO]  24/03/2026, 18:00:00 | pending | Dieter BG (premium) | whatsapp:+29232221420180838
+[FUTURO]  24/03/2026, 19:00:00 | pending | Dieter BG (premium) | whatsapp:+29232221420180838
+
+RESUMO:
+  pending: 3

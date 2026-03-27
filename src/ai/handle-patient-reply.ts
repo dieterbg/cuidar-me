@@ -375,9 +375,9 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
 
         if (msg.source === 'protocol' || (msg.metadata && (msg.metadata as any).isGamification)) {
             const metadata = (msg.metadata as any) || {};
-            const title = metadata.checkinTitle || metadata.title || '';
+            const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
 
-            // Map titles to templates from env
+            // Map gamification titles to specific check-in templates
             if (title.includes('Hidratação')) contentSid = process.env.TWILIO_CHECKIN_WATER_SID;
             else if (title.includes('Café')) contentSid = process.env.TWILIO_CHECKIN_BREAKFAST_SID;
             else if (title.includes('Almoço')) contentSid = process.env.TWILIO_CHECKIN_LUNCH_SID;
@@ -387,20 +387,26 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
             else if (title.includes('Bem-Estar')) contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
             else if (title.includes('Peso')) contentSid = process.env.TWILIO_CHECKIN_WEIGHT_SID;
 
-            // ⚠️ NÃO há fallback genérico: mensagens sem título reconhecido (dicas, etc.)
-            // são enviadas via body normal. Usar um template errado causa erros 63003/63016.
+            // Fallback: template genérico para mensagens de protocolo sem template específico
+            // (Planejamento Semanal, dicas, reflexões, etc.)
+            // Sem isso, essas mensagens falham com erro 63016 fora da janela de 24h.
             if (!contentSid) {
-                console.warn(`[QUEUE] ⚠️ Título "${title}" não mapeado para template. Enviando via body.`);
+                contentSid = process.env.TWILIO_PROTOCOL_CONTENT_SID;
+                if (contentSid) {
+                    console.log(`[QUEUE] 📝 Usando template genérico para: "${title || msg.message_content?.substring(0, 50)}"`);
+                } else {
+                    console.warn(`[QUEUE] ⚠️ Sem template genérico (TWILIO_PROTOCOL_CONTENT_SID). Enviando "${title}" via body — pode falhar fora da janela de 24h.`);
+                }
             }
 
             if (contentSid) {
                 // Fetch patient name
                 const patientName = (msg as any).patient?.full_name?.split(' ')[0] || "lá";
-                
-                // templates normally expect: {{1}} = name, {{2}} = content
-                contentVariables = { 
+
+                // templates expect: {{1}} = name, {{2}} = content
+                contentVariables = {
                     "1": patientName,
-                    "2": msg.message_content 
+                    "2": msg.message_content
                 };
             }
         }

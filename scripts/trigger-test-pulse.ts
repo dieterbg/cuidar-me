@@ -10,19 +10,23 @@ const supabase = createClient(
 );
 
 async function manualTrigger() {
-    const patientId = '936eafb5-64d8-4f81-8cec-beefb0f8e3c8'; // Dieter BG (ID correto pós-limpeza)
-    const protocolId = '2412145d-c346-4012-9040-65e9d43073a3'; // Protocolo Teste
+    const patientId = '936eafb5-64d8-4cec-beefb0f8e3c8'; // Dieter Teste 10min
+    const protocolId = '2412145d-c346-4012-9040-65e9d43073a3'; // Protocolo Teste (Intensivo)
 
     console.log('🔄 Marcando protocolo como ativo no banco...');
 
-    // Desativar protocolos antigos
-    await supabase
+    // Desativar protocolos antigos (apenas atualizar is_active, não deletar para preservar histórico)
+    const { error: deactivateError } = await supabase
         .from('patient_protocols')
         .update({ is_active: false })
         .eq('patient_id', patientId);
 
-    // Inserir/Ativar o Protocolo Teste
-    await supabase.from('patient_protocols').delete().eq('patient_id', patientId);
+    if (deactivateError) {
+        console.error('❌ Erro ao desativar protocolos antigos:', deactivateError.message);
+        // Não retornamos aqui para permitir inserção mesmo se o update falhar
+    }
+
+    // Inserir/Ativar o Protocolo Teste (mantendo o delete apenas para garantir compatibilidade se necessário)
     const { error: ppError } = await supabase
         .from('patient_protocols')
         .insert({

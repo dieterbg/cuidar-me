@@ -1,0 +1,18 @@
+=== PACIENTES CADASTRADOS ===
+
+=== PROTOCOLOS ATIVOS ===
+• Dieter BG (whatsapp:+29232221420180838) → Protocolo Fundamentos (Completo): dia 12/90
+
+=== MENSAGENS PENDING ===
+⚠️ ATRASADA | 20/03/2026, 18:00:00 | Dieter BG | whatsapp:+29232221420180838
+⚠️ ATRASADA | 20/03/2026, 19:00:00 | Dieter BG | whatsapp:+29232221420180838
+⚠️ ATRASADA | 21/03/2026, 19:00:00 | Dieter BG | whatsapp:+29232221420180838
+⚠️ ATRASADA | 22/03/2026, 11:00:00 | Dieter BG | whatsapp:+29232221420180838
+⚠️ ATRASADA | 22/03/2026, 19:00:00 | Dieter BG | whatsapp:+29232221420180838
+⚠️ ATRASADA | 23/03/2026, 16:00:00 | Dieter BG | whatsapp:+29232221420180838
+⚠️ ATRASADA | 23/03/2026, 19:00:00 | Dieter BG | whatsapp:+29232221420180838
+🔜 FUTURA   | 24/03/2026, 18:00:00 | Dieter BG | whatsapp:+29232221420180838
+🔜 FUTURA   | 24/03/2026, 19:00:00 | Dieter BG | whatsapp:+29232221420180838
+
+=== RECENTES sent/failed (48h) ===
+(nenhuma)

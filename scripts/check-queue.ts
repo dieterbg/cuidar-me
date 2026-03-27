@@ -1,34 +1,59 @@
-import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
-dotenv.config({ path: '.env' });
 import { createServiceRoleClient } from '../src/lib/supabase-server-utils';
-import * as fs from 'fs';
 
-async function checkQueue() {
-    const supabase = createServiceRoleClient();
-    console.log('--- CHECKING MESSAGE QUEUE ---');
+async function run() {
+    const s = createServiceRoleClient();
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 3600 * 1000).toISOString();
+    const twoDaysAhead = new Date(now.getTime() + 48 * 3600 * 1000).toISOString();
 
-    // Check if table exists
-    const { data: tableCheck, error: tableError } = await supabase.from('message_queue').select('id').limit(1);
-    if (tableError) {
-        console.error('ERROR ACCESSING TABLE:', tableError.message);
-        fs.writeFileSync('scripts/queue-out.json', JSON.stringify({ error: tableError.message }));
-        return;
-    }
-
-    const { data: allMessages, error } = await supabase
-        .from('message_queue')
-        .select('id, whatsapp_number, message_text, status, error_log, created_at, updated_at')
-        .order('created_at', { ascending: false })
-        .limit(10);
+    const { data, error } = await s
+        .from('scheduled_messages')
+        .select(`
+            id, 
+            patient_whatsapp_number, 
+            status, 
+            send_at, 
+            metadata,
+            patient:patients(full_name, plan)
+        `)
+        .gte('send_at', oneDayAgo)
+        .lte('send_at', twoDaysAhead)
+        .order('send_at', { ascending: true });
 
     if (error) {
-        console.error('Error fetching messages:', error);
-        fs.writeFileSync('scripts/queue-out.json', JSON.stringify({ error }));
-    } else {
-        console.log(`Found ${allMessages.length} recent messages in queue:`);
-        fs.writeFileSync('scripts/queue-out.json', JSON.stringify(allMessages, null, 2));
+        console.error('ERROR:', error.message);
+        process.exit(1);
     }
+
+    console.log(`\n=== FILA (últimas 24h + próximas 48h) ===`);
+    console.log(`Hora atual BRT: ${now.toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'})}\n`);
+
+    if (!data || data.length === 0) {
+        console.log('Nenhuma mensagem encontrada no período.');
+        process.exit(0);
+    }
+
+    data.forEach(m => {
+        const name = (m.patient as any)?.full_name || 'Desconhecido';
+        const plan = (m.patient as any)?.plan || '?';
+        const sendAt = new Date(m.send_at);
+        const isPast = sendAt < now;
+        const marker = isPast ? '⬅️ PASSADO' : '➡️ FUTURO ';
+        const sendAtBRT = sendAt.toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'});
+        console.log(`${marker} | ${sendAtBRT} | ${m.status.padEnd(10)} | ${name} (${plan}) | template: ${m.twilio_content_sid || 'N/A'}`);
+    });
+
+    const byStatus: Record<string, number> = {};
+    data.forEach(m => {
+        byStatus[m.status] = (byStatus[m.status] || 0) + 1;
+    });
+
+    console.log('\n--- RESUMO ---');
+    Object.entries(byStatus).forEach(([status, count]) => {
+        console.log(`  ${status}: ${count}`);
+    });
+
+    process.exit(0);
 }
 
-checkQueue();
+run();
