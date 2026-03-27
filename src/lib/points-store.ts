@@ -14,7 +14,7 @@ export const STORE_CATALOG: StoreItem[] = [
         id: 'streak_freeze',
         name: '🛡️ Proteção de Streak',
         description: 'Não perca sua ofensiva se esquecer de registrar hoje.',
-        cost: 300,
+        cost: 100,
         icon: '🛡️',
         category: 'streak',
         tier: 'Comum',

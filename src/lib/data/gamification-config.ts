@@ -4,11 +4,11 @@ import type { GamificationConfig } from '../types';
 // This single configuration object replaces the linear missions.
 export const gamificationConfig: GamificationConfig = {
     perspectiveGoals: {
-        alimentacao: 5,
-        movimento: 5,
-        hidratacao: 5,
-        disciplina: 5,
-        bemEstar: 5,
+        alimentacao: 3,
+        movimento: 3,
+        hidratacao: 3,
+        disciplina: 3,
+        bemEstar: 3,
     },
     actions: [
         // Alimentação

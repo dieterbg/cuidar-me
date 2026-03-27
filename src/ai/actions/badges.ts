@@ -99,17 +99,37 @@ export async function awardNewBadges(userId: string): Promise<{
             return { success: true, newBadges: [], message: '' };
         }
 
-        // 4. Adicionar novos badges
+        // 4. Adicionar novos badges + calcular bonus de pontos por raridade
         const updatedBadges = [...currentBadges, ...newBadgeIds];
 
-        // Atualizar no banco
+        const BADGE_POINTS_BY_RARITY: Record<string, number> = {
+            comum: 50,
+            raro: 100,
+            epico: 200,
+            lendario: 500,
+        };
+
+        let badgeBonusPoints = 0;
+        const newBadgeDefinitions = newBadgeIds
+            .map(id => BADGE_CATALOG.find(b => b.id === id))
+            .filter(Boolean) as BadgeDefinition[];
+
+        for (const badge of newBadgeDefinitions) {
+            badgeBonusPoints += BADGE_POINTS_BY_RARITY[badge.rarity] || 0;
+        }
+
+        const updatedTotalPoints = (patient.gamification?.totalPoints || 0) + badgeBonusPoints;
+
+        // Atualizar no banco (badges + bonus points)
         const { error: updateError } = await supabase
             .from('patients')
             .update({
                 gamification: {
                     ...patient.gamification,
-                    badges: updatedBadges
-                }
+                    badges: updatedBadges,
+                    totalPoints: updatedTotalPoints,
+                },
+                total_points: updatedTotalPoints,
             })
             .eq('user_id', userId);
 
@@ -118,18 +138,16 @@ export async function awardNewBadges(userId: string): Promise<{
             return { success: false, newBadges: [], message: 'Erro ao salvar badges.' };
         }
 
-        // 5. Preparar retorno
-        const newBadgeDefinitions = newBadgeIds
-            .map(id => BADGE_CATALOG.find(b => b.id === id))
-            .filter(Boolean) as BadgeDefinition[];
-
+        // 5. Preparar retorno (newBadgeDefinitions já calculado acima)
         // Revalidar
         revalidatePath('/portal/journey');
         revalidatePath('/portal/achievements');
 
+        const badgeNames = newBadgeDefinitions.map(b => b.name).join(', ');
+        const pointsSuffix = badgeBonusPoints > 0 ? ` +${badgeBonusPoints} pontos bônus!` : '';
         const message = newBadgeDefinitions.length === 1
-            ? `🏆 Novo badge desbloqueado: ${newBadgeDefinitions[0].name}!`
-            : `🏆 ${newBadgeDefinitions.length} novos badges desbloqueados!`;
+            ? `🏆 Novo badge desbloqueado: ${newBadgeDefinitions[0].name}!${pointsSuffix}`
+            : `🏆 ${newBadgeDefinitions.length} novos badges: ${badgeNames}!${pointsSuffix}`;
 
         return {
             success: true,

@@ -22,6 +22,7 @@ export async function handleProtocolGamification(
         generateConfirmationMessage
     } = await import('../protocol-response-processor');
     const { registerQuickAction } = await import('../actions/gamification');
+    const { getStreakMultiplier } = await import('@/lib/level-system');
 
     const currentDay = patientProtocol.current_day;
     const protocolData = protocols.find(p => p.id === patientProtocol.protocol.id);
@@ -75,7 +76,14 @@ export async function handleProtocolGamification(
         const perspective = extractPerspective(activeProtocolStep);
         if (perspective) {
             const { processNumericResponse } = await import('../protocol-response-processor');
-            const points = calculatePoints(activeProtocolStep.title, messageText, perspective);
+            let points = calculatePoints(activeProtocolStep.title, messageText, perspective);
+
+            // Aplicar multiplicador de streak
+            const currentStreak = patient.gamification?.streak?.currentStreak || 0;
+            const multiplier = getStreakMultiplier(currentStreak);
+            if (multiplier > 1) {
+                points = Math.round(points * multiplier);
+            }
 
             if (points > 0 && patient.user_id) {
                 const type = getActionType(perspective);

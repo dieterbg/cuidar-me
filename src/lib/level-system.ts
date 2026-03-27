@@ -186,6 +186,16 @@ function toRoman(num: number): string {
 }
 
 /**
+ * Calcula o multiplicador de pontos baseado no streak atual
+ * 1.0x (padrão), 1.5x (7+ dias), 2.0x (30+ dias)
+ */
+export function getStreakMultiplier(currentStreak: number): number {
+    if (currentStreak >= 30) return 2.0;
+    if (currentStreak >= 7) return 1.5;
+    return 1.0;
+}
+
+/**
  * Migração suave de sistema antigo (string) para novo (number)
  * @param oldLevel - Nível antigo ('Iniciante', 'Praticante', etc.)
  * @param totalPoints - Pontos totais do paciente

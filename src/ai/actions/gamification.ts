@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { revalidatePath } from 'next/cache';
 import type { Patient, Perspective } from '@/lib/types';
-import { calculateLevel, getLevelName } from '@/lib/level-system';
+import { calculateLevel, getLevelName, getStreakMultiplier } from '@/lib/level-system';
 
 export async function registerQuickAction(
     userId: string,
@@ -55,6 +55,14 @@ export async function registerQuickAction(
     }
 
     if (perspectiveKey) {
+        // ✨ MULTIPLICADOR DE STREAK ✨
+        const currentStreak = patient.gamification?.streak?.currentStreak || 0;
+        const multiplier = getStreakMultiplier(currentStreak);
+        if (multiplier > 1) {
+            pointsEarned = Math.round(pointsEarned * multiplier);
+            message = `Ação registrada! +${pointsEarned} pontos (${multiplier}x streak) 🔥`;
+        }
+
         // ✨ ANTI-CHEAT (RATE LIMITING) ✨
         const now = Date.now();
         const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 horas de espera entre cliques no mesmo botão
@@ -102,7 +110,7 @@ export async function registerQuickAction(
         patient.gamification.dailyActionCounts[todayKey][perspectiveKey] = todayCount + 1;
 
         // Atualizar progresso semanal
-        const currentProgress = patient.gamification.weeklyProgress?.perspectives?.[perspectiveKey] || { current: 0, goal: 5, isComplete: false };
+        const currentProgress = patient.gamification.weeklyProgress?.perspectives?.[perspectiveKey] || { current: 0, goal: 3, isComplete: false };
 
         currentProgress.current += 1;
 
@@ -126,11 +134,14 @@ export async function registerQuickAction(
     const newLevel = calculateLevel(patient.gamification.totalPoints);
     patient.gamification.level = newLevel;
 
-    // Verificar se subiu de nível
+    // Verificar se subiu de nível — dar bônus de 100 × nível
     const oldLevelNum = typeof oldLevel === 'number' ? oldLevel : 1;
-    if (newLevel !== oldLevelNum) {
+    if (newLevel > oldLevelNum) {
+        const levelUpBonus = 100 * newLevel;
+        patient.gamification.totalPoints += levelUpBonus;
+        pointsEarned += levelUpBonus;
         const levelName = getLevelName(newLevel);
-        message = `PARABÉNS! Você subiu para ${levelName}! 🎉`;
+        message = `PARABÉNS! Você subiu para ${levelName}! +${levelUpBonus} pontos bônus! 🎉`;
     }
 
     // 4. Salvar no banco
