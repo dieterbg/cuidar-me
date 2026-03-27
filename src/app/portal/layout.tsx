@@ -19,7 +19,8 @@ import {
   Settings,
   Sparkles,
   Building2,
-  ShoppingBag
+  ShoppingBag,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-client';
@@ -259,6 +260,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     { href: '/portal/journey', label: 'Minha Jornada', icon: Trophy },
     { href: '/portal/store', label: 'Loja de Pontos', icon: ShoppingBag },
     { href: '/portal/profile', label: 'Meu Perfil', icon: User },
+    { href: '/portal/how-it-works', label: 'Como Funciona', icon: HelpCircle },
     { href: '/portal/community', label: 'Comunidade', icon: Users },
     { href: '/portal/education', label: 'Educação', icon: BookOpen },
   ];
@@ -267,7 +269,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const menuItems = allMenuItems.filter(item => {
     // Core items always visible
-    if (['/portal/welcome', '/portal/profile', '/portal/journey', '/portal/store'].includes(item.href)) return true;
+    if (['/portal/welcome', '/portal/profile', '/portal/journey', '/portal/store', '/portal/how-it-works'].includes(item.href)) return true;
 
     // Hide Community/Education if profile incomplete
     if (['/portal/community', '/portal/education'].includes(item.href)) {

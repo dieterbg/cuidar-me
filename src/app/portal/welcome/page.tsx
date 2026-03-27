@@ -26,7 +26,8 @@ import {
   Zap,
   BookOpen,
   Target,
-  HeartPulse
+  HeartPulse,
+  HelpCircle,
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { getLevelInfo, getLevelName } from '@/lib/level-system';
@@ -294,6 +295,17 @@ export default function WelcomePage() {
               </CardContent>
             </Card>
           )}
+
+          {/* COMO FUNCIONA */}
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={() => router.push('/portal/how-it-works')}>
+            <CardHeader className="pb-2">
+              <HelpCircle className="h-6 w-6 text-primary mb-2 group-hover:scale-110 transition-transform" />
+              <CardTitle className="text-base font-bold">Como Funciona</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">Entenda como ganhar pontos, subir de nivel e trocar por recompensas.</p>
+            </CardContent>
+          </Card>
 
           {/* COMMUNITY / EDUCATION SNEAK PEEK */}
           <Card className="bg-card shadow-sm border-border/40 hover:bg-accent/5 transition-colors group cursor-pointer" onClick={() => router.push('/portal/education')}>
