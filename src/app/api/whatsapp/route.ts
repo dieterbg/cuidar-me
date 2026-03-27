@@ -56,13 +56,12 @@ export async function POST(request: NextRequest) {
       const protocolValue = request.headers.get('x-forwarded-proto') || 'https';
       const hostValue = request.headers.get('host');
       const processUrl = `${protocolValue}://${hostValue}/api/process-queue`;
-      const unifiedUrl = `${protocolValue}://${hostValue}/api/cron/unified`;
 
       const expectedToken = process.env.CRON_SECRET || 'fallback-secret';
 
       const { waitUntil } = require('@vercel/functions');
 
-      // AI Processor
+      // AI Processor — processa a resposta do paciente
       const runBgQueue = fetch(processUrl, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${expectedToken}` }
@@ -70,16 +69,11 @@ export async function POST(request: NextRequest) {
         console.error("[Twilio Webhook] Failed to trigger background processor:", err);
       });
 
-      // Pulse: Use any interaction to check the protocol scheduled message queue
-      // This is necessary because Vercel Hobby only allows daily crons.
-      const runPulseQueue = fetch(unifiedUrl, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${expectedToken}` }
-      }).catch(err => {
-        console.error("[Twilio Webhook] Failed to trigger pulse orchestrator:", err);
-      });
+      // ⚠️ NÃO disparar /api/cron/unified aqui.
+      // O cron unificado (agendamento de protocolos, check-ins diários, etc.) deve rodar
+      // apenas via cron schedule, não a cada mensagem recebida — isso causava envios duplicados/triplicados.
 
-      waitUntil(Promise.all([runBgQueue, runPulseQueue]));
+      waitUntil(runBgQueue);
     }
 
     // 3. Respond to Twilio with empty TwiML in < 200ms to confirm receipt.

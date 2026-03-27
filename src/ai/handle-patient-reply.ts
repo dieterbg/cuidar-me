@@ -348,13 +348,27 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
         .lte('send_at', new Date().toISOString())
         .limit(50);
 
-    if (!pendingMessages) return { success: true, processed: 0 };
+    if (!pendingMessages || pendingMessages.length === 0) return { success: true, processed: 0 };
 
     // Padrões de números de teste/seed que nunca devem ser enviados em produção
     const TEST_PHONE_PATTERNS = ['999999000', '999990000', '999990001', '999990002', '999990003'];
 
     let processed = 0;
     for (const msg of pendingMessages) {
+        // ✨ ATOMIC CLAIM: Marcar como 'sending' ANTES de enviar.
+        // Se outra instância concorrente já pegou esta mensagem, o WHERE falha e retorna vazio.
+        const { data: claimed } = await supabase
+            .from('scheduled_messages')
+            .update({ status: 'sending' })
+            .eq('id', msg.id)
+            .eq('status', 'pending')
+            .select('id');
+
+        if (!claimed || claimed.length === 0) {
+            console.log(`[QUEUE] ⏭ Mensagem ${msg.id} já foi reclamada por outro processo. Pulando.`);
+            continue;
+        }
+
         // Logic to determine if we should use a template (Bypass 24h window for protocols)
         let contentSid = undefined;
         let contentVariables = undefined;
@@ -373,9 +387,10 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
             else if (title.includes('Bem-Estar')) contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
             else if (title.includes('Peso')) contentSid = process.env.TWILIO_CHECKIN_WEIGHT_SID;
 
-            // Fallback for generic protocol messages (dicas, etc)
+            // ⚠️ NÃO há fallback genérico: mensagens sem título reconhecido (dicas, etc.)
+            // são enviadas via body normal. Usar um template errado causa erros 63003/63016.
             if (!contentSid) {
-                contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
+                console.warn(`[QUEUE] ⚠️ Título "${title}" não mapeado para template. Enviando via body.`);
             }
 
             if (contentSid) {
@@ -417,7 +432,7 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
             await supabase.from('scheduled_messages')
                 .update({
                     status: 'failed',
-                    error_info: `Failed to send via Twilio API`
+                    error_info: `Failed to send via Twilio API${contentSid ? ` (ContentSID: ${contentSid})` : ''}`
                 })
                 .eq('id', msg.id);
         }

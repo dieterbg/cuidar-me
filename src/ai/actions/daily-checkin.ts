@@ -37,31 +37,31 @@ export async function startDailyCheckin(
 
         const today = new Date().toISOString().split('T')[0];
 
-        // Verificar se já existe check-in hoje
-        const { data: existing } = await supabase
+        // Criar estado inicial com upsert atômico.
+        // Se outra chamada concorrente já criou o registro, o ON CONFLICT ignora silenciosamente.
+        // Isso previne race conditions onde duas chamadas passam pela verificação de existência
+        // ao mesmo tempo e ambas inserem → duplicando a mensagem de check-in.
+        const { data: inserted, error: insertError } = await supabase
             .from('daily_checkin_states')
-            .select('id')
-            .eq('patient_id', patientId)
-            .eq('date', today)
-            .single();
-
-        if (existing) {
-            return { success: false, error: 'Check-in already started today' };
-        }
-
-        // Criar estado inicial
-        const { error: insertError } = await supabase
-            .from('daily_checkin_states')
-            .insert({
-                patient_id: patientId,
-                date: today,
-                step: 'hydration',
-                data: {},
-            });
+            .upsert(
+                {
+                    patient_id: patientId,
+                    date: today,
+                    step: 'hydration',
+                    data: {},
+                },
+                { onConflict: 'patient_id,date', ignoreDuplicates: true }
+            )
+            .select('id');
 
         if (insertError) {
             console.error('[startDailyCheckin] Error:', insertError);
             return { success: false, error: insertError.message };
+        }
+
+        // Se o upsert não retornou nada, o registro já existia (outra chamada concorrente ganhou)
+        if (!inserted || inserted.length === 0) {
+            return { success: false, error: 'Check-in already started today' };
         }
 
         // Enviar primeira mensagem

@@ -50,7 +50,9 @@ export async function sendWhatsappMessage(
             to: normalizedTo
         };
 
-        // 1. Tentar enviar via Template se houver ContentSid
+        // 1. Enviar via Template se houver ContentSid
+        //    ⚠️ IMPORTANTE: NÃO há fallback de body — evita mensagens duplicadas.
+        //    Se o template falhar, retornamos null e o processMessageQueue marca como 'failed'.
         if (options?.contentSid) {
             try {
                 const templateParams = {
@@ -59,22 +61,21 @@ export async function sendWhatsappMessage(
                     contentVariables: options.contentVariables ? JSON.stringify(options.contentVariables) : undefined
                 };
                 const message = await twilioClient.messages.create(templateParams);
-                console.log(`[Twilio] Mensagem enviada via TEMPLATE para ${normalizedTo}. SID: ${message.sid}`);
+                console.log(`[Twilio] ✅ Template enviado para ${normalizedTo}. SID: ${message.sid} (ContentSID: ${options.contentSid})`);
                 return message.sid;
             } catch (templateError: any) {
-                // Erros fatais (como remetente inexistente/inválido) não devem tentar o fallback
-                const fatalCodes = [63007, 21211, 21606, 20003];
-                if (fatalCodes.includes(templateError.code)) {
-                    console.error(`[Twilio Fatal Error]: ${templateError.message} (Code: ${templateError.code})`);
-                    return null;
+                // 63016 = fora da janela de 24h → precisa de template aprovado
+                if (templateError.code === 63016) {
+                    console.error(`[Twilio] ❌ Fora da janela de 24h para ${normalizedTo}. Use um template aprovado pelo WhatsApp. (Code: 63016, ContentSID: ${options.contentSid})`);
+                } else {
+                    console.error(`[Twilio] ❌ Falha no template (SID: ${options.contentSid}) para ${normalizedTo}: ${templateError.message} (Code: ${templateError.code})`);
                 }
-
-                console.warn(`[Twilio] Falha no template (SID: ${options.contentSid}). Tentando body normal como fallback...`);
-                // Continua para o passo 2
+                // NÃO faz fallback para body — isso causaria mensagem duplicada.
+                return null;
             }
         }
 
-        // 2. Enviar via Body (Mensagem Normal ou Fallback)
+        // 2. Enviar via Body (apenas para mensagens sem template)
         const message = await twilioClient.messages.create({
             ...messageParams,
             body: body
