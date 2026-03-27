@@ -49,6 +49,15 @@ export default function AdminPage() {
     const [isProcessing, startTransition] = useTransition();
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
 
+    // Proteção: apenas admin pode gerenciar usuários do sistema
+    useEffect(() => {
+        if (authLoading) return;
+        if (!profile) return;
+        if (profile.role !== 'admin') {
+            router.replace('/overview');
+        }
+    }, [authLoading, profile, router]);
+
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         setUsers([]); // Clear users before fetching

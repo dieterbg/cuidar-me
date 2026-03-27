@@ -22,6 +22,13 @@ export default function DashboardLayout({
       return;
     }
 
+    // Proteção de role: paciente não tem acesso à área da equipe/admin.
+    // Redireciona para o portal do paciente sem expor a existência das páginas.
+    if (profile && profile.role === 'paciente') {
+      router.replace('/portal/welcome');
+      return;
+    }
+
     // A lógica complexa de redirecionamento foi movida para a página /dashboard
     // que atua como um roteador central. Este layout agora apenas garante
     // que um usuário esteja autenticado para acessar a área do dashboard.
