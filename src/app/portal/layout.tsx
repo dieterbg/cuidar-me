@@ -18,7 +18,8 @@ import {
   Trophy,
   Settings,
   Sparkles,
-  Building2
+  Building2,
+  ShoppingBag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-client';
@@ -256,6 +257,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const allMenuItems = [
     { href: '/portal/welcome', label: 'Início', icon: LayoutDashboard },
     { href: '/portal/journey', label: 'Minha Jornada', icon: Trophy },
+    { href: '/portal/store', label: 'Loja de Pontos', icon: ShoppingBag },
     { href: '/portal/profile', label: 'Meu Perfil', icon: User },
     { href: '/portal/community', label: 'Comunidade', icon: Users },
     { href: '/portal/education', label: 'Educação', icon: BookOpen },
@@ -264,11 +266,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const isProfileComplete = !!patient?.height;
 
   const menuItems = allMenuItems.filter(item => {
-    // Show core items always
-    if (['/portal/welcome', '/portal/profile'].includes(item.href)) return true;
-
-    // Journey is okay too? Let's check if user complained. No.
-    if (item.href === '/portal/journey') return true;
+    // Core items always visible
+    if (['/portal/welcome', '/portal/profile', '/portal/journey', '/portal/store'].includes(item.href)) return true;
 
     // Hide Community/Education if profile incomplete
     if (['/portal/community', '/portal/education'].includes(item.href)) {

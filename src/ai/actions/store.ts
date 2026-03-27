@@ -24,6 +24,7 @@ export async function purchaseStoreItem(
     success: boolean;
     message: string;
     newBalance: number;
+    redeemCode?: string;
 }> {
     const supabase = createClient();
     const item = getStoreItem(itemId);
@@ -102,7 +103,10 @@ export async function purchaseStoreItem(
             throw updateError;
         }
 
-        // 4.4 Registrar transação
+        // 4.4 Gerar código de resgate (antes do insert para poder retornar)
+        const redeemCode = item.type === 'redeemable' ? generateRedeemCode() : undefined;
+
+        // 4.5 Registrar transação
         const { error: txError } = await supabase
             .from('transactions')
             .insert({
@@ -114,13 +118,12 @@ export async function purchaseStoreItem(
                 metadata: {
                     category: item.category,
                     type: item.type,
-                    redeem_code: item.type === 'redeemable' ? generateRedeemCode() : null
+                    redeem_code: redeemCode || null
                 }
             });
 
         if (txError) {
             console.error('Error logging transaction:', txError);
-            // Não falhamos a compra se o log falhar, mas é bom monitorar
         }
 
         revalidatePath('/portal/store');
@@ -128,8 +131,11 @@ export async function purchaseStoreItem(
 
         return {
             success: true,
-            message: `Compra realizada com sucesso! ${item.name} adquirido.`,
-            newBalance
+            message: item.type === 'redeemable'
+                ? `${item.name} resgatado! Guarde seu código de voucher.`
+                : `${item.name} aplicado com sucesso!`,
+            newBalance,
+            redeemCode
         };
 
     } catch (error) {
