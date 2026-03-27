@@ -180,9 +180,10 @@ export default function EducationPage() {
             title: newVideoTitle,
             description: newVideoDescription,
             category: newVideoCategory,
-            videoUrl: newVideoUrl,
-            thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-            plans: newVideoPlans
+            video_url: newVideoUrl,
+            thumbnail_url: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+            eligible_plans: newVideoPlans,
+            is_active: true
         };
 
         startSavingVideoTransition(async () => {
@@ -373,7 +374,7 @@ export default function EducationPage() {
                             {filteredVideos.map((video) => {
                                 const pillar = normalizeCategory(video.category || '');
                                 const pillarColor = gamificationPillars.find(p => p.id === pillar)?.color || 'bg-secondary/10 text-secondary-foreground';
-                                const isAvailableForPatient = selectedPatient?.subscription ? video.plans.includes(selectedPatient.subscription.plan) : false;
+                                const isAvailableForPatient = selectedPatient?.subscription ? video.eligible_plans.includes(selectedPatient.subscription.plan) : false;
 
                                 return (
                                     <Card
@@ -381,9 +382,9 @@ export default function EducationPage() {
                                         className="bg-card/80 backdrop-blur-sm border-border/60 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden flex flex-col h-full"
                                     >
                                         <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden cursor-pointer" onClick={() => setVideoToPreview(video)}>
-                                            {video.thumbnailUrl ? (
+                                            {video.thumbnail_url ? (
                                                 <Image
-                                                    src={video.thumbnailUrl}
+                                                    src={video.thumbnail_url}
                                                     alt={video.title}
                                                     fill
                                                     className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -401,7 +402,7 @@ export default function EducationPage() {
                                                     {pillar}
                                                 </Badge>
                                                 <div className="flex gap-1">
-                                                    {(video.plans || []).map(plan => (
+                                                    {(video.eligible_plans || []).map(plan => (
                                                         <Badge key={plan} variant="outline" className="text-[9px] uppercase px-1 py-0 h-4 border-muted-foreground/30 text-muted-foreground">
                                                             {plan}
                                                         </Badge>

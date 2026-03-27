@@ -28,7 +28,7 @@ export function VideoCard({ video, onSend, onPreview, onDelete, isSending, isAva
         <div className="aspect-video relative group">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={video.thumbnailUrl}
+            src={video.thumbnail_url}
             alt={video.title}
             className={cn("rounded-t-lg object-cover w-full h-full", !isAvailable && "grayscale opacity-60")}
             data-ai-hint="health education"

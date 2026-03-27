@@ -143,9 +143,9 @@ export default function EducationPage() {
                     )}
                   >
                     <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
-                      {video.thumbnailUrl ? (
+                      {video.thumbnail_url ? (
                         <Image
-                          src={video.thumbnailUrl}
+                          src={video.thumbnail_url}
                           alt={video.title}
                           fill
                           className={cn("object-cover transition-transform duration-500", hasAccess && "group-hover:scale-105")}

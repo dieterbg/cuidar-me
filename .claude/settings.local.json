@@ -4,7 +4,11 @@
       "Bash(xargs grep:*)",
       "Bash(npx tsc:*)",
       "Bash(node -e \":*)",
-      "Bash(npx tsx -e \":*)"
+      "Bash(npx tsx -e \":*)",
+      "Bash(node -e \"require\\(''dotenv''\\).config\\({path:''.env.local''}\\); const tsx = require\\(''tsx''\\); tsx.createRequire\\(import.meta.url\\)\\(''./scripts/seed-videos.ts''\\);\")",
+      "Bash(npx tsx:*)",
+      "Bash(sed -i 's/thumbnailUrl/thumbnail_url/g; s/videoUrl/video_url/g; s/\"\"plans\"\"/\"\"eligible_plans\"\"/g' src/lib/data/seed-data.ts)",
+      "Bash(sed -i \"s/''plans''/''eligible_plans''/g\" src/lib/data/seed-data.ts)"
     ]
   }
 }

@@ -231,9 +231,12 @@ export interface Video {
     category: string;
     title: string;
     description: string;
-    thumbnailUrl: string;
-    videoUrl: string;
-    plans: PatientPlan[]; // Which plans can access this video
+    thumbnail_url: string;
+    video_url: string;
+    eligible_plans: PatientPlan[];
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface SentVideo {

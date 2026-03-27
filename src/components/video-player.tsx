@@ -53,7 +53,7 @@ export function VideoPlayer({ video, onBack, showFeedback = true }: VideoPlayerP
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const videoId = getYouTubeId(video.videoUrl);
+  const videoId = getYouTubeId(video.video_url);
 
   const embedUrl = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0` : '';
 
