@@ -258,9 +258,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const allMenuItems = [
     { href: '/portal/welcome', label: 'Início', icon: LayoutDashboard },
     { href: '/portal/journey', label: 'Minha Jornada', icon: Trophy },
+    { href: '/portal/how-it-works', label: 'Como Funciona', icon: HelpCircle },
     { href: '/portal/store', label: 'Loja de Pontos', icon: ShoppingBag },
     { href: '/portal/profile', label: 'Meu Perfil', icon: User },
-    { href: '/portal/how-it-works', label: 'Como Funciona', icon: HelpCircle },
     { href: '/portal/community', label: 'Comunidade', icon: Users },
     { href: '/portal/education', label: 'Educação', icon: BookOpen },
   ];
