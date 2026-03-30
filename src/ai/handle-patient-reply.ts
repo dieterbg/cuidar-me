@@ -364,18 +364,21 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
     const TEST_PHONE_PATTERNS = ['999999000', '999990000', '999990001', '999990002', '999990003'];
 
     let processed = 0;
+    const loopDebug: any[] = [];
     for (const msg of pendingMessages) {
         // ✨ ATOMIC CLAIM: Marcar como 'sending' ANTES de enviar.
         // Se outra instância concorrente já pegou esta mensagem, o WHERE falha e retorna vazio.
-        const { data: claimed } = await supabase
+        const { data: claimed, error: claimError } = await supabase
             .from('scheduled_messages')
             .update({ status: 'sending' })
             .eq('id', msg.id)
             .eq('status', 'pending')
             .select('id');
 
+        loopDebug.push({ id: msg.id, claimed: claimed?.length ?? 0, claimError: claimError?.message ?? null });
+
         if (!claimed || claimed.length === 0) {
-            console.log(`[QUEUE] ⏭ Mensagem ${msg.id} já foi reclamada por outro processo. Pulando.`);
+            console.log(`[QUEUE] ⏭ Mensagem ${msg.id} claim failed. claimed=${JSON.stringify(claimed)}, error=${JSON.stringify(claimError)}`);
             continue;
         }
 
@@ -459,7 +462,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
         }
     }
 
-    return { success: true, processed };
+    return { success: true, processed, debug: { found: pendingMessages.length, loopDebug } };
 }
 
 /**
