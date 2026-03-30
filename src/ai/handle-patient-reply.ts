@@ -366,11 +366,13 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
     let processed = 0;
     const loopDebug: any[] = [];
     for (const msg of pendingMessages) {
-        // ✨ ATOMIC CLAIM: Marcar como 'sending' ANTES de enviar.
+        // ✨ ATOMIC CLAIM: Marcar como 'failed' temporariamente para evitar duplicatas.
         // Se outra instância concorrente já pegou esta mensagem, o WHERE falha e retorna vazio.
+        // Nota: usamos 'failed' como claim porque o enum message_status não tem 'sending'.
+        // Se o envio for bem-sucedido, atualizamos para 'sent'.
         const { data: claimed, error: claimError } = await supabase
             .from('scheduled_messages')
-            .update({ status: 'sending' })
+            .update({ status: 'failed', error_info: 'Processing...' })
             .eq('id', msg.id)
             .eq('status', 'pending')
             .select('id');
