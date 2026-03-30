@@ -338,35 +338,41 @@ export async function handlePatientReply(
 /**
  * Processa fila de mensagens agendadas
  */
-export async function processMessageQueue(externalSupabase?: any): Promise<{ success: boolean; processed: number; error?: string; debug?: any }> {
+export async function processMessageQueue(externalSupabase?: any): Promise<{ success: boolean; processed: number; skipped?: number; error?: string }> {
     const supabase = externalSupabase || createServiceRoleClient();
-    const now = new Date().toISOString();
+    const now = new Date();
+    const MAX_AGE_HOURS = 2; // Don't send messages more than 2h late
 
     const { data: pendingMessages, error: queueError } = await supabase
         .from('scheduled_messages')
         .select('*')
         .eq('status', 'pending')
-        .lte('send_at', now)
+        .lte('send_at', now.toISOString())
         .limit(50);
 
-    console.log(`[QUEUE] Query: pending + send_at <= ${now} → found ${pendingMessages?.length ?? 'null'}, error: ${JSON.stringify(queueError)}`);
-
     if (queueError) {
-        console.error('[QUEUE] ❌ Erro ao buscar mensagens pendentes:', JSON.stringify(queueError));
+        console.error('[QUEUE] Erro ao buscar mensagens pendentes:', JSON.stringify(queueError));
         return { success: false, processed: 0, error: queueError.message };
     }
 
     if (!pendingMessages || pendingMessages.length === 0) {
-        return { success: true, processed: 0, debug: { now, found: pendingMessages?.length ?? 0, error: null } };
+        return { success: true, processed: 0 };
     }
 
-    // Padrões de números de teste/seed que nunca devem ser enviados em produção
-    const TEST_PHONE_PATTERNS = ['999999000', '999990000', '999990001', '999990002', '999990003'];
-
     let processed = 0;
-    const loopDebug: any[] = [];
+    let skipped = 0;
     for (const msg of pendingMessages) {
-        loopDebug.push({ id: msg.id, phone: msg.patient_whatsapp_number?.substring(0, 8) });
+        // Skip messages that are too old — sending stale check-ins feels like spam
+        const ageMs = now.getTime() - new Date(msg.send_at).getTime();
+        const ageHours = ageMs / (1000 * 60 * 60);
+        if (ageHours > MAX_AGE_HOURS) {
+            console.log(`[QUEUE] ⏭ Skipping stale message ${msg.id} (${ageHours.toFixed(1)}h old)`);
+            await supabase.from('scheduled_messages')
+                .update({ status: 'sent', error_info: `Skipped: ${ageHours.toFixed(0)}h late` })
+                .eq('id', msg.id);
+            skipped++;
+            continue;
+        }
 
         // Logic to determine if we should use a template (Bypass 24h window for protocols)
         let contentSid = undefined;
@@ -449,7 +455,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
         }
     }
 
-    return { success: true, processed, debug: { found: pendingMessages.length, loopDebug } };
+    return { success: true, processed, skipped };
 }
 
 /**
