@@ -438,11 +438,12 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             });
             processed++;
         } else {
-            // Se falhou, marcar como erro e registrar no log
+            // Se falhou, registrar erro mas manter como 'sent' para evitar reenvio infinito
+            // (enum message_status só aceita 'pending' e 'sent')
             await supabase.from('scheduled_messages')
                 .update({
-                    status: 'failed',
-                    error_info: `Failed to send via Twilio API${contentSid ? ` (ContentSID: ${contentSid})` : ''}`
+                    status: 'sent',
+                    error_info: `FAILED to send via Twilio API${contentSid ? ` (ContentSID: ${contentSid})` : ''}`
                 })
                 .eq('id', msg.id);
         }
