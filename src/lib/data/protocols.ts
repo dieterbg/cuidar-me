@@ -1,7 +1,7 @@
 import type { Protocol } from '../types';
 
 // --- PROTOCOLS: 90-DAY WEIGHT LOSS PROGRAMS ---
-// These protocols now ONLY contain content/engagement messages. 
+// These protocols now ONLY contain content/engagement messages.
 // Gamification messages (weigh-ins, etc.) are injected automatically.
 export const protocols: Protocol[] = [
     {
@@ -14,13 +14,18 @@ export const protocols: Protocol[] = [
             // Month 1: Foundation
             { day: 2, title: 'Meta de Hidratação', message: "Olá! Vamos começar com o básico: hidratação. Sua primeira meta é beber 2 litros de água hoje. Um copo a cada 2 horas é um ótimo começo! 💧" },
             { day: 4, title: 'Dica do Prato Colorido', message: "Dica de hoje: Seu prato está colorido? Tente incluir pelo menos 3 cores de vegetais no seu almoço para garantir mais nutrientes! 🥗" },
+            { day: 5, title: 'Proteína no Café da Manhã', message: "Incluir uma fonte de proteína como ovos, iogurte natural ou queijo no café da manhã ajuda a manter a saciedade por mais tempo e evita os picos de fome antes do almoço. Experimente amanhã!" },
             { day: 6, title: 'Importância do Sono', message: "Você sabia que uma boa noite de sono regula os hormônios da fome? Tente dormir de 7 a 8 horas esta noite e veja como se sente amanhã." },
+            { day: 7, title: 'Planejando as Refeições', message: "Planejar as refeições da semana com antecedência é uma das estratégias mais eficazes para manter boas escolhas. Que tal reservar 15 minutos hoje para organizar o cardápio dos próximos 3 dias?" },
             { day: 9, title: 'Fim de Semana com Equilíbrio', message: "Fim de semana chegando! Lembre-se que o equilíbrio é seu melhor amigo. Aproveite com consciência e sem culpa!" },
             { day: 11, title: 'Lendo Rótulos', message: "Desafio do dia: ao ir ao mercado, leia o rótulo de 3 produtos que você costuma comprar. Compare a quantidade de açúcar e sódio. A conscientização é o primeiro passo!" },
             { day: 13, title: 'Mindful Eating', message: "Na sua próxima refeição, tente comer sem distrações (TV, celular). Preste atenção nos sabores e texturas. Isso ajuda a reconhecer os sinais de saciedade do seu corpo." },
+            { day: 14, title: 'Bebidas Calóricas', message: "Fique de olho nas calorias líquidas! Refrigerantes, sucos industrializados e cafés adoçados podem sabotar seu progresso sem que você perceba. Prefira água, chás e café sem açúcar." },
             { day: 16, title: 'Planejando o Desconhecido', message: "Você tem algum evento social ou viagem chegando? Planejar como lidar com essas situações com antecedência é uma estratégia poderosa para não sair dos trilhos." },
             { day: 18, title: 'Consistência > Perfeição', message: "Lembre-se sempre: consistência é mais importante que perfeição. Se um dia não for como o planejado, apenas retome no dia seguinte. O que importa é a direção!" },
             { day: 20, title: 'Dica de Atividade Física', message: "Que tal usar as escadas em vez do elevador hoje? Pequenas trocas no dia a dia fazem uma grande diferença no final do mês." },
+            { day: 21, title: 'Recompensas não Alimentares', message: "Você cumpriu suas metas esta semana? Se recompense com algo que não seja comida: um banho relaxante, um episódio da sua série favorita, um passeio ao ar livre. Celebrar vitórias é parte da jornada!" },
+            { day: 22, title: 'Reconhecendo Gatilhos', message: "Qual situação te faz sair do plano? Tédio? Cansaço? Ansiedade? Identificar seus gatilhos é o primeiro passo para criar um plano de ação antes que eles apareçam." },
             { day: 23, title: 'Reconhecendo a Fome', message: "Antes de beliscar, beba um copo d'água. Muitas vezes, nosso cérebro confunde sede com fome." },
             { day: 25, title: 'Benefícios da Caminhada', message: "Uma caminhada de 30 minutos pode melhorar seu humor, sua circulação e ajudar no controle do peso. Que tal encaixar uma no seu dia hoje?" },
             { day: 28, title: 'Pequenas Vitórias', message: "Conseguiu beber mais água? Comeu mais salada? Comemore as pequenas vitórias! Elas são o combustível para as grandes conquistas." },
@@ -29,14 +34,12 @@ export const protocols: Protocol[] = [
             // Month 2: Consistency
             { day: 32, title: 'Variando a Atividade Física', message: 'Que tal variar a caminhada de hoje? Tente um caminho novo ou ouça um podcast. Manter a mente engajada ajuda a criar o hábito.' },
             { day: 34, title: 'O Poder das Fibras', message: 'Alimentos ricos em fibras (aveia, feijão, maçã) ajudam na saciedade. Sua meta hoje é incluir uma fonte de fibra em seu café da manhã.' },
+            { day: 35, title: 'Mantendo a Motivação', message: 'Releia o motivo pelo qual você começou esta jornada. Conectar-se com seu "porquê" é uma fonte poderosa de motivação, especialmente quando os dias ficam difíceis.' },
             { day: 37, title: 'Escala da Fome', message: 'Antes de comer, se pergunte de 0 a 10, qual o seu nível de fome? Isso te ajuda a diferenciar fome física de vontade de comer.' },
-            { day: 39, title: 'Planejando as Refeições', message: 'Planejar as refeições da semana no domingo pode economizar tempo e evitar decisões ruins de última hora. Que tal tentar planejar 3 dias?' },
-            { day: 42, title: 'Bebidas Calóricas', message: 'Fique de olho nas calorias líquidas! Refrigerantes, sucos industrializados e cafés adoçados podem sabotar seu progresso. Prefira água, chás e café sem açúcar.' },
             { day: 44, title: 'Lidando com o Estresse', message: 'O estresse pode aumentar o cortisol e a vontade de comer. Encontre uma válvula de escape saudável: meditação, um hobby, ou uma conversa com um amigo.' },
             { day: 46, title: 'Revisão de Meio de Percurso', message: 'Metade do caminho! Como você se sente em relação ao início? O que está mais fácil agora?' },
             { day: 49, title: 'O Mito do "Pode Tudo"', message: 'Cuidado com o pensamento "já que saí da dieta, vou chutar o balde". Uma refeição fora do plano não anula seu progresso. Apenas retome na próxima.' },
-            { day: 51, title: 'Proteína no Café da Manhã', message: 'Incluir uma fonte de proteína como ovos ou iogurte no café da manhã ajuda a manter a saciedade por mais tempo. Experimente amanhã!' },
-            { day: 53, title: 'A Importância do Descanso', message: 'O descanso é tão importante quanto o treino. É durante o sono que seu corpo se recupera e constrói músculos. Priorize seu sono!' },
+            { day: 53, title: 'A Importância do Descanso', message: 'O descanso é tão importante quanto o treino. É durante o sono que seu corpo se recupera e se renova. Priorize seu sono!' },
             { day: 56, title: 'Coma Devagar', message: 'Seu cérebro leva cerca de 20 minutos para registrar que você está satisfeito. Comer devagar é uma ferramenta poderosa para controlar as porções.' },
             { day: 58, title: 'Organizando a Geladeira', message: 'Deixe frutas e vegetais lavados e picados em potes transparentes na altura dos olhos. Deixe os alimentos menos saudáveis menos visíveis.' },
             { day: 60, title: 'Fim do Mês 2', message: 'Dois meses de dedicação! Você está cada vez mais perto de consolidar esses hábitos para a vida toda. Sinta orgulho da sua jornada!' },
@@ -45,12 +48,9 @@ export const protocols: Protocol[] = [
             { day: 62, title: 'Cozinhando em Casa', message: 'Cozinhar em casa te dá total controle sobre os ingredientes. Desafio: prepare uma refeição hoje que você normalmente pediria por delivery.' },
             { day: 64, title: 'Comunidade de Apoio', message: 'Lembre-se da nossa comunidade no portal. Compartilhar uma dificuldade ou uma vitória pode te dar um novo ânimo!' },
             { day: 67, title: 'Visualizando o Futuro', message: 'Feche os olhos e se imagine daqui a 1 ano com seus novos hábitos. Como você se sente? Use essa visão como combustível.' },
-            { day: 70, title: 'Reconhecendo Gatilhos', message: 'Qual situação te faz sair do plano? Tédio? Cansaço? Identificar os gatilhos é o primeiro passo para criar um plano de ação.' },
             { day: 72, title: 'Coma até 80% Satisfeito', message: 'Experimente parar de comer quando se sentir 80% satisfeito, em vez de completamente cheio. É uma prática oriental que ajuda muito no controle de peso.' },
             { day: 74, title: 'Planejamento para Viagens', message: 'Vai viajar? Leve lanches saudáveis (castanhas, frutas secas), pesquise restaurantes com opções leves no seu destino e mantenha-se hidratado.' },
             { day: 77, title: 'Amigo do Movimento', message: 'Convide um amigo ou familiar para uma caminhada. Ter companhia torna o exercício mais prazeroso e aumenta o compromisso.' },
-            { day: 80, title: 'Recompensas não alimentares', message: 'Cumpriu suas metas da semana? Se recompense com algo que não seja comida: um banho relaxante, um episódio da sua série favorita, um novo livro.' },
-            { day: 83, title: 'Mantendo a Motivação', message: 'Releia o motivo pelo qual você começou esta jornada. Conectar-se com seu "porquê" é uma fonte poderosa de motivação.' },
             { day: 85, title: 'O Hábito Angular', message: 'Muitas vezes, um único hábito (como se exercitar de manhã) desencadeia uma série de outras boas decisões ao longo do dia. Qual é o seu?' },
             { day: 88, title: 'Véspera da Conclusão', message: 'Amanhã completamos 90 dias. Reflita sobre o hábito mais importante que você construiu e que irá levar para o resto da sua vida.' },
             { day: 90, title: 'Conclusão do Protocolo!', message: 'PARABÉNS! Você completou os 90 dias do Protocolo Fundamentos. Você provou para si mesmo que é capaz de construir hábitos saudáveis e duradouros. A jornada continua e estamos aqui para te apoiar!' },
@@ -76,7 +76,7 @@ export const protocols: Protocol[] = [
             { day: 29, title: 'Socializando com Saúde', message: 'Vai a uma festa? Dica: coma uma fruta ou um iogurte antes de sair. Isso ajuda a não chegar com muita fome e fazer escolhas melhores.' },
 
             // Month 2
-            { day: 32, title: 'Reflexão sobre o Mês 1', message: "Primeiro mês do Protocolo Evolução completo! Você já aprendeu muito. Qual foi o maior 'click' ou aprendizado que você teve até agora?" },
+            { day: 30, title: 'Reflexão sobre o Mês 1', message: "Primeiro mês do Protocolo Evolução completo! Você já aprendeu muito. Qual foi o maior 'click' ou aprendizado que você teve até agora?" },
             { day: 35, title: 'Jejum Intermitente: Mitos e Verdades', message: 'Curioso sobre jejum intermitente? Assista ao vídeo em nosso portal que explica os prós e contras. Lembre-se: sempre fale com a equipe antes de começar.' },
             { day: 38, title: 'A Importância da Força', message: 'Músculos queimam mais calorias em repouso. Não negligencie o treino de força! Relembre os benefícios no vídeo "Treino de Força para Emagrecer".' },
             { day: 41, title: 'Fibras: Suas Melhores Amigas', message: 'As fibras te mantém saciado por mais tempo e ajudam seu intestino. Já viu nosso vídeo sobre os melhores alimentos ricos em fibras? Está no portal!' },
@@ -87,7 +87,6 @@ export const protocols: Protocol[] = [
             { day: 59, title: 'Seu Novo Eu', message: 'Pense na pessoa que começou este protocolo há quase 60 dias. O que você diria para ela hoje? Compartilhe essa reflexão na comunidade se se sentir à vontade.' },
 
             // Month 3
-            { day: 62, title: 'Ajuste Fino de Suplementos', message: 'É hora de reavaliar a suplementação. Você está sentindo os efeitos? Talvez seja hora de ajustar doses ou tipos com a equipe.' },
             { day: 66, title: 'A Mentalidade do Atleta', message: 'Pense como um atleta: cada refeição, cada treino, cada noite de sono é um passo em direção ao seu objetivo. Você está no controle.' },
             { day: 70, title: 'Estratégia de Longo Prazo', message: 'Como você vai incorporar esse estilo de vida permanentemente? Vamos pensar juntos em uma estratégia de manutenção que seja prazerosa e sustentável.' },
             { day: 74, title: 'Legado de Performance', message: 'Pense em alguém que você pode inspirar com sua jornada. Compartilhar seu sucesso na comunidade pode motivar dezenas de outros pacientes.' },
@@ -111,8 +110,8 @@ export const protocols: Protocol[] = [
             { day: 9, title: 'Sono e Performance', message: "Nesta fase, o sono é ainda mais crucial para a recuperação muscular e regulação hormonal. Sua meta hoje é ter 30 minutos de relaxamento antes de deitar, sem telas." },
             { day: 11, title: 'Visualização de Metas', message: "Feche os olhos por um minuto e se visualize atingindo sua meta de peso. Sentir a emoção da conquista fortalece sua determinação." },
             { day: 13, title: 'Escutando seu Corpo', message: "Performance também é saber descansar. Se sentir que precisa de um dia mais leve, ouça seu corpo. O descanso constrói músculos e previne lesões." },
-            { day: 16, title: 'Ciclo de Carboidratos (Introdução)', message: 'Vamos experimentar um ciclo de carboidratos. Hoje, reduza pela metade a porção de carbos no jantar. Observe como seu corpo responde amanhã.' },
-            { day: 18, title: 'Jejum Intermitente: Está funcionando?', message: "Se você optou por tentar o jejum intermitente, como está se sentindo? Com mais energia ou mais fraco? O ajuste fino é fundamental." },
+            { day: 16, title: 'Ciclo de Carboidratos (Introdução)', message: 'Vamos experimentar um ciclo de carboidratos. Hoje, reduza pela metade a porção de carbos no jantar. Observe como seu corpo responde amanhã. Importante: essa estratégia é um ajuste pontual — não reduza carboidratos de forma contínua sem orientação da equipe.' },
+            { day: 18, title: 'Jejum Intermitente: Uma Ferramenta a Conhecer', message: "O jejum intermitente é uma estratégia que vem ganhando espaço na ciência da nutrição. A ideia é concentrar as refeições em uma janela de tempo (geralmente 8h) e passar o restante do dia sem comer. Antes de experimentar, converse com a equipe para entender se faz sentido para o seu perfil." },
             { day: 20, title: 'Treino HIIT', message: 'Para quebrar um platô, o treino intervalado de alta intensidade (HIIT) é excelente. Tente trocar 20 minutos de cardio contínuo por 10 minutos de HIIT, 2x na semana.' },
             { day: 23, title: 'Análise de Composição Corporal', message: 'Neste ponto, a balança pode não ser a melhor métrica. Se possível, agende uma bioimpedância para ver a evolução da massa magra vs. gordura.' },
             { day: 25, title: 'Receita Rica em Proteína', message: 'Experimente nossa receita de panqueca de whey com aveia no café da manhã. É uma forma deliciosa de começar o dia com a proteína em alta. Está no portal!' },
@@ -134,10 +133,10 @@ export const protocols: Protocol[] = [
             // Month 3
             { day: 62, title: 'Periodização do Treino', message: 'Considere conversar com um profissional para periodizar seu treino, alternando semanas de alta intensidade com semanas de recuperação ativa.' },
             { day: 65, title: 'Ajustando as Calorias', message: 'Com a perda de peso, sua necessidade calórica basal diminui. Pode ser hora de um pequeno ajuste no plano alimentar com a equipe para continuar progredindo.' },
-            { day: 69, title: 'Saúde das Articulações', message: 'Com o aumento da performance, a saúde das articulações é vital. Suplementos como colágeno tipo II ou condroitina podem ser discutidos com a equipe.' },
+            { day: 69, title: 'Saúde das Articulações', message: 'Com o aumento da performance, a saúde das articulações é vital. Suplementos como colágeno tipo I ou condroitina podem ser discutidos com a equipe.' },
             { day: 73, title: 'A Importância dos Micronutrientes', message: 'Não se esqueça dos micronutrientes! Vegetais de folhas escuras, frutas vermelhas e sementes garantem as vitaminas e minerais que seu corpo precisa.' },
             { day: 77, title: 'Lidando com a Pressão Social', message: 'Como você lida quando amigos ou família não entendem seu novo estilo de vida? Ter respostas prontas e ser firme em suas convicções é uma habilidade a ser treinada.' },
-            { day: 81, title: 'O Jejum como Ferramenta', message: 'Se você se adaptou bem, o jejum pode ser uma ferramenta poderosa. Mas lembre-se: não é uma solução mágica, e sim uma estratégia dentro de um plano maior.' },
+            { day: 81, title: 'O Jejum como Ferramenta Avançada', message: 'Chegando ao mês 3, o jejum intermitente pode ser uma ferramenta poderosa se você já se adaptou bem ao protocolo. O momento ideal é usar durante períodos de manutenção ou quando sentir que quer dar um "reset" metabólico. Sempre com acompanhamento.' },
             { day: 85, title: 'Planejando o Pós-Protocolo', message: 'O protocolo está quase no fim, mas o estilo de vida não. Qual será sua rotina de treinos e alimentação na próxima fase? Vamos planejar juntos.' },
             { day: 89, title: 'Reflexão Final de Performance', message: 'Você chegou ao fim do protocolo mais intenso. Olhe para trás e veja o quão longe você chegou. Qual foi a mudança mais significativa, além do peso?' },
             { day: 90, title: 'PARABÉNS, ATLETA!', message: 'Você não apenas atingiu seus objetivos, mas transformou seu corpo e mente. Você é a prova de que disciplina, ciência e apoio levam a resultados extraordinários. Celebre sua conquista!' },

@@ -47,9 +47,9 @@ function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boo
     else if (messageTitle.includes('Bem-Estar') && !messageTitle.includes('sono')) {
         date.setHours(21, 0, 0, 0);
     }
-    // Hidratação: 22h (fim do dia, avalia o dia todo)
+    // Hidratação: 20h (início da noite — ainda dá tempo de se hidratar se necessário)
     else if (messageTitle.includes('Hidratação')) {
-        date.setHours(22, 0, 0, 0);
+        date.setHours(20, 0, 0, 0);
     }
     // Bem-Estar (Sono): 9h (manhã depois)
     else if (messageTitle.includes('Bem-Estar') && messageTitle.includes('sono')) {
