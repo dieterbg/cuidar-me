@@ -6,10 +6,13 @@ import { sendFreemiumTips } from '@/cron/send-freemium-tips';
 import { getHours } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 
+// Prevent Next.js from caching Supabase query results in the Data Cache
+export const dynamic = 'force-dynamic';
+
 /**
  * Unified Cron Orchestrator
  * Consolidates all periodic tasks into a single endpoint to bypass Vercel Hobby limits.
- * 
+ *
  * Frequency: Hourly (0 * * * *)
  */
 export async function GET(request: NextRequest) {
