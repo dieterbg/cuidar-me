@@ -382,7 +382,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             const metadata = (msg.metadata as any) || {};
             const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
 
-            // Map gamification titles to specific check-in templates
+            // Map gamification check-in titles to specific templates
             if (title.includes('Hidratação')) contentSid = process.env.TWILIO_CHECKIN_WATER_SID;
             else if (title.includes('Café')) contentSid = process.env.TWILIO_CHECKIN_BREAKFAST_SID;
             else if (title.includes('Almoço')) contentSid = process.env.TWILIO_CHECKIN_LUNCH_SID;
@@ -392,16 +392,22 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             else if (title.includes('Bem-Estar')) contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
             else if (title.includes('Peso')) contentSid = process.env.TWILIO_CHECKIN_WEIGHT_SID;
 
-            // Fallback: template genérico para mensagens de protocolo sem template específico
-            // (Planejamento Semanal, dicas, reflexões, etc.)
-            // Sem isso, essas mensagens falham com erro 63016 fora da janela de 24h.
+            // Map protocol message titles to category templates
+            else if (
+                title.includes('Dica') || title.includes('Curiosidade') || title.includes('Energia')
+            ) contentSid = process.env.TWILIO_PROTOCOL_DICA_SID;
+            else if (
+                title.includes('Reflexão') || title.includes('Respiração') || title.includes('Sono')
+            ) contentSid = process.env.TWILIO_PROTOCOL_REFLEXAO_SID;
+            else if (
+                title.includes('Incentivo') || title.includes('Movimento') || title.includes('Quase') ||
+                title.includes('Bem-vindo') || title.includes('Parabéns') || title.includes('Conquista')
+            ) contentSid = process.env.TWILIO_PROTOCOL_INCENTIVO_SID;
+
+            // Fallback: use incentivo template for any remaining protocol messages
             if (!contentSid) {
-                contentSid = process.env.TWILIO_PROTOCOL_CONTENT_SID;
-                if (contentSid) {
-                    console.log(`[QUEUE] 📝 Usando template genérico para: "${title || msg.message_content?.substring(0, 50)}"`);
-                } else {
-                    console.warn(`[QUEUE] ⚠️ Sem template genérico (TWILIO_PROTOCOL_CONTENT_SID). Enviando "${title}" via body — pode falhar fora da janela de 24h.`);
-                }
+                contentSid = process.env.TWILIO_PROTOCOL_INCENTIVO_SID;
+                console.log(`[QUEUE] 📝 Template incentivo (fallback) para: "${title || msg.message_content?.substring(0, 50)}"`);
             }
 
             if (contentSid) {
