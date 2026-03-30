@@ -341,12 +341,17 @@ export async function handlePatientReply(
 export async function processMessageQueue(): Promise<{ success: boolean; processed: number; error?: string }> {
     const supabase = createServiceRoleClient();
 
-    const { data: pendingMessages } = await supabase
+    const { data: pendingMessages, error: queueError } = await supabase
         .from('scheduled_messages')
-        .select('*, patient:patients(id, full_name, whatsapp_number)')
+        .select('*')
         .eq('status', 'pending')
         .lte('send_at', new Date().toISOString())
         .limit(50);
+
+    if (queueError) {
+        console.error('[QUEUE] ❌ Erro ao buscar mensagens pendentes:', JSON.stringify(queueError));
+        return { success: false, processed: 0, error: queueError.message };
+    }
 
     if (!pendingMessages || pendingMessages.length === 0) return { success: true, processed: 0 };
 
@@ -400,8 +405,13 @@ export async function processMessageQueue(): Promise<{ success: boolean; process
             }
 
             if (contentSid) {
-                // Fetch patient name
-                const patientName = (msg as any).patient?.full_name?.split(' ')[0] || "lá";
+                // Fetch patient name separately (avoids join issues with RLS)
+                const { data: patientRow } = await supabase
+                    .from('patients')
+                    .select('full_name')
+                    .eq('id', msg.patient_id)
+                    .single();
+                const patientName = patientRow?.full_name?.split(' ')[0] || "lá";
 
                 // templates expect: {{1}} = name, {{2}} = content
                 contentVariables = {
