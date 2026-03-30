@@ -366,23 +366,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
     let processed = 0;
     const loopDebug: any[] = [];
     for (const msg of pendingMessages) {
-        // ✨ ATOMIC CLAIM: Marcar como 'failed' temporariamente para evitar duplicatas.
-        // Se outra instância concorrente já pegou esta mensagem, o WHERE falha e retorna vazio.
-        // Nota: usamos 'failed' como claim porque o enum message_status não tem 'sending'.
-        // Se o envio for bem-sucedido, atualizamos para 'sent'.
-        const { data: claimed, error: claimError } = await supabase
-            .from('scheduled_messages')
-            .update({ status: 'failed', error_info: 'Processing...' })
-            .eq('id', msg.id)
-            .eq('status', 'pending')
-            .select('id');
-
-        loopDebug.push({ id: msg.id, claimed: claimed?.length ?? 0, claimError: claimError?.message ?? null });
-
-        if (!claimed || claimed.length === 0) {
-            console.log(`[QUEUE] ⏭ Mensagem ${msg.id} claim failed. claimed=${JSON.stringify(claimed)}, error=${JSON.stringify(claimError)}`);
-            continue;
-        }
+        loopDebug.push({ id: msg.id, phone: msg.patient_whatsapp_number?.substring(0, 8) });
 
         // Logic to determine if we should use a template (Bypass 24h window for protocols)
         let contentSid = undefined;
