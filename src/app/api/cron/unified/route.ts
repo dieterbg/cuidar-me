@@ -66,23 +66,8 @@ async function handleCronRequest(request: NextRequest) {
 
         // TASK 2: Process Message Queue (Always runs to send any pending protocol/system messages)
         try {
-            // DEBUG: Direct query to verify data access before calling processMessageQueue
-            const debugSupabase = createServiceRoleClient();
-            const now = new Date().toISOString();
-            const { data: debugPending, error: debugErr } = await debugSupabase
-                .from('scheduled_messages')
-                .select('id, status, send_at')
-                .eq('status', 'pending')
-                .lte('send_at', now)
-                .limit(5);
-            console.log(`[UNIFIED CRON] DEBUG: now=${now}, pending=${debugPending?.length ?? 'null'}, err=${JSON.stringify(debugErr)}`);
-
-            results.messageQueue = await processMessageQueue();
-            (results.messageQueue as any).debug = {
-                directQueryFound: debugPending?.length ?? 0,
-                directQueryError: debugErr?.message ?? null,
-                now,
-            };
+            const queueSupabase = createServiceRoleClient();
+            results.messageQueue = await processMessageQueue(queueSupabase);
             console.log(`[UNIFIED CRON] Queue results:`, results.messageQueue);
         } catch (e: any) {
             console.error('[UNIFIED CRON] Queue error:', e);

@@ -338,8 +338,8 @@ export async function handlePatientReply(
 /**
  * Processa fila de mensagens agendadas
  */
-export async function processMessageQueue(): Promise<{ success: boolean; processed: number; error?: string; debug?: any }> {
-    const supabase = createServiceRoleClient();
+export async function processMessageQueue(externalSupabase?: any): Promise<{ success: boolean; processed: number; error?: string; debug?: any }> {
+    const supabase = externalSupabase || createServiceRoleClient();
     const now = new Date().toISOString();
 
     const { data: pendingMessages, error: queueError } = await supabase
