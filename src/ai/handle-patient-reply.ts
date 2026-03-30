@@ -338,22 +338,27 @@ export async function handlePatientReply(
 /**
  * Processa fila de mensagens agendadas
  */
-export async function processMessageQueue(): Promise<{ success: boolean; processed: number; error?: string }> {
+export async function processMessageQueue(): Promise<{ success: boolean; processed: number; error?: string; debug?: any }> {
     const supabase = createServiceRoleClient();
+    const now = new Date().toISOString();
 
     const { data: pendingMessages, error: queueError } = await supabase
         .from('scheduled_messages')
         .select('*')
         .eq('status', 'pending')
-        .lte('send_at', new Date().toISOString())
+        .lte('send_at', now)
         .limit(50);
+
+    console.log(`[QUEUE] Query: pending + send_at <= ${now} → found ${pendingMessages?.length ?? 'null'}, error: ${JSON.stringify(queueError)}`);
 
     if (queueError) {
         console.error('[QUEUE] ❌ Erro ao buscar mensagens pendentes:', JSON.stringify(queueError));
         return { success: false, processed: 0, error: queueError.message };
     }
 
-    if (!pendingMessages || pendingMessages.length === 0) return { success: true, processed: 0 };
+    if (!pendingMessages || pendingMessages.length === 0) {
+        return { success: true, processed: 0, debug: { now, found: pendingMessages?.length ?? 0, error: null } };
+    }
 
     // Padrões de números de teste/seed que nunca devem ser enviados em produção
     const TEST_PHONE_PATTERNS = ['999999000', '999990000', '999990001', '999990002', '999990003'];
