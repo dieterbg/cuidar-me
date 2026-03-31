@@ -5,13 +5,18 @@ import { revalidatePath } from 'next/cache';
 import type { Patient, Perspective } from '@/lib/types';
 import { calculateLevel, getLevelName, getStreakMultiplier } from '@/lib/level-system';
 
-export async function registerQuickAction(
+/**
+ * Adiciona pontos diretamente ao paciente (bypass de rate-limit).
+ * Usado pelo sistema de WhatsApp (handlers de protocolo, check-ins de IA).
+ */
+export async function awardGamificationPoints(
     userId: string,
-    type: 'hydration' | 'mood',
-    perspectiveOverride?: Perspective
+    perspectiveKey: Perspective,
+    basePoints: number,
+    supabaseClient?: any
 ): Promise<{ success: boolean; message: string; pointsEarned: number }> {
-    console.log(`[GAMIFICATION] registerQuickAction called for user ${userId} type ${type} perspective ${perspectiveOverride || 'auto'}`);
-    const supabase = createClient();
+    console.log(`[GAMIFICATION] awardGamificationPoints for user ${userId} perspective ${perspectiveKey} basePoints ${basePoints}`);
+    const supabase = supabaseClient || createClient();
 
     // 1. Buscar dados atuais do paciente
     const { data: patientData, error: fetchError } = await supabase
@@ -25,111 +30,40 @@ export async function registerQuickAction(
         return { success: false, message: 'Erro ao identificar paciente.', pointsEarned: 0 };
     }
 
-    const patient = patientData as any; // Cast temporário para manipular o JSON
-    let pointsEarned = 0;
-    let message = '';
+    const patient = patientData as any;
+    let pointsEarned = basePoints;
+    let message = `Ação registrada! +${pointsEarned} pontos`;
 
-    // Inicializar estrutura se não existir (segurança)
-    // NOTA: level agora é number (1-20), mas compatível com string antiga
+    // Inicializar estrutura se não existir
     if (!patient.gamification) patient.gamification = { totalPoints: 0, level: 1, badges: [], weeklyProgress: { perspectives: {} } };
 
-    // 2. Definir qual perspectiva atualizar
-    let perspectiveKey: Perspective | null = null;
-
-    // Se foi fornecida uma perspectiva específica, usar ela
-    if (perspectiveOverride) {
-        perspectiveKey = perspectiveOverride;
-        pointsEarned = type === 'hydration' ? 10 : 15;
-        message = `Ação registrada! +${pointsEarned} pontos`;
-    } else {
-        // Lógica padrão (retrocompatibilidade)
-        if (type === 'hydration') {
-            perspectiveKey = 'hidratacao';
-            pointsEarned = 10;
-            message = 'Hidratação registrada! +10 pontos 💧';
-        } else if (type === 'mood') {
-            perspectiveKey = 'bemEstar';
-            pointsEarned = 15;
-            message = 'Humor registrado! +15 pontos ☀️';
-        }
+    // ✨ MULTIPLICADOR DE STREAK ✨
+    const currentStreak = patient.gamification?.streak?.currentStreak || 0;
+    const multiplier = getStreakMultiplier(currentStreak);
+    if (multiplier > 1) {
+        pointsEarned = Math.round(basePoints * multiplier);
+        message = `Ação registrada! +${pointsEarned} pontos (${multiplier}x streak) 🔥`;
     }
 
-    if (perspectiveKey) {
-        // ✨ MULTIPLICADOR DE STREAK ✨
-        const currentStreak = patient.gamification?.streak?.currentStreak || 0;
-        const multiplier = getStreakMultiplier(currentStreak);
-        if (multiplier > 1) {
-            pointsEarned = Math.round(pointsEarned * multiplier);
-            message = `Ação registrada! +${pointsEarned} pontos (${multiplier}x streak) 🔥`;
-        }
+    // Atualizar progresso semanal
+    const currentProgress = patient.gamification.weeklyProgress?.perspectives?.[perspectiveKey] || { current: 0, goal: 3, isComplete: false };
+    currentProgress.current += 1;
 
-        // ✨ ANTI-CHEAT (RATE LIMITING) ✨
-        const now = Date.now();
-        const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 horas de espera entre cliques no mesmo botão
-        const DAILY_LIMIT = 5;
-
-        if (!patient.gamification.lastActionLogs) {
-            patient.gamification.lastActionLogs = {};
-        }
-
-        // 1. Cooldown Check
-        const lastActionTime = patient.gamification.lastActionLogs[perspectiveKey];
-        if (lastActionTime && (now - lastActionTime) < COOLDOWN_MS) {
-            const minutesLeft = Math.ceil((COOLDOWN_MS - (now - lastActionTime)) / 60000);
-            const hoursLeft = Math.floor(minutesLeft / 60);
-            const remainingMins = minutesLeft % 60;
-            const timeStr = hoursLeft > 0 ? `${hoursLeft}h e ${remainingMins}min` : `${minutesLeft} minutos`;
-
-            return {
-                success: false,
-                message: `Você já registrou isso há pouco tempo! Tente novamente em ${timeStr}. ⏳`,
-                pointsEarned: 0
-            };
-        }
-
-        // 2. Daily Limit Check
-        const todayKey = new Date().toISOString().split('T')[0];
-        if (!patient.gamification.dailyActionCounts) {
-            patient.gamification.dailyActionCounts = {};
-        }
-        if (!patient.gamification.dailyActionCounts[todayKey]) {
-            patient.gamification.dailyActionCounts[todayKey] = {};
-        }
-
-        const todayCount = patient.gamification.dailyActionCounts[todayKey][perspectiveKey] || 0;
-        if (todayCount >= DAILY_LIMIT) {
-            return {
-                success: false,
-                message: `Você já atingiu o limite diário de 5 registros para esta categoria. Volte amanhã! 🌟`,
-                pointsEarned: 0
-            };
-        }
-
-        // Registrar a hora do novo clique e incrementar contador diário
-        patient.gamification.lastActionLogs[perspectiveKey] = now;
-        patient.gamification.dailyActionCounts[todayKey][perspectiveKey] = todayCount + 1;
-
-        // Atualizar progresso semanal
-        const currentProgress = patient.gamification.weeklyProgress?.perspectives?.[perspectiveKey] || { current: 0, goal: 3, isComplete: false };
-
-        currentProgress.current += 1;
-
-        // Verificar se completou a meta
-        if (currentProgress.current >= currentProgress.goal && !currentProgress.isComplete) {
-            currentProgress.isComplete = true;
-            pointsEarned += 50; // Bônus por completar meta
-            message += ' e Meta Semanal Concluída! 🚀';
-        }
-
-        // Salvar de volta no objeto
-        if (!patient.gamification.weeklyProgress.perspectives) patient.gamification.weeklyProgress.perspectives = {};
-        patient.gamification.weeklyProgress.perspectives[perspectiveKey] = currentProgress;
+    // Verificar se completou a meta semanal
+    if (currentProgress.current >= currentProgress.goal && !currentProgress.isComplete) {
+        currentProgress.isComplete = true;
+        pointsEarned += 50; // Bônus por completá-la
+        message += ' e Meta Semanal Concluída! 🚀';
     }
+
+    // Salvar meta de volta no objeto
+    if (!patient.gamification.weeklyProgress.perspectives) patient.gamification.weeklyProgress.perspectives = {};
+    patient.gamification.weeklyProgress.perspectives[perspectiveKey] = currentProgress;
 
     // 3. Atualizar pontos totais e nível
     patient.gamification.totalPoints = (patient.gamification.totalPoints || 0) + pointsEarned;
 
-    // ✨ NOVO SISTEMA DE 20 NÍVEIS ✨
+    // ✨ SISTEMA DE NÍVEIS ✨
     const oldLevel = patient.gamification.level;
     const newLevel = calculateLevel(patient.gamification.totalPoints);
     patient.gamification.level = newLevel;
@@ -141,7 +75,7 @@ export async function registerQuickAction(
         patient.gamification.totalPoints += levelUpBonus;
         pointsEarned += levelUpBonus;
         const levelName = getLevelName(newLevel);
-        message = `PARABÉNS! Você subiu para ${levelName}! +${levelUpBonus} pontos bônus! 🎉`;
+        message += `\nPARABÉNS! Você subiu para ${levelName}! +${levelUpBonus} pontos bônus! 🎉`;
     }
 
     // 4. Salvar no banco
@@ -149,7 +83,6 @@ export async function registerQuickAction(
         .from('patients')
         .update({
             gamification: patient.gamification,
-            // Também atualiza colunas soltas se existirem, para compatibilidade
             total_points: patient.gamification.totalPoints,
             level: patient.gamification.level
         })
@@ -160,8 +93,7 @@ export async function registerQuickAction(
         return { success: false, message: 'Erro ao salvar progresso.', pointsEarned: 0 };
     }
 
-    // 5. Verificar Badges (Assíncrono, mas aguardamos para retornar mensagem se houver)
-    // Import dinâmico para evitar dependência circular se houver, ou import normal no topo
+    // 5. Verificar Badges
     const { awardNewBadges } = await import('./badges');
     const badgeResult = await awardNewBadges(userId);
 
@@ -173,4 +105,67 @@ export async function registerQuickAction(
     revalidatePath('/portal/journey');
 
     return { success: true, message, pointsEarned };
+}
+
+/**
+ * Registra uma ação rápida via Interface Web (ex: botões do dashboard).
+ * Aplica regras de anti-cheat (rate-limiting e cooldown).
+ */
+export async function registerQuickAction(
+    userId: string,
+    type: 'hydration' | 'mood',
+    perspectiveOverride?: Perspective
+): Promise<{ success: boolean; message: string; pointsEarned: number }> {
+    console.log(`[GAMIFICATION] registerQuickAction (Web UI) called for user ${userId} type ${type}`);
+    const supabase = createClient();
+
+    // Buscar rapidamente os bounds de rate limit no paciente
+    const { data: patientData, error: fetchError } = await supabase
+        .from('patients')
+        .select('gamification')
+        .eq('user_id', userId)
+        .single();
+
+    if (fetchError || !patientData) return { success: false, message: 'Erro ao identificar paciente.', pointsEarned: 0 };
+
+    const gamification = (patientData.gamification as any) || { lastActionLogs: {}, dailyActionCounts: {} };
+    if (!gamification.lastActionLogs) gamification.lastActionLogs = {};
+    if (!gamification.dailyActionCounts) gamification.dailyActionCounts = {};
+
+    let perspectiveKey: Perspective = perspectiveOverride || (type === 'hydration' ? 'hidratacao' : 'bemEstar');
+    let basePoints = type === 'hydration' ? 10 : 15;
+
+    // ✨ ANTI-CHEAT (RATE LIMITING) ✨
+    const now = Date.now();
+    const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 horas
+    const DAILY_LIMIT = 5;
+
+    // 1. Cooldown Check
+    const lastActionTime = gamification.lastActionLogs[perspectiveKey];
+    if (lastActionTime && (now - lastActionTime) < COOLDOWN_MS) {
+        const minutesLeft = Math.ceil((COOLDOWN_MS - (now - lastActionTime)) / 60000);
+        const hoursLeft = Math.floor(minutesLeft / 60);
+        const remainingMins = minutesLeft % 60;
+        const timeStr = hoursLeft > 0 ? `${hoursLeft}h e ${remainingMins}min` : `${minutesLeft} minutos`;
+        return { success: false, message: `Você já registrou isso há pouco! Volte em ${timeStr}. ⏳`, pointsEarned: 0 };
+    }
+
+    // 2. Daily Limit Check
+    const todayKey = new Date().toISOString().split('T')[0];
+    if (!gamification.dailyActionCounts[todayKey]) gamification.dailyActionCounts[todayKey] = {};
+    
+    const todayCount = gamification.dailyActionCounts[todayKey][perspectiveKey] || 0;
+    if (todayCount >= DAILY_LIMIT) {
+        return { success: false, message: `Limite diário de 5 atingido para esta atividade. Volte amanhã! 🌟`, pointsEarned: 0 };
+    }
+
+    // Registrar a hora do novo clique e incrementar contador diário para anti-cheat
+    gamification.lastActionLogs[perspectiveKey] = now;
+    gamification.dailyActionCounts[todayKey][perspectiveKey] = todayCount + 1;
+
+    // Atualizar dados de anti-cheat antes de dar os pontos (para prevenir concorrência leve na UI)
+    await supabase.from('patients').update({ gamification }).eq('user_id', userId);
+
+    // Chamar a função interna de premiação
+    return await awardGamificationPoints(userId, perspectiveKey, basePoints, supabase);
 }

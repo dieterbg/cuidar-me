@@ -81,8 +81,15 @@ export async function handleProtocolGamification(
             }
 
             if (points > 0 && patient.user_id) {
-                const type = getActionType(perspective);
-                const result = await registerQuickAction(patient.user_id, type, perspective);
+                const { awardGamificationPoints } = await import('../actions/gamification');
+                
+                // 4. Registrar a ação e dar XP (passando direto, bypass de Rate-Limit da Web)
+                const result = await awardGamificationPoints(
+                    patient.user_id,
+                    perspective,
+                    points,
+                    supabase
+                );
 
                 if (result.success) {
                     totalPointsAwarded += points;
