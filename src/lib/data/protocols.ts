@@ -145,42 +145,22 @@ export const protocols: Protocol[] = [
     {
         id: '2412145d-c346-4012-9040-65e9d43073a3', // Sincronizado com o ID do Banco
         name: 'Protocolo Teste (Rápido)',
-        description: 'Protocolo de verificação técnica — todas as mensagens no dia 1 com intervalo de 5min. Testa todos os templates em ~1h.',
+        description: 'Protocolo de teste — 6 mensagens no dia 1 (3 gamificação + 3 conteúdo) com intervalo de 5min.',
         durationDays: 1,
         eligiblePlans: ['premium', 'vip'],
         messages: [
-            // Todas no dia 1 — fast-track agenda com offset de +5min cada
-            // +mandatory Weight (WEIGHT template) e Planning (INCENTIVO template) no topo
+            // Dia 1: fast-track agenda com offset de +5min cada
+            // Gamificação (Peso + Planejamento + Hidratação) é injetada automaticamente
+            // Aqui ficam apenas as 3 mensagens de conteúdo:
 
-            // Msg 3: testa template INCENTIVO (keyword "Bem-vindo")
-            { day: 1, title: 'Bem-vindo ao Teste!', message: 'Teste iniciado! Esta mensagem verifica o template INCENTIVO. Você receberá ~12 mensagens nos próximos 60 minutos testando todos os formatos.' },
+            // Msg 4: template DICA
+            { day: 1, title: 'Dica de Nutrição', message: 'Incluir proteína no café da manhã reduz a fome ao longo do dia. Ovos, iogurte ou queijo são ótimas opções.' },
 
-            // Msg 4: testa template DICA (keyword "Dica")
-            { day: 1, title: 'Dica de Nutrição', message: 'TESTE DICA: Incluir proteína no café da manhã reduz a fome ao longo do dia. Ovos, iogurte ou queijo são ótimas opções.' },
+            // Msg 5: template REFLEXAO
+            { day: 1, title: 'Reflexão sobre Hábitos', message: 'Qual foi o hábito mais positivo que você praticou esta semana? Reconhecer conquistas fortalece a motivação.' },
 
-            // Msg 5: testa template REFLEXAO (keyword "Reflexão")
-            { day: 1, title: 'Reflexão sobre Hábitos', message: 'TESTE REFLEXAO: Qual foi o hábito mais positivo que você praticou esta semana? Reconhecer conquistas fortalece a motivação.' },
-
-            // Msg 6: testa template WATER (keyword "Hidratação")
-            { day: 1, title: 'Hidratação e Saúde', message: 'TESTE WATER: A água é essencial para o metabolismo. Sua meta diária de 2 litros está em dia?' },
-
-            // Msg 7: testa template LUNCH (keyword "Almoço")
-            { day: 1, title: 'Curiosidade sobre o Almoço', message: 'TESTE LUNCH: Metade do prato deve ser de vegetais e salada. A outra metade dividida entre proteína e carboidratos complexos.' },
-
-            // Msg 8: testa template DICA (keyword "Energia")
-            { day: 1, title: 'Energia e Disposição', message: 'TESTE DICA: Hidratação, sono e alimentação balanceada são a tríade de ouro para disposição. Qual desses três você pode melhorar?' },
-
-            // Msg 9: testa template DINNER (keyword "Jantar")
-            { day: 1, title: 'Preparação para o Jantar', message: 'TESTE DINNER: Um jantar leve e nutritivo facilita o sono e a recuperação noturna. Prefira proteínas magras e vegetais.' },
-
-            // Msg 10: testa template REFLEXAO (keyword "Sono")
-            { day: 1, title: 'Sono e Recuperação', message: 'TESTE REFLEXAO: Uma boa noite de sono regula hormônios da fome e saciedade. Tente desligar telas 30 minutos antes de dormir.' },
-
-            // Msg 11: testa template INCENTIVO (keyword "Incentivo")
-            { day: 1, title: 'Incentivo de Movimento', message: 'TESTE INCENTIVO: Cada passo conta! Mesmo 10 minutos de caminhada fazem diferença no metabolismo e humor.' },
-
-            // Msg 12: testa template INCENTIVO (keyword "Conquista")
-            { day: 1, title: 'Conquista: Teste Concluído!', message: 'TESTE FINALIZADO! Templates verificados: WEIGHT, INCENTIVO, DICA, REFLEXAO, WATER, LUNCH, DINNER. Se todas chegaram, o sistema está 100% operacional!' },
+            // Msg 6: template INCENTIVO
+            { day: 1, title: 'Incentivo de Movimento', message: 'Cada passo conta! Mesmo 10 minutos de caminhada fazem diferença no metabolismo e humor.' },
         ]
     }
 ];
