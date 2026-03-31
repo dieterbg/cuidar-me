@@ -195,10 +195,12 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             const protocolData = protocols.find(p => p.id === protocolId);
             const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
             const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
+            const isFastTrack = protocolId === '2412145d-c346-4012-9040-65e9d43073a3';
 
             // Limite de 3 mensagens/dia para não cansar o paciente
             // Prioridade: gamificação primeiro, depois conteúdo
-            const MAX_MESSAGES_PER_DAY = 3;
+            // Fast-track (teste): sem limite, para testar todos os templates em ~1h
+            const MAX_MESSAGES_PER_DAY = isFastTrack ? 50 : 3;
             const totalRaw = gamificationMessages.length + contentMessages.length;
             const allMessages = [...gamificationMessages, ...contentMessages].slice(0, MAX_MESSAGES_PER_DAY);
 
@@ -220,7 +222,6 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
 
             console.log(`[SCHEDULER] 📅 Agendando ${allMessages.length} mensagens para ID ${patientProtocol.patient.id}:`);
 
-            const isFastTrack = patientProtocol.protocol.id === '2412145d-c346-4012-9040-65e9d43073a3';
             let scheduledCount = 0;
 
             // Agendar cada mensagem no horário específico
