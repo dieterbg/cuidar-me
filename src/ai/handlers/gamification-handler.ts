@@ -90,15 +90,20 @@ export async function handleProtocolGamification(
                         generateConfirmationMessage(activeProtocolStep.title, points, perspective)
                     );
                     console.log(`[PROTOCOL-GAMIFICATION] +${points} pts (${perspective})`);
+                } else {
+                    // Se falhou por cooldown/limite, responde com a mensagem de rate limit!
+                    confirmationMessages.push(result.message);
+                    console.log(`[PROTOCOL-GAMIFICATION] Rate limit hit: ${result.message}`);
+                    totalPointsAwarded += 1; // Hack para garantir que retorne true no final
+                }
 
-                    // ✨ NOVO: Armazenar Dado Estruturado se for Peso ✨
-                    if (activeProtocolStep.title.includes('Peso')) {
-                        const { isValid, value } = processNumericResponse(messageText);
-                        if (isValid && value) {
-                            const { addHealthMetric } = await import('../actions/patients');
-                            await addHealthMetric(patient.id, { weight: value });
-                            console.log(`[PROTOCOL-GAMIFICATION] Weight ${value}kg saved for patient ${patient.id}`);
-                        }
+                // ✨ NOVO: Armazenar Dado Estruturado se for Peso ✨
+                if (result.success && activeProtocolStep.title.includes('Peso')) {
+                    const { isValid, value } = processNumericResponse(messageText);
+                    if (isValid && value) {
+                        const { addHealthMetric } = await import('../actions/patients');
+                        await addHealthMetric(patient.id, { weight: value });
+                        console.log(`[PROTOCOL-GAMIFICATION] Weight ${value}kg saved for patient ${patient.id}`);
                     }
                 }
             }

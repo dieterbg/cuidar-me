@@ -152,7 +152,10 @@ export function calculatePoints(
         if (grade === 'A') return 20;
         if (grade === 'B') return 15;
         if (grade === 'C') return 10;
-        return 0;
+        
+        // Fallback para Sim
+        const { isPositive } = processYesNoResponse(response);
+        return isPositive ? 20 : 0;
     }
 
     // Check-in de hidratação (A/B/C)
