@@ -176,7 +176,11 @@ export function calculatePoints(
         if (grade === 'A') return 15;
         if (grade === 'B') return 10;
         if (grade === 'C') return 5;
-        return 0;
+        
+        // Fallback
+        const { isPositive } = processYesNoResponse(response);
+        if (isPositive) return 15; // Ex: "Boa", "Sim", "Dormi bem" (length > 5)
+        return response.trim().length > 0 ? 10 : 0; // Fallback genérico para resposta
     }
 
     // Pesagem semanal
