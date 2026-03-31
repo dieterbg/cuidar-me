@@ -199,34 +199,8 @@ export async function handlePatientReply(
         // A PARTIR DAQUI: APENAS PREMIUM E VIP
         // =====================================================
 
-        // 3. DETECTAR CHECK-INS ATIVOS
-        const { data: recentSystemMessages } = await supabase
-            .from('messages')
-            .select('text, created_at, metadata')
-            .eq('patient_id', patient.id)
-            .in('sender', ['me', 'system'])
-            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-        // 2.3. Buscar contexto de check-in persistente (Sticky Context)
-        const lastCheckinAt = (patientRaw as any).last_checkin_at ? new Date((patientRaw as any).last_checkin_at) : null;
-        const lastCheckinType = (patientRaw as any).last_checkin_type || null;
-        const isWithinCheckinWindow = lastCheckinAt && (Date.now() - lastCheckinAt.getTime()) < 2 * 60 * 60 * 1000; // 2 horas
-
-        // Determinar se há um check-in ativo (via histórico ou via estado persistente)
-        const recentProtocolMessage = recentSystemMessages?.find((m: any) =>
-            (m.text && m.text.includes('[GAMIFICAÇÃO]')) ||
-            (m.metadata && (m.metadata as any).isGamification === true)
-        );
-
-        const hasActiveCheckin = isWithinCheckinWindow || !!recentProtocolMessage;
-        const checkinTitle = recentProtocolMessage?.text || undefined;
-
-        console.log(`[CheckIn] Active: ${hasActiveCheckin}, patientId: ${patient.id}. Window: ${isWithinCheckinWindow}`);
-
         // =====================================================
-        // 🚨 GATE DE EMERGÊNCIA POR KEYWORDS (antes da IA)
+        // 🚨 GATE DE EMERGÊNCIA POR KEYWORDS (prioridade máxima)
         // =====================================================
         const EMERGENCY_PATTERNS = [
             /dor.{0,15}(peito|braço|cabeça\s+forte|torax)/i,
@@ -248,33 +222,30 @@ export async function handlePatientReply(
         }
 
         // =====================================================
-        // 🚀 PRIORIDADE 1: PROTOCOLOS + GAMIFICAÇÃO (STICKY CONTEXT)
-        // Se houver um check-in ativo recente, tenta processar a resposta antes da IA
+        // 🎮 GATE DE CHECK-IN PENDENTE (leitura direta do DB)
+        // Se last_checkin_type está preenchido e dentro de 2h,
+        // tenta processar como resposta simples (A/B/C, Sim/Não, número).
+        // Respostas complexas passam direto para a IA.
         // =====================================================
-        const { data: patientProtocol } = await supabase
-            .from('patient_protocols')
-            .select('*, protocol:protocols(id, name, duration_days)')
-            .eq('patient_id', patient.id)
-            .eq('is_active', true)
-            .single();
+        const pendingType = (patientRaw as any).last_checkin_type as string | null;
+        const pendingAt = (patientRaw as any).last_checkin_at ? new Date((patientRaw as any).last_checkin_at) : null;
+        const isPendingCheckin = pendingType && pendingAt &&
+            (Date.now() - pendingAt.getTime()) < 2 * 60 * 60 * 1000; // janela de 2 horas
 
-        if (patientProtocol && hasActiveCheckin) {
-            console.log(`[ROUTING] Attempting gamification bypass for ${patient.id} (Context: ${lastCheckinType})`);
-            const { handleProtocolGamification } = await import('./handlers/gamification-handler');
-            const processed = await handleProtocolGamification(
-                patient,
-                patientProtocol,
-                messageText,
-                whatsappNumber,
-                supabase,
-                lastCheckinType // Injeta o tipo persistente do Sticky Context
+        console.log(`[CheckIn] Pending: ${isPendingCheckin ? pendingType : 'none'} | Patient: ${patient.id}`);
+
+        if (isPendingCheckin) {
+            const { processCheckinResponse } = await import('./handlers/checkin-response-handler');
+            const result = await processCheckinResponse(
+                patient, messageText, pendingType, whatsappNumber, supabase
             );
 
-            // Se processado com sucesso (pontuou), encerra o fluxo imediatamente (NÃO chama IA)
-            if (processed) {
-                console.log(`[ROUTING] ✅ Message ${messageSid} consumed by Gamification. IA Silenced.`);
+            if (result.processed) {
+                console.log(`[ROUTING] ✅ Check-in consumed: "${pendingType}" → "${messageText}". IA silenced.`);
                 return { success: true };
             }
+            // Resposta não reconhecida como simples → continua para IA
+            console.log(`[ROUTING] Check-in pending but reply not simple. Passing to AI.`);
         }
 
         // =====================================================
@@ -284,8 +255,8 @@ export async function handlePatientReply(
         const { classifyMessageIntent, MessageIntent } = await import('./message-intent-classifier');
 
         const classification = await classifyMessageIntent(messageText, {
-            hasActiveCheckin,
-            checkinTitle,
+            hasActiveCheckin: !!isPendingCheckin,
+            checkinTitle: pendingType || undefined,
         });
 
         console.log(`[Intent] ${classification.intent} (${classification.confidence})`);
@@ -390,28 +361,35 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
         if (msg.source === 'protocol' || (msg.metadata && (msg.metadata as any).isGamification)) {
             const metadata = (msg.metadata as any) || {};
             const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
+            const isGamification = !!metadata.isGamification;
 
             const env = (key: string) => process.env[key]?.trim();
 
-            if (title.includes('Hidratação')) contentSid = env('TWILIO_CHECKIN_WATER_SID');
-            else if (title.includes('Café')) contentSid = env('TWILIO_CHECKIN_BREAKFAST_SID');
-            else if (title.includes('Almoço')) contentSid = env('TWILIO_CHECKIN_LUNCH_SID');
-            else if (title.includes('Jantar')) contentSid = env('TWILIO_CHECKIN_DINNER_SID');
-            else if (title.includes('Lanche')) contentSid = env('TWILIO_CHECKIN_SNACKS_SID');
-            else if (title.includes('Peso')) contentSid = env('TWILIO_CHECKIN_WEIGHT_SID');
-            else if (title.includes('Atividade') || title.includes('Planejamento')) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
-            else if (title.includes('Bem-Estar')) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
+            // ── TEMPLATES INTERATIVOS: somente para check-ins de gamificação ──
+            if (isGamification) {
+                if (title.includes('Hidratação')) contentSid = env('TWILIO_CHECKIN_WATER_SID');
+                else if (title.includes('Café')) contentSid = env('TWILIO_CHECKIN_BREAKFAST_SID');
+                else if (title.includes('Almoço')) contentSid = env('TWILIO_CHECKIN_LUNCH_SID');
+                else if (title.includes('Jantar')) contentSid = env('TWILIO_CHECKIN_DINNER_SID');
+                else if (title.includes('Lanche')) contentSid = env('TWILIO_CHECKIN_SNACKS_SID');
+                else if (title.includes('Peso')) contentSid = env('TWILIO_CHECKIN_WEIGHT_SID');
+                else if (title.includes('Atividade') || title.includes('Planejamento')) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
+                else if (title.includes('Bem-Estar')) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
+            }
 
-            else if (
-                title.includes('Dica') || title.includes('Curiosidade') || title.includes('Energia')
-            ) contentSid = env('TWILIO_PROTOCOL_DICA_SID');
-            else if (
-                title.includes('Reflexão') || title.includes('Respiração') || title.includes('Sono')
-            ) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
-            else if (
-                title.includes('Incentivo') || title.includes('Movimento') || title.includes('Quase') ||
-                title.includes('Bem-vindo') || title.includes('Parabéns') || title.includes('Conquista')
-            ) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
+            // ── TEMPLATES NÃO-INTERATIVOS: para mensagens de conteúdo do protocolo ──
+            if (!contentSid) {
+                if (
+                    title.includes('Dica') || title.includes('Curiosidade') || title.includes('Energia')
+                ) contentSid = env('TWILIO_PROTOCOL_DICA_SID');
+                else if (
+                    title.includes('Reflexão') || title.includes('Respiração') || title.includes('Sono')
+                ) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
+                else if (
+                    title.includes('Incentivo') || title.includes('Movimento') || title.includes('Quase') ||
+                    title.includes('Bem-vindo') || title.includes('Parabéns') || title.includes('Conquista')
+                ) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
+            }
 
             if (!contentSid) {
                 contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');

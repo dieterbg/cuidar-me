@@ -252,6 +252,28 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                     messageTitle: message.title, // Sempre salvar título para logging e fallback de template
                 };
 
+                // ✨ DEDUP: Não agendar se já existe uma mensagem pendente com o mesmo título para o mesmo dia
+                const dayStart = new Date(sendTime);
+                dayStart.setHours(0, 0, 0, 0);
+                const dayEnd = new Date(sendTime);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                const { data: existing } = await supabase
+                    .from('scheduled_messages')
+                    .select('id')
+                    .eq('patient_id', patientProtocol.patient.id)
+                    .eq('status', 'pending')
+                    .gte('send_at', dayStart.toISOString())
+                    .lte('send_at', dayEnd.toISOString())
+                    .eq('message_content', messageContent)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (existing) {
+                    console.log(`[SCHEDULER]   ⏭ Dedup: "${message.title}" já agendada`);
+                    continue;
+                }
+
                 await supabase
                     .from('scheduled_messages')
                     .insert({
