@@ -247,6 +247,7 @@ export async function handlePatientReply(
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
+        /* DESATIVADO TEMPORARIAMENTE A PEDIDO DO USUÁRIO
         // =====================================================
         // 🚀 PRIORIDADE 1: PROTOCOLOS + GAMIFICAÇÃO (STICKY CONTEXT)
         // Se houver um check-in ativo recente, tenta processar a resposta antes da IA
@@ -276,6 +277,7 @@ export async function handlePatientReply(
                 return { success: true };
             }
         }
+        */
 
         // =====================================================
         // 🚀 PRIORIDADE 2: CLASSICAÇÃO DE INTENÇÃO POR IA
