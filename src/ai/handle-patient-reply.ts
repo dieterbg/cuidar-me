@@ -262,10 +262,29 @@ export async function handlePatientReply(
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
-        // 5.2 SOCIAL - Resposta rápida
-        if (classification.intent === MessageIntent.SOCIAL || classification.intent === MessageIntent.QUESTION) {
-            const { handleAIConversation } = await import('./handlers/conversation-handler');
-            return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
+        // 5.2 PROTOCOLOS + GAMIFICAÇÃO (se ativo)
+        // Damos prioridade a isso ANTES de SOCIAL/QUESTION porque a IA pode classificar "Sim" ou "Adaptei" como pergunta ou social!
+        const { data: patientProtocol } = await supabase
+            .from('patient_protocols')
+            .select('*, protocol:protocols(id, name, duration_days)')
+            .eq('patient_id', patient.id)
+            .eq('is_active', true)
+            .single();
+
+        if (patientProtocol && hasActiveCheckin) {
+            const { handleProtocolGamification } = await import('./handlers/gamification-handler');
+            const processed = await handleProtocolGamification(
+                patient,
+                patientProtocol,
+                messageText,
+                whatsappNumber,
+                supabase
+            );
+
+            // Se o gamification handler entendeu a resposta (ex. era A, B, C, ou um número),
+            // ele processa e retorna true. Aí encerramos.
+            // Se ele retornou false (ex. paciente perguntou algo), deixamos cair pros próximos fluxos.
+            if (processed) return { success: true };
         }
 
         // 5.3 DAILY CHECK-IN (check-in diário genérico - para pacientes SEM protocolo ativo)
@@ -289,30 +308,15 @@ export async function handlePatientReply(
             // Se falhou (ex: check-in expirado), cai para o fluxo normal abaixo
         }
 
-        // 5.4 PROTOCOLOS + GAMIFICAÇÃO (se ativo)
-        const { data: patientProtocol } = await supabase
-            .from('patient_protocols')
-            .select('*, protocol:protocols(id, name, duration_days)')
-            .eq('patient_id', patient.id)
-            .eq('is_active', true)
-            .single();
-
-        if (patientProtocol && classification.intent === MessageIntent.CHECKIN_RESPONSE) {
-            const { handleProtocolGamification } = await import('./handlers/gamification-handler');
-            const processed = await handleProtocolGamification(
-                patient,
-                patientProtocol,
-                messageText,
-                whatsappNumber,
-                supabase
-            );
-
-            if (processed) return { success: true };
+        // 5.4 SOCIAL - Resposta rápida (Se não era resposta a um checkin)
+        if (classification.intent === MessageIntent.SOCIAL || classification.intent === MessageIntent.QUESTION) {
+            const { handleAIConversation } = await import('./handlers/conversation-handler');
+            return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
         }
 
-        // 5.4 IA CONVERSACIONAL (padrão)
-        const { handleAIConversation } = await import('./handlers/conversation-handler');
-        return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
+        // 5.5 IA CONVERSACIONAL (padrão)
+        const { handleAIConversation: defaultConv } = await import('./handlers/conversation-handler');
+        return await defaultConv(patient, messageText, whatsappNumber, supabase);
 
     } catch (error: any) {
         console.error('[handlePatientReply] Error:', error);
