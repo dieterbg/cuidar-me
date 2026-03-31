@@ -161,6 +161,9 @@ export const protocols: Protocol[] = [
 
             // Msg 6: template INCENTIVO
             { day: 1, title: 'Incentivo de Movimento', message: 'Cada passo conta! Mesmo 10 minutos de caminhada fazem diferença no metabolismo e humor.' },
+
+            // Msg 7 (extra, mas será a 6ª com gamificação): template REFLEXAO
+            { day: 1, title: 'Sono e Recuperação', message: 'Uma boa noite de sono regula hormônios da fome e saciedade. Tente desligar telas 30 minutos antes de dormir.' },
         ]
     }
 ];
