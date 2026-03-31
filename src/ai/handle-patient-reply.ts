@@ -382,31 +382,37 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             const metadata = (msg.metadata as any) || {};
             const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
 
-            // Map gamification check-in titles to specific templates
-            if (title.includes('Hidratação')) contentSid = process.env.TWILIO_CHECKIN_WATER_SID;
-            else if (title.includes('Café')) contentSid = process.env.TWILIO_CHECKIN_BREAKFAST_SID;
-            else if (title.includes('Almoço')) contentSid = process.env.TWILIO_CHECKIN_LUNCH_SID;
-            else if (title.includes('Jantar')) contentSid = process.env.TWILIO_CHECKIN_DINNER_SID;
-            else if (title.includes('Lanche')) contentSid = process.env.TWILIO_CHECKIN_SNACKS_SID;
-            else if (title.includes('Atividade')) contentSid = process.env.TWILIO_CHECKIN_ACTIVITY_SID;
-            else if (title.includes('Bem-Estar')) contentSid = process.env.TWILIO_CHECKIN_WELLBEING_SID;
-            else if (title.includes('Peso')) contentSid = process.env.TWILIO_CHECKIN_WEIGHT_SID;
+            // Helper to read env var and trim whitespace/newlines (prevents trailing \n bugs)
+            const env = (key: string) => process.env[key]?.trim();
 
-            // Map protocol message titles to category templates
+            // Map gamification check-in titles to approved Twilio templates
+            // Hydration / Breakfast / Lunch / Dinner / Weight → dedicated check-in templates
+            if (title.includes('Hidratação')) contentSid = env('TWILIO_CHECKIN_WATER_SID');
+            else if (title.includes('Café')) contentSid = env('TWILIO_CHECKIN_BREAKFAST_SID');
+            else if (title.includes('Almoço')) contentSid = env('TWILIO_CHECKIN_LUNCH_SID');
+            else if (title.includes('Jantar')) contentSid = env('TWILIO_CHECKIN_DINNER_SID');
+            else if (title.includes('Lanche')) contentSid = env('TWILIO_CHECKIN_SNACKS_SID');
+            else if (title.includes('Peso')) contentSid = env('TWILIO_CHECKIN_WEIGHT_SID');
+            // Atividade / Planejamento → INCENTIVO (movimento/motivação — approved)
+            else if (title.includes('Atividade') || title.includes('Planejamento')) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
+            // Bem-Estar (sono/descanso) → REFLEXAO (sono/respiração — approved)
+            else if (title.includes('Bem-Estar')) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
+
+            // Map protocol content message titles to category templates
             else if (
                 title.includes('Dica') || title.includes('Curiosidade') || title.includes('Energia')
-            ) contentSid = process.env.TWILIO_PROTOCOL_DICA_SID;
+            ) contentSid = env('TWILIO_PROTOCOL_DICA_SID');
             else if (
                 title.includes('Reflexão') || title.includes('Respiração') || title.includes('Sono')
-            ) contentSid = process.env.TWILIO_PROTOCOL_REFLEXAO_SID;
+            ) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
             else if (
                 title.includes('Incentivo') || title.includes('Movimento') || title.includes('Quase') ||
                 title.includes('Bem-vindo') || title.includes('Parabéns') || title.includes('Conquista')
-            ) contentSid = process.env.TWILIO_PROTOCOL_INCENTIVO_SID;
+            ) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
 
             // Fallback: use incentivo template for any remaining protocol messages
             if (!contentSid) {
-                contentSid = process.env.TWILIO_PROTOCOL_INCENTIVO_SID;
+                contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
                 console.log(`[QUEUE] 📝 Template incentivo (fallback) para: "${title || msg.message_content?.substring(0, 50)}"`);
             }
 

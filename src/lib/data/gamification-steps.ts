@@ -105,11 +105,25 @@ export const mandatoryGamificationSteps: (ProtocolStep & { perspective: Perspect
         perspective: 'disciplina' as Perspective,
     })),
 
-    // Hydration check-ins (every day for 13 weeks — rotating messages)
-    ...Array.from({ length: 13 * 7 }, (_, i) => ({
-        day: i + 1,
+    // Hydration check-ins (Tuesday + Thursday + Saturday = 3x/week for 13 weeks)
+    // Paired with existing check-ins to stay within MAX_MESSAGES_PER_DAY=3
+    // Tue (day 2, 9, 16...) + Thu (day 4, 11, 18...) + Sat (day 6, 13, 20...)
+    ...Array.from({ length: 13 }, (_, i) => ({
+        day: (i * 7) + 2, // Tuesday
         title: `[GAMIFICAÇÃO] Check-in de Hidratação`,
         message: HYDRATION_MESSAGES[i % HYDRATION_MESSAGES.length],
+        perspective: 'hidratacao' as Perspective,
+    })),
+    ...Array.from({ length: 13 }, (_, i) => ({
+        day: (i * 7) + 4, // Thursday
+        title: `[GAMIFICAÇÃO] Check-in de Hidratação`,
+        message: HYDRATION_MESSAGES[(i + 2) % HYDRATION_MESSAGES.length], // offset to vary message
+        perspective: 'hidratacao' as Perspective,
+    })),
+    ...Array.from({ length: 13 }, (_, i) => ({
+        day: (i * 7) + 6, // Saturday
+        title: `[GAMIFICAÇÃO] Check-in de Hidratação`,
+        message: HYDRATION_MESSAGES[(i + 4) % HYDRATION_MESSAGES.length], // offset to vary message
         perspective: 'hidratacao' as Perspective,
     })),
 

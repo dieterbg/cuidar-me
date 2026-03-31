@@ -5,7 +5,7 @@ import type { Protocol } from '../types';
 // Gamification messages (weigh-ins, etc.) are injected automatically.
 export const protocols: Protocol[] = [
     {
-        id: 'fundamentos_90_dias',
+        id: '613a4a63-ed4b-4cbf-9c64-49fe98074032', // Sincronizado com o ID do Banco (Protocolo Fundamentos)
         name: 'Protocolo Fundamentos (90 Dias)',
         description: 'Focado em criar hábitos básicos como hidratação, caminhadas leves e um dia de pesagem na semana. Ideal para quem precisa de estrutura para começar e manter a consistência.',
         durationDays: 90,
@@ -57,7 +57,7 @@ export const protocols: Protocol[] = [
         ]
     },
     {
-        id: 'evolucao_90_dias',
+        id: 'b9a33669-05c3-4316-b669-f9d0a84c4a83', // Sincronizado com o ID do Banco (Protocolo Evolução)
         name: 'Protocolo Evolução (90 Dias)',
         description: 'Adiciona uma camada de interação e educação, com envio de fotos de pratos e sugestão de vídeos educativos para aprofundar o conhecimento ao longo de 90 dias.',
         durationDays: 90,
@@ -97,7 +97,7 @@ export const protocols: Protocol[] = [
         ]
     },
     {
-        id: 'performance_90_dias',
+        id: '63e69258-ca73-4a6f-bd64-13031fa140f2', // Sincronizado com o ID do Banco (Protocolo Performance)
         name: 'Protocolo Performance (90 Dias)',
         description: 'Acompanhamento intensivo com check-ins mais frequentes e metas de macronutrientes, para quem busca otimizar os resultados em um programa de 90 dias.',
         durationDays: 90,
