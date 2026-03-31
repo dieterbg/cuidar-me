@@ -8,7 +8,18 @@
       "Bash(node -e \"require\\(''dotenv''\\).config\\({path:''.env.local''}\\); const tsx = require\\(''tsx''\\); tsx.createRequire\\(import.meta.url\\)\\(''./scripts/seed-videos.ts''\\);\")",
       "Bash(npx tsx:*)",
       "Bash(sed -i 's/thumbnailUrl/thumbnail_url/g; s/videoUrl/video_url/g; s/\"\"plans\"\"/\"\"eligible_plans\"\"/g' src/lib/data/seed-data.ts)",
-      "Bash(sed -i \"s/''plans''/''eligible_plans''/g\" src/lib/data/seed-data.ts)"
+      "Bash(sed -i \"s/''plans''/''eligible_plans''/g\" src/lib/data/seed-data.ts)",
+      "Bash(node -r dotenv/config -e \":*)",
+      "Bash(curl -s \"https://cuidar-me-olive.vercel.app/api/cron/unified?token=CuidarMeCronSecret123\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s https://cuidar-me-olive.vercel.app/api/cron/unified?token=CuidarMeCronSecret123)",
+      "Bash(curl -s \"https://cuidar-me-olive.vercel.app/api/debug-env\")",
+      "Bash(curl -sk -w \"\\\\nHTTP_CODE:%{http_code}\" \"https://cuidar-me-olive.vercel.app/\")",
+      "Bash(curl -sk --max-time 25 \"https://cuidar-me-olive.vercel.app/api/cron/unified?token=CuidarMeCronSecret123\")",
+      "Bash(for i:*)",
+      "Bash(do curl:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''Run {$i}: processed={d[results][messageQueue][processed]}''''\\)\")",
+      "Bash(done)"
     ]
   }
 }

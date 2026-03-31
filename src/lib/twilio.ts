@@ -51,8 +51,7 @@ export async function sendWhatsappMessage(
         };
 
         // 1. Enviar via Template se houver ContentSid
-        //    ⚠️ IMPORTANTE: NÃO há fallback de body — evita mensagens duplicadas.
-        //    Se o template falhar, retornamos null e o processMessageQueue marca como 'failed'.
+        // Se o template falhar por motivos de limite de caracteres, tentamos o fallback em "body"
         if (options?.contentSid) {
             try {
                 const templateParams = {
@@ -67,21 +66,23 @@ export async function sendWhatsappMessage(
                 // 63016 = fora da janela de 24h → precisa de template aprovado
                 if (templateError.code === 63016) {
                     console.error(`[Twilio] ❌ Fora da janela de 24h. Use um template aprovado pelo WhatsApp. (Code: 63016, ContentSID: ${options.contentSid})`);
+                    // Não adianta tentar fallback se a janela está fechada
+                    return null;
                 } else {
                     console.error(`[Twilio] ❌ Falha no template (SID: ${options.contentSid}): ${templateError.message} (Code: ${templateError.code})`);
+                    console.log(`[Twilio] 🔄 Tentando fallback para mensagem livre (body)...`);
+                    // Continua execução para tentar enviar via Body
                 }
-                // NÃO faz fallback para body — isso causaria mensagem duplicada.
-                return null;
             }
         }
 
-        // 2. Enviar via Body (apenas para mensagens sem template)
+        // 2. Enviar via Body (apenas para mensagens sem template ou via fallback)
         const message = await twilioClient.messages.create({
             ...messageParams,
             body: body
         });
 
-        console.log(`[Twilio] Mensagem enviada via BODY. SID: ${message.sid}`);
+        console.log(`[Twilio] ✅ Mensagem enviada via BODY. SID: ${message.sid}`);
         return message.sid;
     } catch (error: any) {
         console.error(`[Twilio Error]:`, error.message);
