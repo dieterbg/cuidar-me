@@ -84,7 +84,9 @@ export async function awardGamificationPoints(
         .update({
             gamification: patient.gamification,
             total_points: patient.gamification.totalPoints,
-            level: patient.gamification.level
+            level: patient.gamification.level,
+            last_checkin_type: null, // Resetar contexto de check-in
+            last_checkin_at: null    // Resetar contexto de check-in
         })
         .eq('user_id', userId);
 

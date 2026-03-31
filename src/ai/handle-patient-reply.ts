@@ -200,8 +200,6 @@ export async function handlePatientReply(
         // =====================================================
 
         // 3. DETECTAR CHECK-INS ATIVOS
-        // Verificar se enviamos mensagem de protocolo nas últimas 24h
-        // Buscamos as últimas mensagens do sistema e filtramos por [GAMIFICAÇÃO] ou metadado isGamification
         const { data: recentSystemMessages } = await supabase
             .from('messages')
             .select('text, created_at, metadata')
@@ -211,19 +209,24 @@ export async function handlePatientReply(
             .order('created_at', { ascending: false })
             .limit(5);
 
+        // 2.3. Buscar contexto de check-in persistente (Sticky Context)
+        const lastCheckinAt = (patientRaw as any).last_checkin_at ? new Date((patientRaw as any).last_checkin_at) : null;
+        const lastCheckinType = (patientRaw as any).last_checkin_type || null;
+        const isWithinCheckinWindow = lastCheckinAt && (Date.now() - lastCheckinAt.getTime()) < 2 * 60 * 60 * 1000; // 2 horas
+
+        // Determinar se há um check-in ativo (via histórico ou via estado persistente)
         const recentProtocolMessage = recentSystemMessages?.find((m: any) =>
             (m.text && m.text.includes('[GAMIFICAÇÃO]')) ||
             (m.metadata && (m.metadata as any).isGamification === true)
         );
 
-        const hasActiveCheckin = !!recentProtocolMessage;
+        const hasActiveCheckin = isWithinCheckinWindow || !!recentProtocolMessage;
         const checkinTitle = recentProtocolMessage?.text || undefined;
 
         console.log(`[CheckIn] Active: ${hasActiveCheckin}, patientId: ${patient.id}`);
 
         // =====================================================
         // 🚨 GATE DE EMERGÊNCIA POR KEYWORDS (antes da IA)
-        // Detecção determinística de termos críticos — não depende da IA
         // =====================================================
         const EMERGENCY_PATTERNS = [
             /dor.{0,15}(peito|braço|cabeça\s+forte|torax)/i,
@@ -256,14 +259,12 @@ export async function handlePatientReply(
 
         // 5. ROTEAMENTO BASEADO NA INTENÇÃO (PREMIUM/VIP ONLY)
 
-        // 5.1 EMERGÊNCIA - Escala imediatamente
         if (classification.intent === MessageIntent.EMERGENCY) {
             const { handleEmergency } = await import('./handlers/emergency-handler');
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
         // 5.2 PROTOCOLOS + GAMIFICAÇÃO (se ativo)
-        // Damos prioridade a isso ANTES de SOCIAL/QUESTION porque a IA pode classificar "Sim" ou "Adaptei" como pergunta ou social!
         const { data: patientProtocol } = await supabase
             .from('patient_protocols')
             .select('*, protocol:protocols(id, name, duration_days)')
@@ -271,6 +272,8 @@ export async function handlePatientReply(
             .eq('is_active', true)
             .single();
 
+        // 🚀 GATE 4: PROTOCOLO & GAMIFICAÇÃO (PONTOS)
+        // Se houver um check-in ativo recente, tenta processar a resposta antes da IA
         if (patientProtocol && hasActiveCheckin) {
             const { handleProtocolGamification } = await import('./handlers/gamification-handler');
             const processed = await handleProtocolGamification(
@@ -278,17 +281,15 @@ export async function handlePatientReply(
                 patientProtocol,
                 messageText,
                 whatsappNumber,
-                supabase
+                supabase,
+                lastCheckinType // Injeta o tipo persistente
             );
 
-            // Se o gamification handler entendeu a resposta (ex. era A, B, C, ou um número),
-            // ele processa e retorna true. Aí encerramos.
-            // Se ele retornou false (ex. paciente perguntou algo), deixamos cair pros próximos fluxos.
+            // Se processado com sucesso, encerra o fluxo (não chama a IA)
             if (processed) return { success: true };
         }
 
         // 5.3 DAILY CHECK-IN (check-in diário genérico - para pacientes SEM protocolo ativo)
-        // Se o paciente está num check-in diário ativo, rotear para o handler correto
         const { isDailyCheckinActive, handleDailyCheckinReply } = await import('./actions/daily-checkin');
         const hasDailyCheckin = await isDailyCheckinActive(patient.id);
 
@@ -305,10 +306,9 @@ export async function handlePatientReply(
             if (checkinResult.success) {
                 return { success: true };
             }
-            // Se falhou (ex: check-in expirado), cai para o fluxo normal abaixo
         }
 
-        // 5.4 SOCIAL - Resposta rápida (Se não era resposta a um checkin)
+        // 5.4 SOCIAL - Resposta rápida
         if (classification.intent === MessageIntent.SOCIAL || classification.intent === MessageIntent.QUESTION) {
             const { handleAIConversation } = await import('./handlers/conversation-handler');
             return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
@@ -320,18 +320,13 @@ export async function handlePatientReply(
 
     } catch (error: any) {
         console.error('[handlePatientReply] Error:', error);
-        // Log deep error to database for mapping
         try {
             const supabase = createServiceRoleClient();
-            // Tenta inserir log básico primeiro (sem metadata para evitar erro de coluna)
             await supabase.from('messages').insert({
-                patient_id: (error as any).patientId || null, // Se tivermos o ID
+                patient_id: (error as any).patientId || null,
                 sender: 'system',
                 text: `[FATAL-ERROR] handlePatientReply: ${error.message || error}`
             });
-
-            // Tenta inserir atenção se possível
-            console.error('Critical Error in handlePatientReply:', error.stack);
         } catch (logErr) {
             console.error('Failed to log error to DB:', logErr);
         }
@@ -345,7 +340,7 @@ export async function handlePatientReply(
 export async function processMessageQueue(externalSupabase?: any): Promise<{ success: boolean; processed: number; skipped?: number; error?: string }> {
     const supabase = externalSupabase || createServiceRoleClient();
     const now = new Date();
-    const MAX_AGE_HOURS = 2; // Don't send messages more than 2h late
+    const MAX_AGE_HOURS = 2;
 
     const { data: pendingMessages, error: queueError } = await supabase
         .from('scheduled_messages')
@@ -366,7 +361,6 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
     let processed = 0;
     let skipped = 0;
     for (const msg of pendingMessages) {
-        // Skip messages that are too old — sending stale check-ins feels like spam
         const ageMs = now.getTime() - new Date(msg.send_at).getTime();
         const ageHours = ageMs / (1000 * 60 * 60);
         if (ageHours > MAX_AGE_HOURS) {
@@ -378,7 +372,6 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             continue;
         }
 
-        // Logic to determine if we should use a template (Bypass 24h window for protocols)
         let contentSid = undefined;
         let contentVariables = undefined;
 
@@ -386,23 +379,17 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             const metadata = (msg.metadata as any) || {};
             const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
 
-            // Helper to read env var and trim whitespace/newlines (prevents trailing \n bugs)
             const env = (key: string) => process.env[key]?.trim();
 
-            // Map gamification check-in titles to approved Twilio templates
-            // Hydration / Breakfast / Lunch / Dinner / Weight → dedicated check-in templates
             if (title.includes('Hidratação')) contentSid = env('TWILIO_CHECKIN_WATER_SID');
             else if (title.includes('Café')) contentSid = env('TWILIO_CHECKIN_BREAKFAST_SID');
             else if (title.includes('Almoço')) contentSid = env('TWILIO_CHECKIN_LUNCH_SID');
             else if (title.includes('Jantar')) contentSid = env('TWILIO_CHECKIN_DINNER_SID');
             else if (title.includes('Lanche')) contentSid = env('TWILIO_CHECKIN_SNACKS_SID');
             else if (title.includes('Peso')) contentSid = env('TWILIO_CHECKIN_WEIGHT_SID');
-            // Atividade / Planejamento → INCENTIVO (movimento/motivação — approved)
             else if (title.includes('Atividade') || title.includes('Planejamento')) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
-            // Bem-Estar (sono/descanso) → REFLEXAO (sono/respiração — approved)
             else if (title.includes('Bem-Estar')) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
 
-            // Map protocol content message titles to category templates
             else if (
                 title.includes('Dica') || title.includes('Curiosidade') || title.includes('Energia')
             ) contentSid = env('TWILIO_PROTOCOL_DICA_SID');
@@ -414,14 +401,12 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
                 title.includes('Bem-vindo') || title.includes('Parabéns') || title.includes('Conquista')
             ) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
 
-            // Fallback: use incentivo template for any remaining protocol messages
             if (!contentSid) {
                 contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
                 console.log(`[QUEUE] 📝 Template incentivo (fallback) para: "${title || msg.message_content?.substring(0, 50)}"`);
             }
 
             if (contentSid) {
-                // Fetch patient name separately (avoids join issues with RLS)
                 const { data: patientRow } = await supabase
                     .from('patients')
                     .select('full_name')
@@ -429,7 +414,6 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
                     .single();
                 const patientName = patientRow?.full_name?.split(' ')[0] || "lá";
 
-                // templates expect: {{1}} = name, {{2}} = content
                 contentVariables = {
                     "1": patientName,
                     "2": msg.message_content
@@ -443,6 +427,16 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
         });
 
         if (twilioSid) {
+            // Se for uma mensagem de gamificação, atualizar o estado de espera do paciente
+            if (msg.metadata && (msg.metadata as any).isGamification) {
+                const checkinTitle = (msg.metadata as any).checkinTitle || (msg.metadata as any).title || 'Check-in';
+                await supabase.from('patients').update({
+                    last_checkin_type: checkinTitle,
+                    last_checkin_at: new Date().toISOString()
+                }).eq('id', msg.patient_id);
+                console.log(`[QUEUE] 🧠 Contexto de gamificação definido para ${msg.patient_id}: ${checkinTitle}`);
+            }
+
             await supabase.from('scheduled_messages')
                 .update({
                     status: 'sent',
@@ -451,7 +445,6 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
                 })
                 .eq('id', msg.id);
 
-            // Record in chat history, propagating metadata for context-aware processing
             await supabase.from('messages').insert({
                 patient_id: msg.patient_id,
                 sender: 'system',

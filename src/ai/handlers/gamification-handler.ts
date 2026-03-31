@@ -9,9 +9,10 @@ export async function handleProtocolGamification(
     patientProtocol: any,
     messageText: string,
     whatsappNumber: string,
-    supabase: SupabaseClient
+    supabase: SupabaseClient,
+    lastCheckinType?: string | null // Novo parâmetro injetado
 ): Promise<boolean> {
-    console.log('[PROTOCOL-GAMIFICATION] Processing protocol check-in');
+    console.log(`[PROTOCOL-GAMIFICATION] Processing protocol check-in. Persistent Context: ${lastCheckinType || 'None'}`);
 
     const { protocols, mandatoryGamificationSteps } = await import('@/lib/data');
     const {
@@ -44,16 +45,23 @@ export async function handleProtocolGamification(
     const lastMsgMetadata = lastMsg?.metadata || null;
 
     // 2. Filtrar o passo do protocolo que corresponde ao contexto atual
-    // Prioridade 1: Metadados estruturados (preciso)
-    // Prioridade 2: Match de texto (fallback fuzzy)
+    // Prioridade 1: Contexto persistente (Sticky Context) - MAIS PRECISO
+    // Prioridade 2: Metadados estruturados da última mensagem
+    // Prioridade 3: Match de texto (fallback fuzzy)
     const activeProtocolStep = allMessages.find(step => {
-        // Se temos metadados e o título/perspective batem, é o match perfeito
+        // Se temos o tipo injetado via banco de dados (Sticky Context)
+        if (lastCheckinType && step.title === lastCheckinType) {
+            return true;
+        }
+
+        // Se temos metadados e o título/perspective batem
         if (lastMsgMetadata?.isGamification && lastMsgMetadata.checkinTitle === step.title) {
             return true;
         }
+
         // Fallback: fuzzy text match
-        return lastSystemMessageText.includes(step.message) ||
-            (step.title && lastSystemMessageText.includes(step.title));
+        return (step.message && lastSystemMessageText.includes(step.message)) ||
+               (step.title && lastSystemMessageText.includes(step.title));
     });
 
     if (!activeProtocolStep) {
