@@ -223,7 +223,7 @@ export async function handlePatientReply(
         const hasActiveCheckin = isWithinCheckinWindow || !!recentProtocolMessage;
         const checkinTitle = recentProtocolMessage?.text || undefined;
 
-        console.log(`[CheckIn] Active: ${hasActiveCheckin}, patientId: ${patient.id}`);
+        console.log(`[CheckIn] Active: ${hasActiveCheckin}, patientId: ${patient.id}. Window: ${isWithinCheckinWindow}`);
 
         // =====================================================
         // 🚨 GATE DE EMERGÊNCIA POR KEYWORDS (antes da IA)
@@ -247,7 +247,40 @@ export async function handlePatientReply(
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
-        // 4. CLASSIFICAR INTENÇÃO usando IA
+        // =====================================================
+        // 🚀 PRIORIDADE 1: PROTOCOLOS + GAMIFICAÇÃO (STICKY CONTEXT)
+        // Se houver um check-in ativo recente, tenta processar a resposta antes da IA
+        // =====================================================
+        const { data: patientProtocol } = await supabase
+            .from('patient_protocols')
+            .select('*, protocol:protocols(id, name, duration_days)')
+            .eq('patient_id', patient.id)
+            .eq('is_active', true)
+            .single();
+
+        if (patientProtocol && hasActiveCheckin) {
+            console.log(`[ROUTING] Attempting gamification bypass for ${patient.id} (Context: ${lastCheckinType})`);
+            const { handleProtocolGamification } = await import('./handlers/gamification-handler');
+            const processed = await handleProtocolGamification(
+                patient,
+                patientProtocol,
+                messageText,
+                whatsappNumber,
+                supabase,
+                lastCheckinType // Injeta o tipo persistente do Sticky Context
+            );
+
+            // Se processado com sucesso (pontuou), encerra o fluxo imeditamente (NÃO chama IA)
+            if (processed) {
+                console.log(`[ROUTING] ✅ Message ${messageSid} consumed by Gamification. IA Silenced.`);
+                return { success: true };
+            }
+        }
+
+        // =====================================================
+        // 🚀 PRIORIDADE 2: CLASSICAÇÃO DE INTENÇÃO POR IA
+        // Se a gamificação não consumiu a mensagem, deixa a IA classificar.
+        // =====================================================
         const { classifyMessageIntent, MessageIntent } = await import('./message-intent-classifier');
 
         const classification = await classifyMessageIntent(messageText, {
@@ -257,37 +290,16 @@ export async function handlePatientReply(
 
         console.log(`[Intent] ${classification.intent} (${classification.confidence})`);
 
-        // 5. ROTEAMENTO BASEADO NA INTENÇÃO (PREMIUM/VIP ONLY)
-
+        // =====================================================
+        // 🚀 PRIORIDADE 3: ROTEAMENTO BASEADO NA INTENÇÃO (IA)
+        // =====================================================
         if (classification.intent === MessageIntent.EMERGENCY) {
             const { handleEmergency } = await import('./handlers/emergency-handler');
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
-        // 5.2 PROTOCOLOS + GAMIFICAÇÃO (se ativo)
-        const { data: patientProtocol } = await supabase
-            .from('patient_protocols')
-            .select('*, protocol:protocols(id, name, duration_days)')
-            .eq('patient_id', patient.id)
-            .eq('is_active', true)
-            .single();
-
-        // 🚀 GATE 4: PROTOCOLO & GAMIFICAÇÃO (PONTOS)
-        // Se houver um check-in ativo recente, tenta processar a resposta antes da IA
-        if (patientProtocol && hasActiveCheckin) {
-            const { handleProtocolGamification } = await import('./handlers/gamification-handler');
-            const processed = await handleProtocolGamification(
-                patient,
-                patientProtocol,
-                messageText,
-                whatsappNumber,
-                supabase,
-                lastCheckinType // Injeta o tipo persistente
-            );
-
-            // Se processado com sucesso, encerra o fluxo (não chama a IA)
-            if (processed) return { success: true };
-        }
+        // Se a IA classificar como resposta de check-in mas o handler acima falou que NÃO era válido, 
+        // deixamos a IA responder algo genérico se necessário, ou encaminhamos para a conversa normal.
 
         // 5.3 DAILY CHECK-IN (check-in diário genérico - para pacientes SEM protocolo ativo)
         const { isDailyCheckinActive, handleDailyCheckinReply } = await import('./actions/daily-checkin');
