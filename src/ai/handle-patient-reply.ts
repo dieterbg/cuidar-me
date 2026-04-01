@@ -296,9 +296,33 @@ export async function handlePatientReply(
         // 🚀 PRIORIDADE 3: ROTEAMENTO BASEADO NA INTENÇÃO (IA)
         // =====================================================
         if (classification.intent === MessageIntent.EMERGENCY) {
+            // Log emergency decision
+            await supabase.from('ai_decision_logs').insert({
+                message_sid: messageSid,
+                patient_id: patient.id,
+                intent: classification.intent,
+                confidence: classification.confidence,
+                decision: 'ESCALATE',
+                reason: classification.reason,
+                metadata: { source: 'keyword_or_classifier' }
+            });
+
             const { handleEmergency } = await import('./handlers/emergency-handler');
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
+
+        // ... (resto do código)
+
+        // Log general decision before proceeding to conversation
+        await supabase.from('ai_decision_logs').insert({
+            message_sid: messageSid,
+            patient_id: patient.id,
+            intent: classification.intent,
+            confidence: classification.confidence,
+            decision: 'REPLY',
+            reason: classification.reason,
+            metadata: { hasActiveCheckin: !!isPendingCheckin }
+        });
 
         // Se a IA classificar como resposta de check-in mas o handler acima falou que NÃO era válido, 
         // deixamos a IA responder algo genérico se necessário, ou encaminhamos para a conversa normal.

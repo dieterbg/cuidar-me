@@ -12,6 +12,11 @@ export const GenerateChatbotReplyInputSchema = z.object({
         .string()
         .describe('The message from the patient that requires a response.'),
     protocolContext: z.string().optional().describe('A brief summary of the patient\'s current protocol status. E.g., "A última mensagem do protocolo enviada hoje foi: \'Qual seu peso hoje?\'".'),
+    history: z.array(z.object({
+        sender: z.enum(['patient', 'me', 'system']),
+        text: z.string(),
+        timestamp: z.any()
+    })).optional().describe('As últimas mensagens trocadas com o paciente para dar contexto à IA.'),
 });
 export type GenerateChatbotReplyInput = z.infer<typeof GenerateChatbotReplyInputSchema>;
 

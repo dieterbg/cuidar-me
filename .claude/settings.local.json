@@ -19,7 +19,16 @@
       "Bash(for i:*)",
       "Bash(do curl:*)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''Run {$i}: processed={d[results][messageQueue][processed]}''''\\)\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"feat: re-enable gamification gate before AI classification:*)",
+      "Bash(git push:*)",
+      "Bash(find /c/Users/Usuario/.gemini/antigravity/scratch/Cuidar-me/src -type f -name *.ts)",
+      "Bash(grep -E \"\\\\.sql$\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node check_queue.mjs)",
+      "Bash(git commit:*)"
     ]
   }
 }

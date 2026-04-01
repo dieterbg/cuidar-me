@@ -162,11 +162,14 @@ Seu objetivo é ser prestativa, empática e proativa, ajudando o paciente em sua
 - **Plano:** ${input.patient.subscription.plan}
 - **Jornada (Gamificação):** Nível: ${input.patient.gamification.level}
 - **Protocolo Ativo:** ${input.patient.protocol ? `${input.patient.protocol.protocolId} (Dia ${input.patient.protocol.currentDay})` : 'Nenhum'}
-- **Mensagem do Paciente:** "${input.patientMessage}"
+- **Histórico da Conversa:**
+${input.history?.map(m => `- ${m.sender === 'patient' ? 'Paciente' : 'Equipe/Deia'}: ${m.text}`).join('\n') || 'Nenhuma mensagem anterior.'}
+- **Última Mensagem do Protocolo:** ${input.protocolContext || 'Nenhuma.'}
+- **Mensagem ATUAL do Paciente:** "${input.patientMessage}"
 - **Data/Hora Atual:** ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
 
 # SUA TAREFA:
-Analise a mensagem do paciente e responda de acordo com as categorias abaixo:
+Analise a mensagem ATUAL do paciente, levando em conta o histórico acima para não ser repetitiva e entender referências (ex: "e sobre isso?"). Responda de acordo com as categorias abaixo:
 
 1. **ESCALATE (Escalar para Equipe Médica):**
    - Menção a SINTOMAS (dor, tontura, febre, sangramento, etc).
