@@ -14,11 +14,13 @@ O **Protocolo Fundamentos** é o alicerce do sistema Cuidar.me. Ele foca na cons
 ## 📅 Cronograma de Mensagens (Resumo Semanal)
 
 Além das mensagens educativas abaixo, o paciente recebe **Check-ins de Gamificação** recorrentes:
-- **Diário:** Check-in de Hidratação 💧
-- **Segunda-feira:** Registro de Peso + Planejamento Semanal 📊
-- **Terça/Sexta:** Check-in de Almoço/Jantar 🥗
-- **Quarta/Sábado:** Check-in de Atividade Física 💪
-- **Quinta/Domingo:** Check-in de Bem-Estar/Sono 🌙
+- **Segunda-feira:** Registro de Peso (responda com número) + Planejamento Semanal (A/B) 📊
+- **Terça-feira:** Check-in de Almoço (A/B/C) + Hidratação (A/B/C) 🥗💧
+- **Quarta-feira:** Check-in de Atividade Física (A/B) 💪
+- **Quinta-feira:** Check-in de Bem-Estar/Sono (A/B/C) + Hidratação (A/B/C) 🌙💧
+- **Sexta-feira:** Check-in de Jantar (A/B/C) 🍽️
+- **Sábado:** Check-in de Atividade Física (A/B) + Hidratação (A/B/C) 💪💧
+- **Domingo:** Check-in de Bem-Estar (A/B/C) 🧠
 
 ---
 

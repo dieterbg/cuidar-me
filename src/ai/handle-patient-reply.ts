@@ -272,37 +272,9 @@ export async function handlePatientReply(
         // Se a IA classificar como resposta de check-in mas o handler acima falou que NÃO era válido, 
         // deixamos a IA responder algo genérico se necessário, ou encaminhamos para a conversa normal.
 
-        // 5.3 DAILY CHECK-IN (SOMENTE para pacientes SEM protocolo ativo)
-        // Pacientes com protocolo usam gamificação — daily check-in é para quem não tem protocolo
-        const { data: hasActiveProtocol } = await supabase
-            .from('patient_protocols')
-            .select('id')
-            .eq('patient_id', patient.id)
-            .eq('is_active', true)
-            .limit(1)
-            .maybeSingle();
-
-        if (!hasActiveProtocol) {
-            const { isDailyCheckinActive, handleDailyCheckinReply } = await import('./actions/daily-checkin');
-            const hasDailyCheckin = await isDailyCheckinActive(patient.id);
-
-            if (hasDailyCheckin) {
-                console.log(`[ROUTING] Patient ${patient.id} has active daily check-in. Routing to daily check-in handler.`);
-                const checkinResult = await handleDailyCheckinReply(
-                    patient.id,
-                    whatsappNumber,
-                    messageText,
-                    patient.name,
-                    patientPlan as 'premium' | 'vip'
-                );
-
-                if (checkinResult.success) {
-                    return { success: true };
-                }
-            }
-        } else {
-            console.log(`[ROUTING] Patient ${patient.id} has active protocol — skipping daily check-in handler.`);
-        }
+        // 5.3 DAILY CHECK-IN — REMOVIDO
+        // Premium/VIP sempre tem protocolo. Sem protocolo = sem check-ins automáticos.
+        // Gamificação é o único sistema de check-ins (dentro de protocolos).
 
         // 5.4 SOCIAL - Resposta rápida
         if (classification.intent === MessageIntent.SOCIAL || classification.intent === MessageIntent.QUESTION) {

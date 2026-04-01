@@ -85,14 +85,10 @@ async function handleCronRequest(request: NextRequest) {
             }
         }
 
-        // TASK 3: Daily Check-ins (Logic inside sendDailyCheckins already checks for hours 8, 14, 19)
-        try {
-            results.dailyCheckins = await sendDailyCheckins();
-            console.log(`[UNIFIED CRON] Daily check-in results:`, results.dailyCheckins);
-        } catch (e: any) {
-            console.error('[UNIFIED CRON] Daily check-in error:', e);
-            results.dailyCheckins = { success: false, error: e.message };
-        }
+        // TASK 3: Daily Check-ins — DESATIVADO
+        // Premium/VIP sem protocolo não recebe mensagens automáticas.
+        // Check-ins só existem via gamificação (dentro de protocolos).
+        results.dailyCheckins = { processed: 0, skipped: 0, error: null };
 
         // TASK 4: Freemium Tips (Logic inside sendFreemiumTips checks for 8 AM)
         try {
