@@ -7,11 +7,11 @@ import type { ProtocolStep, Perspective } from '../types';
 
 // ── PESAGEM SEMANAL ────────────────────────────────────────────────────────────
 const WEIGHIN_MESSAGES = [
-    'Bom dia! É dia de check-in semanal. Informe seu peso em jejum para registrarmos sua evolução. 📊',
-    'Segunda-feira é dia de acompanhamento! Como está a balança esta semana? Me informe seu peso em jejum.',
-    'Vamos acompanhar seu progresso! Informe seu peso de hoje em jejum. Lembre-se: a tendência ao longo das semanas é o que importa, não o número isolado.',
-    'Check-in semanal! O peso em jejum de hoje me ajuda a acompanhar sua evolução com precisão. Pode me informar?',
-    'Hora do nosso registro semanal. Informe seu peso em jejum — cada medição é um dado valioso da sua jornada. 💪',
+    'Bom dia! É dia de check-in semanal. Responda apenas com o número do seu peso em jejum (ex: 85). 📊',
+    'Segunda-feira é dia de acompanhamento! Responda apenas com o número do seu peso em jejum (ex: 85).',
+    'Vamos acompanhar seu progresso! Responda com o número do seu peso em jejum (ex: 85). A tendência ao longo das semanas é o que importa.',
+    'Check-in semanal! Responda apenas com o número do peso em jejum (ex: 85) para registrarmos.',
+    'Hora do nosso registro semanal. Responda com o número do peso em jejum (ex: 85) — cada medição é valiosa! 💪',
 ];
 
 // ── PLANEJAMENTO SEMANAL ───────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ export const mandatoryGamificationSteps: (ProtocolStep & { perspective: Perspect
         day: (i * 7) + 1, // Days 1, 8, 15, 22...
         title: `[GAMIFICAÇÃO] Check-in Semanal de Peso (Semana ${i + 1})`,
         message: i === 0
-            ? 'Bem-vindo(a) ao seu protocolo! Para registrarmos nosso ponto de partida, por favor me informe seu peso de hoje em jejum. 📊'
+            ? 'Bem-vindo(a) ao seu protocolo! Para registrarmos nosso ponto de partida, responda apenas com o número do seu peso em jejum (ex: 85). 📊'
             : WEIGHIN_MESSAGES[i % WEIGHIN_MESSAGES.length],
         perspective: 'disciplina' as Perspective,
     })),
