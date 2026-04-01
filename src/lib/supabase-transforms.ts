@@ -11,6 +11,7 @@ import type { Patient } from './types';
 export function transformPatientFromSupabase(supabasePatient: any): Patient {
     return {
         id: supabasePatient.id,
+        userId: supabasePatient.user_id,    // Necessário para gamificação (awardGamificationPoints)
         fullName: supabasePatient.full_name,
         name: supabasePatient.full_name, // Compatibilidade
         whatsappNumber: supabasePatient.whatsapp_number,

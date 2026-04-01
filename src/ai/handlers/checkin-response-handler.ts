@@ -69,10 +69,11 @@ export async function processCheckinResponse(
     }
 
     // ── PONTUAR ─────────────────────────────────────────
-    if (points > 0 && patient.user_id) {
+    if (points > 0 && (patient.userId || patient.user_id)) {
         const { awardGamificationPoints } = await import('../actions/gamification');
+        const uid = patient.userId || patient.user_id;
         const result = await awardGamificationPoints(
-            patient.user_id, perspective, points, supabase
+            uid, perspective, points, supabase
         );
 
         if (result.success) {
