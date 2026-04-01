@@ -49,7 +49,13 @@ export async function POST(req: NextRequest) {
 
         if (lockError) throw lockError;
 
-        console.log(`[PROCESS QUEUE] Processing msg ${msg.id} for ${msg.whatsapp_number}`);
+        console.log(`[DEBUG-PROCESS-QUEUE] ========== PROCESSING ==========`);
+        console.log(`[DEBUG-PROCESS-QUEUE] msg.id: ${msg.id}`);
+        console.log(`[DEBUG-PROCESS-QUEUE] msg.whatsapp_number: ${msg.whatsapp_number}`);
+        console.log(`[DEBUG-PROCESS-QUEUE] msg.message_text: "${msg.message_text}"`);
+        console.log(`[DEBUG-PROCESS-QUEUE] msg.profile_name: "${msg.profile_name}"`);
+        console.log(`[DEBUG-PROCESS-QUEUE] msg.message_sid: "${msg.message_sid}"`);
+        console.log(`[DEBUG-PROCESS-QUEUE] ====================================`);
 
         // 4. Delegate to the original AI handler
         const result = await handlePatientReply(

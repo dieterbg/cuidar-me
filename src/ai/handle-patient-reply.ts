@@ -30,6 +30,20 @@ export async function handlePatientReply(
         const patientRaw = await findPatientByPhone(supabase, whatsappNumber);
         const patient = patientRaw ? transformPatientFromSupabase(patientRaw) : null;
 
+        console.log(`[DEBUG-PATIENT] ========== PATIENT LOOKUP ==========`);
+        console.log(`[DEBUG-PATIENT] whatsappNumber: "${whatsappNumber}"`);
+        console.log(`[DEBUG-PATIENT] found: ${!!patientRaw}`);
+        if (patientRaw) {
+            console.log(`[DEBUG-PATIENT] patientRaw.id: "${patientRaw.id}"`);
+            console.log(`[DEBUG-PATIENT] patientRaw.user_id: "${patientRaw.user_id}"`);
+            console.log(`[DEBUG-PATIENT] patientRaw.full_name: "${patientRaw.full_name}"`);
+            console.log(`[DEBUG-PATIENT] patientRaw.last_checkin_type: "${patientRaw.last_checkin_type}"`);
+            console.log(`[DEBUG-PATIENT] patientRaw.last_checkin_at: "${patientRaw.last_checkin_at}"`);
+            console.log(`[DEBUG-PATIENT] patientRaw.plan: "${patientRaw.plan}"`);
+            console.log(`[DEBUG-PATIENT] transformed patient.userId: "${patient?.userId}"`);
+        }
+        console.log(`[DEBUG-PATIENT] ====================================`);
+
         // Se não encontrou paciente, envia mensagem de cadastro e encerra
         if (!patient) {
             console.log(`[HANDLE-REPLY] Unknown number ${whatsappNumber}. Sending registration link.`);
@@ -229,23 +243,40 @@ export async function handlePatientReply(
         // =====================================================
         const pendingType = (patientRaw as any).last_checkin_type as string | null;
         const pendingAt = (patientRaw as any).last_checkin_at ? new Date((patientRaw as any).last_checkin_at) : null;
+        const ageMs = pendingAt ? Date.now() - pendingAt.getTime() : null;
         const isPendingCheckin = pendingType && pendingAt &&
-            (Date.now() - pendingAt.getTime()) < 2 * 60 * 60 * 1000; // janela de 2 horas
+            (ageMs! < 2 * 60 * 60 * 1000); // janela de 2 horas
 
-        console.log(`[CheckIn] Pending: ${isPendingCheckin ? pendingType : 'none'} | Patient: ${patient.id}`);
+        console.log(`[DEBUG-GATE] ========== CHECK-IN GATE ==========`);
+        console.log(`[DEBUG-GATE] patientId: ${patient.id}`);
+        console.log(`[DEBUG-GATE] patientRaw.last_checkin_type: "${pendingType}"`);
+        console.log(`[DEBUG-GATE] patientRaw.last_checkin_at: "${(patientRaw as any).last_checkin_at}"`);
+        console.log(`[DEBUG-GATE] pendingAt parsed: ${pendingAt?.toISOString() || 'null'}`);
+        console.log(`[DEBUG-GATE] age: ${ageMs !== null ? (ageMs / 60000).toFixed(1) + ' min' : 'N/A'}`);
+        console.log(`[DEBUG-GATE] isPendingCheckin: ${isPendingCheckin}`);
+        console.log(`[DEBUG-GATE] messageText: "${messageText}"`);
+        console.log(`[DEBUG-GATE] patient.userId: "${(patient as any).userId}"`);
+        console.log(`[DEBUG-GATE] patient.user_id: "${(patient as any).user_id}"`);
+        console.log(`[DEBUG-GATE] patientRaw.user_id: "${(patientRaw as any).user_id}"`);
+        console.log(`[DEBUG-GATE] ====================================`);
 
         if (isPendingCheckin) {
+            console.log(`[DEBUG-GATE] ✅ Entering checkin handler for type="${pendingType}"`);
             const { processCheckinResponse } = await import('./handlers/checkin-response-handler');
             const result = await processCheckinResponse(
                 patient, messageText, pendingType, whatsappNumber, supabase
             );
+
+            console.log(`[DEBUG-GATE] Handler returned: processed=${result.processed}`);
 
             if (result.processed) {
                 console.log(`[ROUTING] ✅ Check-in consumed: "${pendingType}" → "${messageText}". IA silenced.`);
                 return { success: true };
             }
             // Resposta não reconhecida como simples → continua para IA
-            console.log(`[ROUTING] Check-in pending but reply not simple. Passing to AI.`);
+            console.log(`[ROUTING] ⚠️ Check-in pending but reply not simple. Passing to AI.`);
+        } else {
+            console.log(`[DEBUG-GATE] ❌ NOT entering checkin handler. Reason: ${!pendingType ? 'no last_checkin_type' : !pendingAt ? 'no last_checkin_at' : 'expired (>' + (ageMs! / 60000).toFixed(0) + 'min)'}`);
         }
 
         // =====================================================
@@ -405,11 +436,19 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             // Se for uma mensagem de gamificação, atualizar o estado de espera do paciente
             if (msg.metadata && (msg.metadata as any).isGamification) {
                 const checkinTitle = (msg.metadata as any).checkinTitle || (msg.metadata as any).title || 'Check-in';
-                await supabase.from('patients').update({
+                const { data: updateData, error: updateErr } = await supabase.from('patients').update({
                     last_checkin_type: checkinTitle,
                     last_checkin_at: new Date().toISOString()
-                }).eq('id', msg.patient_id);
-                console.log(`[QUEUE] 🧠 Contexto de gamificação definido para ${msg.patient_id}: ${checkinTitle}`);
+                }).eq('id', msg.patient_id).select('id, last_checkin_type, last_checkin_at, user_id').single();
+                console.log(`[DEBUG-QUEUE] ========== GAMIFICATION CONTEXT SET ==========`);
+                console.log(`[DEBUG-QUEUE] patient_id: ${msg.patient_id}`);
+                console.log(`[DEBUG-QUEUE] checkinTitle: "${checkinTitle}"`);
+                console.log(`[DEBUG-QUEUE] metadata: ${JSON.stringify(msg.metadata)}`);
+                console.log(`[DEBUG-QUEUE] update result: ${JSON.stringify(updateData)}`);
+                console.log(`[DEBUG-QUEUE] update error: ${updateErr ? JSON.stringify(updateErr) : 'none'}`);
+                console.log(`[DEBUG-QUEUE] ================================================`);
+            } else {
+                console.log(`[DEBUG-QUEUE] Non-gamification msg sent. metadata: ${JSON.stringify(msg.metadata)}`);
             }
 
             await supabase.from('scheduled_messages')
