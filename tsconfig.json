@@ -37,6 +37,8 @@
   "exclude": [
     "node_modules",
     "src/scripts",
-    "scripts"
+    "scripts",
+    "pulse-and-process.ts",
+    "*.ts"
   ]
 }

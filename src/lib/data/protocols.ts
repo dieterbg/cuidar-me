@@ -104,7 +104,7 @@ export const protocols: Protocol[] = [
         eligiblePlans: ['vip'],
         messages: [
             // Month 1
-            { day: 2, title: 'Foco em Macronutrientes', message: "Vamos falar de macros. Para hoje, sua meta é ter uma fonte de proteína em TODAS as refeições. Me envie fotos do seu almoço e jantar hoje. Quero te ajudar a fazer os ajustes finos." },
+            { day: 2, title: 'Foco em Macronutrientes', message: "Vamos falar de macros. Para hoje, sua meta é ter uma fonte de proteína em TODAS as refeições. Descreva como foi seu almoço e jantar hoje — quero te ajudar a fazer os ajustes finos!" },
             { day: 4, title: 'Otimização do Treino', message: "Para otimizar a queima de gordura, considere fazer seu aeróbico após o treino de força, não antes. Isso usa suas reservas de glicogênio primeiro." },
             { day: 6, title: 'Suplementação Inteligente', message: "Já conversou com a equipe sobre suplementos como Creatina ou Whey Protein? Podem ser aliados importantes nesta fase." },
             { day: 9, title: 'Sono e Performance', message: "Nesta fase, o sono é ainda mais crucial para a recuperação muscular e regulação hormonal. Sua meta hoje é ter 30 minutos de relaxamento antes de deitar, sem telas." },
@@ -145,25 +145,23 @@ export const protocols: Protocol[] = [
     {
         id: '2412145d-c346-4012-9040-65e9d43073a3', // Sincronizado com o ID do Banco
         name: 'Protocolo Teste (Rápido)',
-        description: 'Protocolo de teste — 6 mensagens no dia 1 (3 gamificação + 3 conteúdo) com intervalo de 5min.',
-        durationDays: 1,
+        description: 'Protocolo de teste intensivo (15/15 min) baseado na ABESO 2026 para validar o cron automático.',
+        durationDays: 2,
         eligiblePlans: ['premium', 'vip'],
         messages: [
-            // Dia 1: fast-track agenda com offset de +5min cada
-            // Gamificação (Peso + Planejamento + Hidratação) é injetada automaticamente
-            // Aqui ficam apenas as 3 mensagens de conteúdo:
+            // --- DIA 1: TESTE INTENSIVO (6 MENSAGENS INTERCALADAS - 15 MIN) ---
+            { day: 1, title: 'Check-in Semanal de Peso', message: 'Registro de peso em jejum. Consistência é a chave. (Vale **+50 pts**)\n\nResponda com o número exato (ex: 85.5).' },
+            { day: 1, title: 'Check-in de Planejamento', message: 'Planejamento Semanal\nVocê já planejou suas atividades e refeições para os próximos dias? (Vale **+30 pts**)\n\nA) Sim, tudo planejado! (+30 pts)\nB) Ainda não parei para isso (+0 pts)' },
+            { day: 1, title: 'Check-in de Hidratação', message: 'Status de hidratação intra-dia. 💧 (Vale até **+15 pts**)\n\nA) Bati a meta de água! (+15 pts)\nB) Fiquei abaixo do ideal (+10 pts)\nC) Hidratação insuficiente (+5 pts)' },
+            { day: 1, title: 'Dica de Nutrição (ABESO 2026)', message: 'Dica rápida: Incluir proteína no café da manhã reduz a fome ao longo do dia e preserva massa magra durante o tratamento.' },
+            { day: 1, title: 'Check-in de Almoço', message: '🥗 (Vale até **+20 pts**)\n\nA) Almoço otimizado - no plano! (+20 pts)\nB) Adaptações aceitas (+15 pts)\nC) Fora do protocolo (+10 pts)' },
+            { day: 1, title: 'Check-in de Atividade Física', message: 'Foco na performance! Intensidade ou recuperação ativa? 💪 (Vale **+40 pts**)\n\nA) Sim, missão cumprida! (+40 pts)\nB) Descanso estratégico (+0 pts)' },
+            { day: 1, title: 'Reflexão sobre Hábitos', message: 'Qual foi o hábito mais positivo que você praticou hoje? Reconhecer conquistas sustenta o progresso a longo prazo.' },
 
-            // Msg 4: template DICA
-            { day: 1, title: 'Dica de Nutrição', message: 'Incluir proteína no café da manhã reduz a fome ao longo do dia. Ovos, iogurte ou queijo são ótimas opções.' },
-
-            // Msg 5: template REFLEXAO
-            { day: 1, title: 'Reflexão sobre Hábitos', message: 'Qual foi o hábito mais positivo que você praticou esta semana? Reconhecer conquistas fortalece a motivação.' },
-
-            // Msg 6: template INCENTIVO
-            { day: 1, title: 'Incentivo de Movimento', message: 'Cada passo conta! Mesmo 10 minutos de caminhada fazem diferença no metabolismo e humor.' },
-
-            // Msg 7 (extra, mas será a 6ª com gamificação): template REFLEXAO
-            { day: 1, title: 'Sono e Recuperação', message: 'Uma boa noite de sono regula hormônios da fome e saciedade. Tente desligar telas 30 minutos antes de dormir.' },
+            // --- DIA 2: VALIDAÇÃO DO ACORDAR AUTOMÁTICO (ABESO 2026) ---
+            { day: 2, title: 'Check-in de Sono e Recuperação', message: 'A ABESO 2026 destaca o sono como pilar metabólico Classe I. Como foi seu descanso?\n\nA) Sono profundo (+10 pts)\nB) Acordei algumas vezes (+5 pts)\nC) Noite difícil (+0 pts)' },
+            { day: 2, title: 'Prevenção de Sarcopenia', message: 'Lembrete importante: A atividade de força é essencial para manter o metabolismo ativo enquanto o corpo emagrece. Já planejou seu treino de hoje? 🏋️‍♂️' },
+            { day: 2, title: 'Check-in de Medicação/Suplementos', message: 'Seguiu sua prescrição médica hoje?\n\nA) Sim, tudo certo! (+10 pts)\nB) Esqueci/Tive dúvidas (+0 pts)' },
         ]
     }
 ];
