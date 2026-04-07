@@ -1,0 +1,22 @@
+﻿[DEBUG] actions/system.ts loaded
+­ƒÜÇ Iniciando PULSE + PROCESS (Corre├º├úo de Dados)...
+[ENV] Twilio From: whatsapp:+18383681307
+
+--- Passagem 1: Agendamento (Pulse) ---
+[SCHEDULER] Starting protocol message scheduling (Pulse: true)...
+[SCHEDULER] Date: 04/04/2026
+[SCHEDULER] Processing 1 protocols
+[SCHEDULER] ­ƒæñ ID: 2fbe9232-22f1-4201-8cec-beefb0f8e3c8 est├í no dia 2/2 do Protocolo Teste (R├ípido)
+[SCHEDULER] ÔÅ¡ J├í existem 6 mensagens pendentes para ID 2fbe9232-22f1-4201-8cec-beefb0f8e3c8. Aguardando processamento.
+[SCHEDULER] Ô£à Agendamento conclu├¡do!
+[SCHEDULER] ­ƒôè Mensagens agendadas: 0
+[SCHEDULER] ­ƒÄë Protocolos completados: 0
+Mensagens agendadas: 0
+
+--- Passagem 2: Processamento de Fila (Envio Real) ---
+Resultado Processamento: {
+  "success": true,
+  "processed": 0
+}
+
+Ô£à Ciclo conclu├¡do. Verifique o console do Twilio para o n├║mero +55 51 992500400.

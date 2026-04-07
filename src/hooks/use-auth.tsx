@@ -26,6 +26,7 @@ export interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata: { displayName: string; role: UserRole; phone?: string }) => Promise<void>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   triggerPatientsUpdate: () => void;
   patientsUpdateCount: number;
 }
@@ -144,6 +145,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (authError) throw authError;
     if (!authData.user) throw new Error('Failed to create user');
 
+    // 2. Consume Invite if present
+    const pendingInvite = typeof window !== 'undefined' ? sessionStorage.getItem('pendingInvite') : null;
+    if (pendingInvite && authData.user) {
+      console.log('useAuth: Found pending invite, consuming...', pendingInvite);
+      try {
+        const response = await fetch('/api/onboarding/consume-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: pendingInvite, userId: authData.user.id })
+        });
+        
+        if (response.ok) {
+          console.log('useAuth: Invite consumed successfully');
+          sessionStorage.removeItem('pendingInvite');
+        } else {
+          console.error('useAuth: Failed to consume invite');
+        }
+      } catch (err) {
+        console.error('useAuth: Error consuming invite:', err);
+      }
+    }
+
     // Perfil é criado automaticamente pelo Trigger no banco de dados.
     // O registro de paciente será criado no primeiro acesso ao portal.
 
@@ -182,6 +205,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`
+      }
+    });
+
+    if (error) {
+      console.error('Google sign in error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao entrar com Google',
+        description: error.message
+      });
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -192,6 +234,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signIn,
         signUp,
         signOut,
+        signInWithGoogle,
         triggerPatientsUpdate,
         patientsUpdateCount,
       }}

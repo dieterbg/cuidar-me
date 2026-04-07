@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, ShieldCheck, AlertTriangle, Database, Star, Check, FilePenLine, Trash2, EyeOff, MessageCircleWarning, Clock, Loader2, Filter } from 'lucide-react';
+import { Search, ShieldCheck, AlertTriangle, Database, Star, Check, FilePenLine, Trash2, EyeOff, MessageCircleWarning, Clock, Loader2, Filter, QrCode, Copy } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { Patient, PatientPlan } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { seedDatabase } from '@/ai/seed-database';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -122,7 +130,7 @@ const StatusIndicator = ({ patient }: { patient: Patient }) => {
 
 
 export default function PatientsListPage() {
-  const { user, loading: authLoading, triggerPatientsUpdate } = useAuth();
+  const { user, session, loading: authLoading, triggerPatientsUpdate } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
@@ -133,6 +141,12 @@ export default function PatientsListPage() {
   const [selectedRisk, setSelectedRisk] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('attention');
   const [patients, setPatients] = useState<Patient[]>([]);
+
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [invitePlan, setInvitePlan] = useState<string>('freemium');
+  const [inviteLink, setInviteLink] = useState<string>('');
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -213,6 +227,43 @@ export default function PatientsListPage() {
         });
       }
     });
+  };
+
+  const handleGenerateInvite = async () => {
+    setIsGeneratingInvite(true);
+    try {
+      const response = await fetch('/api/onboarding/generate-invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify({ plan: invitePlan })
+      });
+
+      const data = await response.json();
+      if (data.inviteUrl) {
+        setInviteLink(data.inviteUrl);
+        setIsInviteModalOpen(true);
+      } else {
+        throw new Error(data.error || 'Erro ao gerar convite');
+      }
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao gerar convite',
+        description: err.message,
+      });
+    } finally {
+      setIsGeneratingInvite(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setIsCopied(true);
+    toast({ title: "Link copiado!" });
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const attentionCount = useMemo(() => patients.filter(p => p.needsAttention && p.status !== 'pending').length, [patients]);
@@ -337,28 +388,39 @@ export default function PatientsListPage() {
             Gerencie o acompanhamento e evolução clínica.
           </p>
         </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" className="border-dashed">
-              <Database className="mr-2 h-4 w-4" />
-              Resetar Dados
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação irá <span className="font-bold text-destructive">APAGAR TODOS OS DADOS ATUAIS</span> e restaurar os dados de exemplo.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isSeeding}>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleSeedDatabase} disabled={isSeeding} className="bg-destructive hover:bg-destructive/90">
-                {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sim, Resetar'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleGenerateInvite} 
+            disabled={isGeneratingInvite}
+            className="bg-[#899d5e] hover:bg-[#7a8c53] font-semibold rounded-xl px-6"
+          >
+            {isGeneratingInvite ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+            Gerar Convite
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="border-dashed rounded-xl">
+                <Database className="mr-2 h-4 w-4" />
+                Resetar Dados
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação irá <span className="font-bold text-destructive">APAGAR TODOS OS DADOS ATUAIS</span> e restaurar os dados de exemplo.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isSeeding}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSeedDatabase} disabled={isSeeding} className="bg-destructive hover:bg-destructive/90">
+                  {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sim, Resetar'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       <Tabs defaultValue="attention" className="w-full space-y-6" onValueChange={setActiveTab}>
@@ -428,6 +490,65 @@ export default function PatientsListPage() {
           )}
         </div>
       </Tabs>
+
+      <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <QrCode className="h-6 w-6 text-[#899d5e]" />
+              Convite Pré-Aprovado
+            </DialogTitle>
+            <DialogDescription>
+              O paciente que escanear este código será ativado automaticamente sem precisar de aprovação manual.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center justify-center p-6 space-y-6">
+            <div className="bg-white p-4 rounded-2xl shadow-inner border border-border/50">
+              <QRCodeSVG 
+                value={inviteLink} 
+                size={200}
+                level="H"
+                includeMargin={true}
+              />
+            </div>
+
+            <div className="w-full space-y-3">
+              <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl border border-border/50">
+                <Input 
+                  value={inviteLink} 
+                  readOnly 
+                  className="bg-transparent border-none focus-visible:ring-0 h-auto p-0 text-xs text-muted-foreground truncate"
+                />
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={copyToClipboard}
+                  className="h-8 w-8 p-0"
+                >
+                  {isCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-medium text-muted-foreground">Protocolo:</p>
+                <div className="flex-1">
+                  <Select value={invitePlan} onValueChange={setInvitePlan}>
+                    <SelectTrigger className="h-9 rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="freemium">Freemium</SelectItem>
+                      <SelectItem value="premium">Premium (Evolução)</SelectItem>
+                      <SelectItem value="vip">VIP (Performance)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

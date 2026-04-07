@@ -21,9 +21,10 @@ export const gamificationConfig: GamificationConfig = {
         // Bem-Estar
         { actionId: 'assistir_video_educativo', perspective: 'bemEstar', points: 20 },
         { actionId: 'participar_comunidade', perspective: 'bemEstar', points: 25 },
-        { actionId: 'checkin_bem_estar', perspective: 'bemEstar', points: 15, checkinTriggerText: 'Check-in de Bem-Estar' },
+        { actionId: 'checkin_bem_estar', perspective: 'bemEstar', points: { 'A': 15, 'B': 10, 'C': 5 }, checkinTriggerText: 'Check-in de Bem-Estar' },
+        { actionId: 'checkin_sono', perspective: 'bemEstar', points: { 'A': 15, 'B': 10, 'C': 5 }, checkinTriggerText: 'Check-in de Sono' },
         // Hidratação
-        { actionId: 'checkin_hidratacao', perspective: 'hidratacao', points: 15, checkinTriggerText: 'Check-in de Hidratação' },
+        { actionId: 'checkin_hidratacao', perspective: 'hidratacao', points: { 'A': 15, 'B': 10, 'C': 5 }, checkinTriggerText: 'Check-in de Hidratação' },
         // Onboarding Actions (don't directly contribute to weekly perspectives but give points)
         { actionId: 'completar_perfil', perspective: 'disciplina', points: 150 },
         { actionId: 'assistir_video_boas_vindas', perspective: 'bemEstar', points: 30 },

@@ -12,12 +12,44 @@ import type { Patient } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { awardGamificationPoints } from '@/ai/actions/gamification';
+import { cn } from '@/lib/utils';
+
+interface StepProps {
+  number: number;
+  label: string;
+  active: boolean;
+  done: boolean;
+}
+
+function Step({ number, label, active, done }: StepProps) {
+  return (
+    <div className={cn(
+      "flex items-center gap-2 transition-all duration-300",
+      active ? "opacity-100" : "opacity-60"
+    )}>
+      <div className={cn(
+        "h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors",
+        done ? "bg-primary border-primary text-primary-foreground" : 
+        active ? "border-primary text-primary" : "border-muted-foreground text-muted-foreground"
+      )}>
+        {done ? <CheckCircle2 className="h-5 w-5" /> : number}
+      </div>
+      <span className={cn(
+        "text-sm font-medium hidden sm:inline",
+        active ? "text-foreground" : "text-muted-foreground"
+      )}>
+        {label}
+      </span>
+    </div>
+  );
+}
 
 export default function PortalProfilePage() {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [profileStep, setProfileStep] = useState<'basic' | 'health'>('basic');
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -43,6 +75,13 @@ export default function PortalProfilePage() {
     }
   }, [user, authLoading]);
 
+  // Se já tem dados básicos, sugere pular para etapa de saúde
+  useEffect(() => {
+    if (patient?.birthDate && patient?.gender) {
+      setProfileStep('health');
+    }
+  }, [patient?.birthDate, patient?.gender]);
+
   const handleSaveSuccess = async () => {
     await fetchProfile();
 
@@ -53,8 +92,6 @@ export default function PortalProfilePage() {
 
       if (updatedPatient) {
         const isComplete = !!(
-          updatedPatient.height &&
-          updatedPatient.initialWeight &&
           updatedPatient.birthDate &&
           updatedPatient.gender &&
           (updatedPatient as any).goal
@@ -96,28 +133,31 @@ export default function PortalProfilePage() {
       }
     }
 
-    // Redirect to welcome page after successful save
-    setTimeout(() => {
-      window.location.href = '/portal/welcome';
-    }, 1500);
+    // Redirect to welcome page after successful save IF health step is complete
+    // Otherwise just stay on the page (state update will stay at health step)
+    if (profileStep === 'health') {
+        setTimeout(() => {
+          window.location.href = '/portal/welcome';
+        }, 1500);
+    }
   }
 
   if (authLoading || isPageLoading) {
     return <ProfileSkeleton />
   }
 
-  const isProfileComplete = !!patient?.height;
+  const isSimpleProfileComplete = !!(patient?.birthDate && patient?.gender && (patient as any)?.goal);
+  const isProfileComplete = !!(isSimpleProfileComplete && patient?.height);
 
-  // Campos obrigatórios para ativação — mesma lista verificada em handleSaveSuccess
+  // Campos obrigatórios para ativação
   const requiredFields = [
-    { label: 'Altura', filled: !!patient?.height },
-    { label: 'Peso inicial', filled: !!patient?.initialWeight },
     { label: 'Nascimento', filled: !!patient?.birthDate },
     { label: 'Gênero', filled: !!patient?.gender },
     { label: 'Objetivo', filled: !!(patient as any)?.goal },
   ];
   const filledCount = requiredFields.filter(f => f.filled).length;
   const progressPct = Math.round((filledCount / requiredFields.length) * 100);
+  const hasBasicData = !!(patient?.birthDate && patient?.gender);
 
   return (
     <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen">
@@ -176,14 +216,34 @@ export default function PortalProfilePage() {
         <Card className="bg-card/80 backdrop-blur-sm border-border/60 shadow-sm overflow-hidden">
           <div className="h-2 bg-gradient-to-r from-primary/40 via-primary to-primary/40" />
           <CardHeader>
-            <CardTitle>Dados Pessoais & Saúde</CardTitle>
-            <CardDescription>
-              Preencha com calma — quanto mais completo, melhor seu protocolo será ajustado pela equipe médica.
-            </CardDescription>
+            <div className="flex flex-col gap-6">
+              {/* Indicador de etapas */}
+              <div className="flex items-center gap-4">
+                <Step number={1} label="Dados Básicos" active={profileStep === 'basic'} done={hasBasicData} />
+                <div className="h-px flex-1 bg-border" />
+                <Step number={2} label="Dados de Saúde" active={profileStep === 'health'} done={isProfileComplete} />
+              </div>
+
+              <div>
+                <CardTitle>
+                  {profileStep === 'basic' ? 'Etapa 1: Dados Básicos' : 'Etapa 2: Dados de Saúde'}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {profileStep === 'basic' 
+                    ? 'Precisamos apenas dessas informações para ativar seu acompanhamento.' 
+                    : 'Agora, preencha seus dados clínicos para personalizarmos seu protocolo.'}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {patient ? (
-              <PatientEditForm patient={patient} onSave={handleSaveSuccess} context="patient" />
+              <PatientEditForm 
+                patient={patient} 
+                onSave={handleSaveSuccess} 
+                context="patient" 
+                step={profileStep}
+              />
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 Não foi possível carregar o formulário.

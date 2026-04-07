@@ -7,7 +7,12 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
-import { protocols, mandatoryGamificationSteps } from '@/lib/data';
+import { 
+    protocols, 
+    mandatoryGamificationSteps,
+    fundamentosGamificationSteps,
+    performanceGamificationSteps
+} from '@/lib/data';
 import { toZonedTime } from 'date-fns-tz';
 
 /**
@@ -17,10 +22,12 @@ import { toZonedTime } from 'date-fns-tz';
 function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boolean = false, offsetMinutes: number = 0): Date {
     const date = new Date(baseDate);
 
-    // Se for fast track, retorna apenas o offset
+    // Se for fast track, o agendamento é relativo ao AGORA (ao pulsar do cron)
+    // para evitar rajadas de mensagens com horários do passado.
     if (isFastTrack) {
-        date.setMinutes(date.getMinutes() + offsetMinutes);
-        return date;
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + offsetMinutes);
+        return now;
     }
 
     // Pesagem: 7h (jejum, ao acordar)
@@ -107,10 +114,11 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
         }
 
         // Se for Pulse, filtrar apenas protocolos de teste/rápidos
+        // Senao, filtrar para ignorar protocolos pulse
         const fastTrackProtocols = ['2412145d-c346-4012-9040-65e9d43073a3'];
         const protocolsToProcess = isPulse
             ? activeProtocols.filter((p: any) => fastTrackProtocols.includes(p.protocol.id))
-            : activeProtocols;
+            : activeProtocols.filter((p: any) => !fastTrackProtocols.includes(p.protocol.id));
 
         if (!protocolsToProcess || protocolsToProcess.length === 0) {
             console.log(`[SCHEDULER] No protocols to process (Pulse: ${isPulse})`);
@@ -142,18 +150,19 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                 continue;
             }
 
-            // Para pulsos fast-track, checar se já tem mensagens pendentes
-            if (isPulse) {
-                const { count } = await supabase
-                    .from('scheduled_messages')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('patient_id', patientProtocol.patient.id)
-                    .eq('status', 'pending');
+            // ✨ IDEMPOTÊNCIA (Pulse e Normal): Verificar se já existem mensagens pendentes ✨
+            // Se já há mensagens agendadas (pending) para este paciente, não reagendar.
+            // Isso evita destruir mensagens que ainda não foram enviadas pelo queue processor.
+            const { count: pendingCount } = await supabase
+                .from('scheduled_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('patient_id', patientProtocol.patient.id)
+                .eq('status', 'pending')
+                .eq('source', 'protocol');
 
-                if (count && count > 0) {
-                    console.log(`[SCHEDULER] ⏭ Pulse ignorado para ID ${patientProtocol.patient.id} - Já tem ${count} mensagens pendentes`);
-                    continue;
-                }
+            if (pendingCount && pendingCount > 0) {
+                console.log(`[SCHEDULER] ⏭ Já existem ${pendingCount} mensagens pendentes para ID ${patientProtocol.patient.id}. Aguardando processamento.`);
+                continue;
             }
 
             // Verificar se completou o protocolo
@@ -194,18 +203,26 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             // Buscar mensagens do dia
             const protocolData = protocols.find(p => p.id === protocolId);
             const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
-            const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
             const isFastTrack = protocolId === '2412145d-c346-4012-9040-65e9d43073a3';
 
-            // Limite de 3 mensagens/dia para não cansar o paciente
-            // Prioridade: gamificação primeiro, depois conteúdo
-            // Fast-track (teste): sem limite, para testar todos os templates em ~1h
-            const MAX_MESSAGES_PER_DAY = isFastTrack ? 50 : 3;
-            const totalRaw = gamificationMessages.length + contentMessages.length;
-            const allMessages = [...gamificationMessages, ...contentMessages].slice(0, MAX_MESSAGES_PER_DAY);
+            let allMessages: any[] = [];
+            
+            if (isFastTrack) {
+                // Modo Fast-Track usa apenas as mensagens configuradas NO arquivo protocols.ts
+                allMessages = contentMessages;
+                console.log(`[SCHEDULER] 🧪 MODO TESTE (15 min): Usando ${allMessages.length} mensagens configuradas.`);
+            } else {
+                const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
+                allMessages = [...gamificationMessages, ...contentMessages];
+            }
+
+            // Limite de mensagens/dia: 10 para teste intensivo (Dia 1 tem 7), 3 p/ produção
+            const MAX_MESSAGES_PER_DAY = isFastTrack ? 10 : 3;
+            const totalRaw = allMessages.length;
+            allMessages = allMessages.slice(0, MAX_MESSAGES_PER_DAY);
 
             if (allMessages.length < totalRaw) {
-                console.log(`[SCHEDULER] ⚠️ Limite de ${MAX_MESSAGES_PER_DAY} msgs/dia: cortando ${totalRaw - allMessages.length} mensagem(ns) de conteúdo para ${patientName}.`);
+                console.log(`[SCHEDULER] ⚠️ Limite de ${MAX_MESSAGES_PER_DAY} msgs/dia: cortando ${totalRaw - allMessages.length} mensagem(ns).`);
             }
 
             if (allMessages.length === 0) {
@@ -227,7 +244,9 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             // Agendar cada mensagem no horário específico
             for (let idx = 0; idx < allMessages.length; idx++) {
                 const message = allMessages[idx];
-                const sendTime = getScheduledTime(message.title, today, isFastTrack, (idx + 1) * 5);
+            // Intervalo de 120 minutos (2 horas) para o teste intensivo conforme solicitado
+            const interval = isFastTrack ? 120 : 5;
+            const sendTime = getScheduledTime(message.title, today, isFastTrack, idx * interval);
 
                 // ✨ PROTEÇÃO: Nunca agendar mensagem para horário que já passou ✨
                 if (sendTime.getTime() < today.getTime() && !isFastTrack) {
@@ -252,26 +271,25 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                     messageTitle: message.title, // Sempre salvar título para logging e fallback de template
                 };
 
-                // ✨ DEDUP: Não agendar se já existe uma mensagem pendente com o mesmo título para o mesmo dia
-                const dayStart = new Date(sendTime);
-                dayStart.setHours(0, 0, 0, 0);
-                const dayEnd = new Date(sendTime);
-                dayEnd.setHours(23, 59, 59, 999);
+                // ✨ FIX 2: Dedup habilitado para TODOS os modos (inclusive FastTrack) ✨
+                // Verifica se esta mensagem já existe (pending OU sent) nas últimas 24h
+                // Janela de 24h evita falsos positivos em gamificação recorrente (mesma msg em semanas diferentes)
+                {
+                    const dedupWindowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+                    const { data: existing } = await supabase
+                        .from('scheduled_messages')
+                        .select('id')
+                        .eq('patient_id', patientProtocol.patient.id)
+                        .in('status', ['pending', 'sent'])
+                        .eq('message_content', messageContent)
+                        .gte('created_at', dedupWindowStart)
+                        .limit(1)
+                        .maybeSingle();
 
-                const { data: existing } = await supabase
-                    .from('scheduled_messages')
-                    .select('id')
-                    .eq('patient_id', patientProtocol.patient.id)
-                    .eq('status', 'pending')
-                    .gte('send_at', dayStart.toISOString())
-                    .lte('send_at', dayEnd.toISOString())
-                    .eq('message_content', messageContent)
-                    .limit(1)
-                    .maybeSingle();
-
-                if (existing) {
-                    console.log(`[SCHEDULER]   ⏭ Dedup: "${message.title}" já agendada`);
-                    continue;
+                    if (existing) {
+                        console.log(`[SCHEDULER]   ⏭ Dedup: "${message.title}" já agendada/enviada`);
+                        continue;
+                    }
                 }
 
                 await supabase
@@ -297,16 +315,48 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                 console.log(`[SCHEDULER]   ✓ ${timeStr} → ${message.title}`);
             }
 
-            // Só incrementar current_day se realmente agendou alguma mensagem
+            // ✨ FIX 1.3: Comportamento diferente para FastTrack vs Produção ✨
+            // - FastTrack: NÃO avança dia aqui → será feito pelo processMessageQueue
+            //   (porque roda vários triggers por dia, precisa esperar envio das mensagens)
+            // - Produção: Avança dia aqui como antes → cron roda 1x/dia, mensagens já
+            //   estão agendadas com horários fixos e serão processadas ao longo do dia
             if (scheduledCount > 0) {
-                await supabase
-                    .from('patient_protocols')
-                    .update({ current_day: currentDay + 1, updated_at: new Date().toISOString() })
-                    .eq('id', patientProtocol.id);
-
-                console.log(`[SCHEDULER]   ↗️ Dia atualizado: ${currentDay} → ${currentDay + 1}`);
+                if (isFastTrack) {
+                    // FastTrack: apenas registrar, dia avançará no queue
+                    await supabase
+                        .from('patient_protocols')
+                        .update({ updated_at: new Date().toISOString() })
+                        .eq('id', patientProtocol.id);
+                    console.log(`[SCHEDULER]   📋 FastTrack: ${scheduledCount} msgs agendadas para dia ${currentDay}. Dia avançará após envio.`);
+                } else {
+                    // Produção: avançar dia agora (comportamento original)
+                    const nextDay = currentDay + 1;
+                    if (nextDay > durationDays) {
+                        // Protocolo completado
+                        await supabase
+                            .from('patient_protocols')
+                            .update({
+                                current_day: nextDay,
+                                is_active: false,
+                                completed_at: new Date().toISOString(),
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', patientProtocol.id);
+                        protocolsCompleted++;
+                        console.log(`[SCHEDULER]   🎉 Protocolo completado! (Dia ${currentDay}/${durationDays})`);
+                    } else {
+                        await supabase
+                            .from('patient_protocols')
+                            .update({
+                                current_day: nextDay,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', patientProtocol.id);
+                        console.log(`[SCHEDULER]   ✅ ${scheduledCount} msgs agendadas. Dia avançado: ${currentDay} → ${nextDay}`);
+                    }
+                }
             } else {
-                console.log(`[SCHEDULER]   ⚠️ Nenhuma mensagem agendada (horários já passaram). Dia NÃO avançado.`);
+                console.log(`[SCHEDULER]   ⚠️ Nenhuma mensagem agendada (horários já passaram ou dedup).`);
             }
         }
 

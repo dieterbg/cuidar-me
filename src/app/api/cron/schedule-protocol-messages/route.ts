@@ -36,11 +36,14 @@ async function handleCronRequest(request: NextRequest) {
             );
         }
 
-        console.log('[CRON API] Starting protocol message scheduling...');
+        const { searchParams } = new URL(request.url);
+        const isPulse = searchParams.get('pulse') === 'true';
+
+        console.log(`[CRON API] Starting protocol message scheduling (Pulse: ${isPulse})...`);
 
         // Executar agendamento com retry automático (3 tentativas, backoff exponencial)
         const result = await withRetry(
-            () => scheduleProtocolMessages(),
+            () => scheduleProtocolMessages(isPulse),
             {
                 maxRetries: 3,
                 initialDelay: 3000,

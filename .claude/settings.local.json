@@ -28,7 +28,12 @@
       "Bash(grep -E \"\\\\.sql$\")",
       "Bash(echo \"exit: $?\")",
       "Bash(node check_queue.mjs)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(xargs ls:*)",
+      "Bash(npx vercel:*)",
+      "Bash(cat \"/c/Users/Usuario/.gemini/antigravity/scratch/Cuidar-me/src/app/\\(dashboard\\)/welcome/page.tsx\")",
+      "Bash(cat \"/c/Users/Usuario/.gemini/antigravity/scratch/Cuidar-me/src/app/\\(dashboard\\)/patients/page.tsx\")",
+      "Bash(cat \"/c/Users/Usuario/.gemini/antigravity/scratch/Cuidar-me/src/app/\\(dashboard\\)/layout.tsx\")"
     ]
   }
 }

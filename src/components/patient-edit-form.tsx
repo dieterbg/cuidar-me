@@ -84,9 +84,10 @@ interface PatientEditFormProps {
   patient: Patient;
   onSave: () => void;
   context: 'admin' | 'patient';
+  step?: 'basic' | 'health' | 'all';
 }
 
-export function PatientEditForm({ patient, onSave, context }: PatientEditFormProps) {
+export function PatientEditForm({ patient, onSave, context, step = 'all' }: PatientEditFormProps) {
   const [isSaving, startSavingTransition] = useTransition();
   const [isDeleting, startDeletingTransition] = useTransition();
   const { toast } = useToast();
@@ -206,8 +207,6 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
         // If patient context and profile is now complete AND consent given, initiate WhatsApp onboarding
         if (isPatientContext) {
           const isComplete = !!(
-            values.height &&
-            values.initialWeight &&
             values.birthDate &&
             values.gender &&
             values.goal
@@ -263,19 +262,21 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto pr-2">
 
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nome Completo</FormLabel>
-              <FormControl>
-                <Input placeholder="Nome completo" {...field} className="rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {(step === 'basic' || step === 'all') && (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nome Completo</FormLabel>
+                <FormControl>
+                  <Input placeholder="Nome completo" {...field} className="rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {isAdminContext && (
           <>
@@ -382,248 +383,257 @@ export function PatientEditForm({ patient, onSave, context }: PatientEditFormPro
 
         {isPatientContext && (
           <>
-            <FormField
-              control={form.control}
-              name="birthDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data de Nascimento</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="gender"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Gênero</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um gênero" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="masculino">Masculino</SelectItem>
-                      <SelectItem value="feminino">Feminino</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-3 gap-4">
-              <FormField
-                control={form.control}
-                name="height"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Altura (cm)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Ex: 175"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="initialWeight"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Peso Inicial (kg)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Ex: 95.5"
-                        step="0.1"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="weightGoal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meta de Peso (kg)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Ex: 85.0"
-                        step="0.1"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="healthConditions"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Condições de Saúde</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Ex: Hipertensão, Diabetes tipo 2"
-                      {...field}
-                      value={field.value ?? ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="allergies"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Alergias</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Ex: Penicilina, Amendoim"
-                      {...field}
-                      value={field.value ?? ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="goal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Objetivo Principal <span className="text-red-600">*</span></FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+            {(step === 'basic' || step === 'all') && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Nascimento</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
+                        <Input type="date" {...field} value={field.value ?? ''} />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="lose_weight">Perder Peso</SelectItem>
-                        <SelectItem value="gain_muscle">Ganhar Massa</SelectItem>
-                        <SelectItem value="maintain">Manter Peso</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="targetWeight"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Meta de Peso (kg)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Ex: 70.0"
-                        step="0.1"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="waist"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cintura (cm)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Ex: 80"
-                        {...field}
-                        value={field.value ?? ''}
-                        onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="medications"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Medicamentos em uso</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Ex: Losartana 50mg, Metformina 850mg"
-                      {...field}
-                      value={field.value ?? ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Exam Upload Section */}
-            <div className="space-y-4 pt-4 border-t border-border/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium">Exames Recentes</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Envie fotos ou PDFs dos seus exames mais recentes (Opcional)
-                  </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gênero</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um gênero" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="masculino">Masculino</SelectItem>
+                          <SelectItem value="feminino">Feminino</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+            
+            {(step === 'health' || step === 'all') && (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="height"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Altura (cm)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 175"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="initialWeight"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Peso Inicial (kg)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 95.5"
+                            step="0.1"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="weightGoal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meta de Peso (kg)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 85.0"
+                            step="0.1"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </div>
+                <FormField
+                  control={form.control}
+                  name="healthConditions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Condições de Saúde</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Ex: Hipertensão, Diabetes tipo 2"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="allergies"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Alergias</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Ex: Penicilina, Amendoim"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <div className="grid w-full max-w-sm items-center gap-1.5">
-                <FormLabel htmlFor="exam-upload">Upload de Arquivo</FormLabel>
-                <div className="flex items-center gap-2">
-                  <Input id="exam-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" className="cursor-pointer" />
-                  <Button type="button" variant="outline" size="icon">
-                    <Upload className="h-4 w-4" />
-                  </Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="goal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Objetivo Principal <span className="text-red-600">*</span></FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="lose_weight">Perder Peso</SelectItem>
+                            <SelectItem value="gain_muscle">Ganhar Massa</SelectItem>
+                            <SelectItem value="maintain">Manter Peso</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="targetWeight"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Meta de Peso (kg)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 70.0"
+                            step="0.1"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Formatos aceitos: PDF, JPG, PNG. Máx: 10MB.
-                </p>
-              </div>
-            </div>
 
-            {/* WhatsApp Consent */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="waist"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cintura (cm)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Ex: 80"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="medications"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Medicamentos em uso</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Ex: Losartana 50mg, Metformina 850mg"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Exam Upload Section */}
+                <div className="space-y-4 pt-4 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium">Exames Recentes</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Envie fotos ou PDFs dos seus exames mais recentes (Opcional)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid w-full max-w-sm items-center gap-1.5">
+                    <FormLabel htmlFor="exam-upload">Upload de Arquivo</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Input id="exam-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" className="cursor-pointer" />
+                      <Button type="button" variant="outline" size="icon">
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Formatos aceitos: PDF, JPG, PNG. Máx: 10MB.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* WhatsApp Consent (Sempre visível no portal para garantir trigger) */}
             <div className="space-y-4 pt-4 border-t border-border/50">
               <div className="rounded-2xl bg-[#899d5e]/5 border border-[#899d5e]/15 p-5 space-y-4">
                 <div className="flex items-start gap-3">

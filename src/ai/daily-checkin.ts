@@ -96,39 +96,9 @@ export function getCheckinStepMessage(
 ): string {
     const firstName = patientName.split(' ')[0];
 
-    switch (step) {
-        case 'hydration':
-            return `Oi ${firstName}! Check-in do dia 🌙\n\nResponda com emojis:\n\n💧 **Água:** Bebeu 2.5L hoje?\n👍 Sim | 🤏 Quase | 👎 Não`;
-
-        case 'breakfast':
-            return `🍳 **Café da manhã:** Seguiu o plano?\n🅰️ 100% | 🅱️ Adaptei | 🅲 Fugi`;
-
-        case 'lunch':
-            return `🍽️ **Almoço:** Seguiu o plano?\n🅰️ 100% | 🅱️ Adaptei | 🅲 Fugi`;
-
-        case 'dinner':
-            return `🌮 **Jantar:** Seguiu o plano?\n🅰️ 100% | 🅱️ Adaptei | 🅲 Fugi`;
-
-        case 'snacks':
-            return `🍎 **Lanches:** Fez lanches saudáveis?\n👍 Sim | 👎 Não`;
-
-        case 'activity':
-            return `🏃 **Atividade física:** Praticou hoje?\n👍 Sim | 👎 Não`;
-
-        case 'wellbeing':
-            return `😊 **Como você está se sentindo?**\n😢 Péssimo | 😕 Ruim | 😐 Ok | 😊 Bem | 😄 Ótimo`;
-
-        case 'weight':
-            return `⚖️ **Pesagem semanal!**\n\nQual seu peso hoje? (em kg)`;
-
-        case 'complete':
-            const points = calculateCheckinPoints(data);
-            const summary = generateCheckinSummary(data, points);
-            return summary;
-
-        default:
-            return 'Próximo passo...';
-    }
+    // Sistema antigo desativado em favor da Gamificação Padronizada A/B/C
+    // Para evitar duplicidade e confusão visual para o paciente.
+    return '';
 }
 
 /**

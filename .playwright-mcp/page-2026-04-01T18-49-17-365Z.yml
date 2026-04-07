@@ -1,0 +1,45 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "Cuidar.me Logo" [ref=e6]
+        - heading "Transformando o cuidado com a saúde através da tecnologia e empatia." [level=1] [ref=e7]
+        - paragraph [ref=e8]: Acompanhamento personalizado, protocolos inteligentes e uma equipe dedicada ao seu bem-estar.
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - img "Avatar" [ref=e13]
+          - img "Avatar" [ref=e15]
+          - img "Avatar" [ref=e17]
+          - img "Avatar" [ref=e19]
+        - paragraph [ref=e20]: Junte-se a mais de 2.000 pacientes
+    - generic [ref=e23]:
+      - link "Clínica Dornelles Clínica Dornelles" [ref=e25] [cursor=pointer]:
+        - /url: /
+        - img "Clínica Dornelles" [ref=e26]
+        - generic [ref=e27]: Clínica Dornelles
+        - img [ref=e28]
+      - generic [ref=e31]:
+        - generic [ref=e32]:
+          - generic [ref=e33]: Bem-vindo de volta
+          - generic [ref=e34]: Acesse sua conta para gerenciar sua saúde ou acompanhar seus pacientes.
+        - generic [ref=e36]:
+          - tablist [ref=e37]:
+            - tab "Entrar" [selected] [ref=e38] [cursor=pointer]
+            - tab "Criar Conta" [ref=e39] [cursor=pointer]
+          - tabpanel "Entrar" [ref=e40]:
+            - generic [ref=e41]:
+              - generic [ref=e42]:
+                - text: Email
+                - generic [ref=e43]:
+                  - img [ref=e44]
+                  - textbox "Email" [ref=e47]:
+                    - /placeholder: seu@email.com
+              - generic [ref=e48]:
+                - text: Senha
+                - generic [ref=e49]:
+                  - img [ref=e50]
+                  - textbox "Senha" [ref=e53]
+              - button "Entrar na Plataforma" [ref=e54] [cursor=pointer]
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=e55]

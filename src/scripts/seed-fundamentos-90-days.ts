@@ -28,26 +28,26 @@ const generate90Days = () => {
     addDay(1, "O Quebrar do Gelo", "Bom dia! 🌟 Hoje é o seu primeiro passo oficial no protocolo Fundamentos. Meu único pedido hoje: tente beber pelo menos 3 garrafinhas de água. Topa esse desafio comigo?");
     addDay(2, "A Primeira Semente", "Oi! Passando só para saber como você está hoje. 🌻 Muitas vezes, adicionar uma coisa boa é mais fácil do que cortar uma ruim. Que tal tentar comer uma frutazinha hoje à tarde?");
     addDay(3, "Acolhendo as Dificuldades", "O cansaço do dia bate na porta, não é? Respire fundo. Tudo bem se ontem não foi perfeito. O que acha de escolhermos o jantar hoje para ser a sua 'refeição de ouro'? Só o jantar.");
-    addDay(4, "Check-in de Hidratação", "[GAMIFICAÇÃO] 💧 Check-in de Hidratação!\nComo está a sua garrafinha hoje?\nA) Já sequei e enchi de novo!\nB) Bebi um pouco, mas esqueci na correria.\nC) Hoje eu confesso que não bebi quase nada.", true, "hidratacao");
+    addDay(4, "Check-in de Hidratação", " Check-in de Hidratação!\nComo está a sua garrafinha hoje?\nA) Já sequei e enchi de novo!\nB) Bebi um pouco, mas esqueci na correria.\nC) Hoje eu confesso que não bebi quase nada.", true, "hidratacao");
     addDay(5, "Sextou com Sabedoria", "Sextou! 🎉 A regra do Fundamentos para o fim de semana é: Não existe perfeição. Escolha uma refeição livre para você curtir sem culpa. Só prometa que amanhã você acorda e toma um belo copo de água.");
-    addDay(6, "O Movimento Leve", "Bom sábado! ☀️ Hoje não quero falar de academia. Que tal 'caminhar 15 minutos ouvindo uma música' ou 'passear com o cachorro'? Não precisa de roupa de treino. Vai como estiver!");
-    addDay(7, "Pesagem Inicial", "[GAMIFICAÇÃO] ⚖️ Chegou o momento da pesagem! \nPor favor, digite aqui o seu peso atual (em kg, como 85.5). O peso de hoje é só o nosso ponto de partida no mapa! 🗺️", true, null);
+    addDay(6, "O Movimento Leve", "Bom sábado! ☀ Hoje não quero falar de academia. Que tal 'caminhar 15 minutos ouvindo uma música' ou 'passear com o cachorro'? Não precisa de roupa de treino. Vai como estiver!");
+    addDay(7, "Pesagem Inicial", " Chegou o momento da pesagem! \nPor favor, digite aqui o seu peso atual (em kg, como 85.5). O peso de hoje é só o nosso ponto de partida no mapa! 🗺", true, null);
 
     addDay(8, "Botão de Reiniciar", "Boa segunda! 🌅 Independente do que aconteceu no final de semana, a segunda-feira é o nosso 'Botão de Reiniciar'. Qual é a sua meta principal hoje: Água ou Dormir Melhor?");
-    addDay(9, "Check-in do Almoço", "[GAMIFICAÇÃO] 🍽️ Check-in do Almoço!\nComo foi seu prato hoje?\nA) Parecia de restaurante saudável!\nB) Tentei fazer o melhor que dava.\nC) Foquei no prazer, hoje não deu pra ser perfeito.", true, "alimentacao");
+    addDay(9, "Check-in do Almoço", " Check-in do Almoço!\nComo foi seu prato hoje?\nA) Parecia de restaurante saudável!\nB) Tentei fazer o melhor que dava.\nC) Foquei no prazer, hoje não deu pra ser perfeito.", true, "alimentacao");
     addDay(10, "Atenção ao Sono", "Sabe o que boicota seu esforço? O sono. 😴 Quando a gente dorme mal, o corpo acorda gritando por açúcar. O quão cansada você acordou hoje?");
     addDay(11, "A Regra do Mais Um", "Hoje o desafio é o 'Só Mais Uma Vez'. Se bebe um copo d'água, beba dois. Se dá 10 passos, dê 11. O que é o seu 'Mais Um' gigante de hoje?");
     addDay(12, "Ansiedade de Sexta", "Sexta chegou... 🍕 Em qual refeição do fds você acha que tem mais dificuldade e sente que 'joga tudo pro alto'? Saber de onde vem a tempestade ajuda a abrir o guarda-chuva.");
     addDay(13, "Foco Positivo", "Você está quase completando 14 dias! 🥇 Já parou para olhar a quantidade de vitórias invisíveis que você teve? Bebeu água num dia que não beberia... o que você fez de melhor essa semana?");
-    addDay(14, "Pesagem da Quinzena", "[GAMIFICAÇÃO] ⚖️ Dia do nosso acompanhamento! Por favor, digite seu peso de jejum hoje (em kg). Vamos registrar como o seu corpo se comportou nessa quinzena! 💪", true, null);
+    addDay(14, "Pesagem da Quinzena", " Dia do nosso acompanhamento! Por favor, digite seu peso de jejum hoje (em kg). Vamos registrar como o seu corpo se comportou nessa quinzena! ", true, null);
 
     addDay(15, "A Nova Semana", "Bom dia! Terceira semana! Você já passou da fase de abandono onde a maioria desiste. Parabéns por continuar aqui comigo. 🌻");
     addDay(16, "A Regra das Telas", "Tente um teste hoje: desligue as telas do celular e TV uns 30 minutos antes de fechar os olhos. A luz azul engana o cérebro achando que é dia. Topa testar hoje?");
-    addDay(17, "Check-in de Bem-Estar", "[GAMIFICAÇÃO] 🧠 Check-in da Mente!\nComo você está se sentindo hoje?\nA) Calma e no controle.\nB) Um pouco cansada e ansiosa, mas lidando.\nC) Pilote automático total, muito estresse.", true, "bemEstar");
+    addDay(17, "Check-in de Bem-Estar", " Check-in da Mente!\nComo você está se sentindo hoje?\nA) Calma e no controle.\nB) Um pouco cansada e ansiosa, mas lidando.\nC) Pilote automático total, muito estresse.", true, "bemEstar");
     addDay(18, "O Poder do Chá", "Dica de ouro de hoje: Que tal trocar o café do final da tarde por um chá calmante? Camomila, Mulungu... Vai ajudar demais a preparar o corpo para a noite.");
     addDay(19, "O Guia da Sexta", "Voltamos à sexta! Lembre-se, 1 refeição livre não estraga a semana se a sua base estiver forte. Beba água antes de comer o que você mais tem vontade.");
     addDay(20, "Alonga e Solta", "Sábado! Se espreguice bem forte hoje. O alongamento solta a tensão acumulada nos músculos. Como está se sentindo hoje?");
-    addDay(21, "Pesagem Semanal 3", "[GAMIFICAÇÃO] ⚖️ Domingo de pesagem! Como foi a descida da balança essa semana?", true, null);
+    addDay(21, "Pesagem Semanal 3", " Domingo de pesagem! Como foi a descida da balança essa semana?", true, null);
 
     // AUTO-GENERATE REST (Day 22 to 90)
     let currentWeek = 4;
@@ -59,20 +59,20 @@ const generate90Days = () => {
             addDay(day, `Segunda do Reset (Semana ${currentWeek})`, `Boa segunda! Nova semana, novas chances. Como foi o final de semana? Lembre-se: não há espaço para culpa aqui, apenas para recomeços.`);
         } else if (dayOfWeek === 2) { // Tuesday (Gamification)
             if (currentWeek % 2 === 0) {
-                addDay(day, "Check-in de Hidratação", `[GAMIFICAÇÃO] 💧 Check-in de Terça!\nAs garrafinhas estão cheias?\nA) Totalmente na meta!\nB) Mais ou menos, tentando.\nC) Preciso focar agora.`, true, "hidratacao");
+                addDay(day, "Check-in de Hidratação", ` Check-in de Terça!\nAs garrafinhas estão cheias?\nA) Totalmente na meta!\nB) Mais ou menos, tentando.\nC) Preciso focar agora.`, true, "hidratacao");
             } else {
-                addDay(day, "Check-in da Mente", `[GAMIFICAÇÃO] 🧠 Check-in de Terça!\nComo anda o estresse hoje?\nA) Super leve.\nB) Correria média.\nC) Exaustão batendo.`, true, "bemEstar");
+                addDay(day, "Check-in da Mente", ` Check-in de Terça!\nComo anda o estresse hoje?\nA) Super leve.\nB) Correria média.\nC) Exaustão batendo.`, true, "bemEstar");
             }
         } else if (dayOfWeek === 3) { // Wednesday
             addDay(day, "Metade da Semana", `Metade da semana ${currentWeek}! Faça algumas pausas de 5 minutos hoje só para respirar fundo. A constância é mais importante que a velocidade.`);
         } else if (dayOfWeek === 4) { // Thursday (Gamification)
-            addDay(day, "Check-in do Progresso", `[GAMIFICAÇÃO] 🍽️ Quinta do foco!\nComo está sendo a sua melhor refeição de hoje?\nA) Bem colorida e nutritiva!\nB) Segurando as pontas como dá.\nC) Dia muito difícil hoje.`, true, "alimentacao");
+            addDay(day, "Check-in do Progresso", ` Quinta do foco!\nComo está sendo a sua melhor refeição de hoje?\nA) Bem colorida e nutritiva!\nB) Segurando as pontas como dá.\nC) Dia muito difícil hoje.`, true, "alimentacao");
         } else if (dayOfWeek === 5) { // Friday
             addDay(day, "Blindagem de Sexta", `Sextou! Qual será a sua recompensa agradável desse final de semana? Aproveite com intenção, saboreando cada pedacinho!`);
         } else if (dayOfWeek === 6) { // Saturday
             addDay(day, "Sábado Vivo", `Sábado de descanso! Seu corpo adora movimento. Um passeio leve, alongar o corpo... O que você escolhe fazer por você hoje?`);
         } else if (dayOfWeek === 0) { // Sunday
-            addDay(day, `Pesagem Semana ${currentWeek}`, `[GAMIFICAÇÃO] ⚖️ Domingo de check-in! Digite o seu peso hoje para registrarmos a sua evolução da semana ${currentWeek}!`, true, null);
+            addDay(day, `Pesagem Semana ${currentWeek}`, ` Domingo de check-in! Digite o seu peso hoje para registrarmos a sua evolução da semana ${currentWeek}!`, true, null);
         }
     }
 
@@ -89,7 +89,7 @@ const generate90Days = () => {
     days[89].title = "A Formatura Final";
     days[89].is_gamification = true;
     days[89].perspective = null;
-    days[89].message = "[GAMIFICAÇÃO] ⚖️ DIA FINAL! Digite seu peso para bater o martelo nos seus incríveis 90 dias de Fundamentos. O prêmio Diamante está batendo à porta!";
+    days[89].message = " DIA FINAL! Digite seu peso para bater o martelo nos seus incríveis 90 dias de Fundamentos. O prêmio Diamante está batendo à porta!";
 
     return days;
 };
