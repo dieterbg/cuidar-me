@@ -57,6 +57,23 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     }
   }, [user, profile, authLoading, router]);
 
+  // Pré-preencher form de ativação com dados coletados no cadastro (se disponíveis)
+  useEffect(() => {
+    if (profile && !patient && !isStatusLoading) {
+      if (profile.display_name && !activationName) {
+        setActivationName(profile.display_name);
+      }
+      if (profile.phone && !activationPhone) {
+        // Aplicar máscara ao número armazenado (só dígitos)
+        let v = profile.phone.replace(/\D/g, '');
+        if (v.length > 11) v = v.slice(0, 11);
+        if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+        if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
+        setActivationPhone(v);
+      }
+    }
+  }, [profile, patient, isStatusLoading]);
+
   useEffect(() => {
     if (user) {
       setIsStatusLoading(true);
@@ -203,14 +220,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4 animate-pulse">
               <UserPlus className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Bem-vindo ao Cuidar.me</CardTitle>
+            <CardTitle className="text-2xl">Quase lá!</CardTitle>
             <CardDescription>
-              Vamos configurar seu espaço pessoal de saúde.
+              Confirme seus dados para ativar o acompanhamento via WhatsApp.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-left">
-            <p className="text-muted-foreground mb-2 text-center">
-              Para ativar sua conta, precisamos de mais alguns dados.
+            <p className="text-muted-foreground mb-2 text-center text-sm">
+              Usaremos o WhatsApp para enviar seus check-ins diários.
             </p>
             <div className="space-y-2">
               <Label htmlFor="activation-name">Nome Completo</Label>

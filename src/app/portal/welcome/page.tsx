@@ -41,6 +41,8 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [waterCount, setWaterCount] = useState(0);
+  const WATER_GOAL = 8;
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -48,6 +50,21 @@ export default function WelcomePage() {
     else if (hour < 18) setGreeting('Boa tarde');
     else setGreeting('Boa noite');
   }, []);
+
+  // Carregar contagem de água do localStorage (resetada por dia)
+  useEffect(() => {
+    const todayKey = `water-${new Date().toDateString()}`;
+    const saved = localStorage.getItem(todayKey);
+    if (saved) setWaterCount(parseInt(saved, 10) || 0);
+  }, []);
+
+  const handleWaterAdd = () => {
+    if (waterCount >= WATER_GOAL) return;
+    const next = waterCount + 1;
+    setWaterCount(next);
+    const todayKey = `water-${new Date().toDateString()}`;
+    localStorage.setItem(todayKey, String(next));
+  };
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -188,6 +205,47 @@ export default function WelcomePage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Rastreador de hidratação — começa a criar hábito agora */}
+          <Card className="border-blue-200/50 bg-blue-50/30 dark:bg-blue-900/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Droplet className="h-5 w-5 text-blue-500" />
+                Comece agora — Rastreador de Hidratação
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Beba 8 copos de água hoje. Toque em cada copo ao beber.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {Array.from({ length: WATER_GOAL }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={handleWaterAdd}
+                    className={cn(
+                      'text-2xl transition-all duration-200 hover:scale-110',
+                      i < waterCount ? 'opacity-100' : 'opacity-20 hover:opacity-40'
+                    )}
+                    title={i < waterCount ? 'Registrado' : 'Clique ao beber'}
+                  >
+                    💧
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                  {waterCount}/{WATER_GOAL} copos hoje
+                </p>
+                {waterCount >= WATER_GOAL && (
+                  <span className="text-xs font-bold text-green-600 bg-green-100 rounded-full px-2 py-0.5">
+                    ✓ Meta atingida!
+                  </span>
+                )}
+              </div>
+              <Progress value={(waterCount / WATER_GOAL) * 100} className="h-1.5" />
+            </CardContent>
+          </Card>
         </div>
       </div>
     );

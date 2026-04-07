@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, Building2 } from 'lucide-react';
+import { Loader2, Mail, Lock, Building2, User, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -98,6 +98,8 @@ const LoginForm: FC = () => {
 const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
+    const [whatsapp, setWhatsapp] = useState('');
     const [isPending, setIsPending] = useState(false);
     const { toast } = useToast();
     const { signUp } = useAuth();
@@ -110,9 +112,9 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
             const roleToAssign = userType === 'patient' ? 'paciente' : 'pendente';
 
             await signUp(email.toLowerCase().trim(), password, {
-                displayName: '', // Será preenchido na ativação
+                displayName: name.trim(),
                 role: roleToAssign,
-                phone: '', // Será preenchido na ativação
+                phone: whatsapp.replace(/\D/g, ''), // Armazena só dígitos
             });
 
         } catch (error: any) {
@@ -122,8 +124,54 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
         }
     };
 
+    // Máscara simples de telefone
+    const handleWhatsappChange = (value: string) => {
+        let v = value.replace(/\D/g, '');
+        if (v.length > 11) v = v.slice(0, 11);
+        if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+        if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
+        setWhatsapp(v);
+    };
+
     return (
         <form onSubmit={handleRegister} className="space-y-4 pt-4">
+            {/* Campos extras apenas para pacientes */}
+            {userType === 'patient' && (
+                <>
+                    <div className="space-y-2">
+                        <Label htmlFor="register-name">Nome Completo</Label>
+                        <div className="relative">
+                            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="register-name"
+                                type="text"
+                                placeholder="Seu nome completo"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                                disabled={isPending}
+                                className="pl-9 h-12 bg-white/50"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="register-whatsapp">WhatsApp</Label>
+                        <div className="relative">
+                            <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                id="register-whatsapp"
+                                type="tel"
+                                placeholder="(11) 99999-9999"
+                                value={whatsapp}
+                                onChange={(e) => handleWhatsappChange(e.target.value)}
+                                required
+                                disabled={isPending}
+                                className="pl-9 h-12 bg-white/50"
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
             <div className="space-y-2">
                 <Label htmlFor="register-email">Email</Label>
                 <div className="relative">
@@ -156,6 +204,11 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
                     />
                 </div>
             </div>
+            {userType === 'patient' && (
+                <p className="text-xs text-muted-foreground text-center">
+                    Sem app para baixar. O Cuidar.me funciona direto no seu WhatsApp.
+                </p>
+            )}
             <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Começar Minha Jornada'}
             </Button>
