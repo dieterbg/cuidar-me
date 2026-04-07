@@ -105,6 +105,38 @@ export async function getScheduledMessagesForPatient(patientId: string): Promise
     return data || [];
 }
 
+export async function getScheduledMessagesToday(): Promise<ScheduledMessage[]> {
+    const supabase = createServiceRoleClient();
+    const now = new Date();
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { data, error } = await supabase
+        .from('scheduled_messages')
+        .select('id, patient_id, patient_whatsapp_number, message_content, send_at, status, source, created_at')
+        .gte('send_at', now.toISOString())
+        .lte('send_at', endOfDay.toISOString())
+        .eq('status', 'pending')
+        .order('send_at', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching today scheduled messages:', error);
+        return [];
+    }
+
+    return (data || []).map((msg: Record<string, any>) => ({
+        id: msg.id,
+        patientId: msg.patient_id,
+        patientWhatsappNumber: msg.patient_whatsapp_number,
+        messageContent: msg.message_content,
+        sendAt: msg.send_at,
+        status: msg.status,
+        source: msg.source,
+        createdAt: msg.created_at,
+        errorInfo: null,
+    }));
+}
+
 export async function updateScheduledMessage(
     messageId: string,
     updates: Partial<ScheduledMessage>

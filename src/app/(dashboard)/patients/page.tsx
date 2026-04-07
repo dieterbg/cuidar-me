@@ -38,6 +38,21 @@ import {
 } from "@/components/ui/select"
 
 
+// Classifica o tipo de alerta pelo texto do motivo (heurística client-side)
+function classifyUrgency(reason?: string | null): 'emergency' | 'question' | 'disengaged' {
+  if (!reason) return 'disengaged';
+  const r = reason.toLowerCase();
+  if (/dor|falta de ar|tont|desmaio|crise|emergên|urgente|socorro|pior|mal/.test(r)) return 'emergency';
+  if (/pergunt|dúvid|como|posso|quando|precis|explica|saber|entend/.test(r)) return 'question';
+  return 'disengaged';
+}
+
+const urgencyConfig = {
+  emergency:  { label: '🔴 Emergência',  className: 'bg-red-100 text-red-700 border border-red-200' },
+  question:   { label: '🟡 Pergunta',    className: 'bg-yellow-100 text-yellow-700 border border-yellow-200' },
+  disengaged: { label: '🟠 Desengajado', className: 'bg-orange-100 text-orange-700 border border-orange-200' },
+} as const;
+
 const riskLevelConfig: { [key in Patient['riskLevel'] & string]: { icon: React.ElementType, color: string, label: string, bg: string } } = {
   low: {
     icon: ShieldCheck,
@@ -115,6 +130,7 @@ export default function PatientsListPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<string>('all');
+  const [selectedRisk, setSelectedRisk] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('attention');
   const [patients, setPatients] = useState<Patient[]>([]);
 
@@ -173,8 +189,12 @@ export default function PatientsListPage() {
       .filter(patient => {
         if (selectedPlan === 'all') return true;
         return patient.subscription.plan === selectedPlan;
+      })
+      .filter(patient => {
+        if (selectedRisk === 'all') return true;
+        return patient.riskLevel === selectedRisk;
       });
-  }, [patients, activeTab, searchTerm, selectedPlan]);
+  }, [patients, activeTab, searchTerm, selectedPlan, selectedRisk]);
 
   const handleSeedDatabase = () => {
     startSeedingTransition(async () => {
@@ -263,9 +283,14 @@ export default function PatientsListPage() {
 
               {patient.attentionRequest ? (
                 <div className="flex-grow mb-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 p-3 rounded-xl">
-                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 mb-1">
-                    <MessageCircleWarning className="h-4 w-4" />
-                    <p className="text-xs font-bold uppercase tracking-wide">Atenção Necessária</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                      <MessageCircleWarning className="h-4 w-4" />
+                      <p className="text-xs font-bold uppercase tracking-wide">Atenção Necessária</p>
+                    </div>
+                    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', urgencyConfig[classifyUrgency(patient.attentionRequest.reason)].className)}>
+                      {urgencyConfig[classifyUrgency(patient.attentionRequest.reason)].label}
+                    </span>
                   </div>
                   <p className="text-sm font-medium text-foreground mb-1">{patient.attentionRequest.reason}</p>
                   <p className="text-xs text-muted-foreground italic line-clamp-2">"{patient.attentionRequest.triggerMessage}"</p>
@@ -355,8 +380,19 @@ export default function PatientsListPage() {
           </TabsList>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            <Select value={selectedRisk} onValueChange={setSelectedRisk}>
+              <SelectTrigger className="w-full sm:w-[160px] bg-background border-border/50 rounded-xl h-10">
+                <SelectValue placeholder="Filtrar por risco" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Riscos</SelectItem>
+                <SelectItem value="high">🔴 Alto Risco</SelectItem>
+                <SelectItem value="medium">🟡 Risco Médio</SelectItem>
+                <SelectItem value="low">🟢 Baixo Risco</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-              <SelectTrigger className="w-full sm:w-[180px] bg-background border-border/50 rounded-xl h-10">
+              <SelectTrigger className="w-full sm:w-[160px] bg-background border-border/50 rounded-xl h-10">
                 <SelectValue placeholder="Filtrar por plano" />
               </SelectTrigger>
               <SelectContent>

@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import { usePatients } from '@/hooks/usePatients';
 import { getProtocols } from '@/ai/actions/protocols';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ClipboardList, Users, UserPlus, Clock, ArrowRight, Activity, AlertCircle, TrendingUp, DollarSign, MessageSquare, Target, Sparkles } from 'lucide-react';
+import { ClipboardList, Users, UserPlus, Clock, ArrowRight, Activity, AlertCircle, TrendingUp, DollarSign, MessageSquare, Target, Sparkles, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCommunityTopics } from '@/ai/actions-extended';
+import { getScheduledMessagesToday } from '@/ai/actions/messages';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -195,6 +196,9 @@ export default function ClinicDashboardPage() {
   });
   const [protocolsLoading, setProtocolsLoading] = useState(true);
   const [communityLoading, setCommunityLoading] = useState(true);
+  const [agendaItems, setAgendaItems] = useState<{ hour: string; count: number; label: string }[]>([]);
+  const [agendaLoading, setAgendaLoading] = useState(true);
+  const [agendaTotal, setAgendaTotal] = useState(0);
 
   useEffect(() => {
     async function fetchProtocolData() {
@@ -236,6 +240,33 @@ export default function ClinicDashboardPage() {
       }
     }
     fetchCommunityData();
+  }, []);
+
+  useEffect(() => {
+    async function fetchAgenda() {
+      try {
+        setAgendaLoading(true);
+        const messages = await getScheduledMessagesToday();
+        setAgendaTotal(messages.length);
+        const grouped = messages.reduce((acc, msg) => {
+          const hour = new Date(msg.sendAt as string).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+          const firstLine = (msg.messageContent || '').split('\n')[0].trim();
+          const existing = acc.find(g => g.hour === hour);
+          if (existing) {
+            existing.count++;
+          } else {
+            acc.push({ hour, count: 1, label: firstLine });
+          }
+          return acc;
+        }, [] as { hour: string; count: number; label: string }[]);
+        setAgendaItems(grouped);
+      } catch (error) {
+        console.error('Failed to fetch agenda', error);
+      } finally {
+        setAgendaLoading(false);
+      }
+    }
+    fetchAgenda();
   }, []);
 
   useEffect(() => {
@@ -371,6 +402,45 @@ export default function ClinicDashboardPage() {
           description="Pacientes seguindo protocolos"
         />
       </div>
+
+      {/* Agenda de Hoje */}
+      <Card className="border-none shadow-lg bg-card/50 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-primary" />
+              Agenda de Hoje
+            </CardTitle>
+            {!agendaLoading && (
+              <span className="text-sm font-semibold text-muted-foreground">
+                {agendaTotal} {agendaTotal === 1 ? 'mensagem pendente' : 'mensagens pendentes'}
+              </span>
+            )}
+          </div>
+          <CardDescription>Mensagens agendadas para as próximas horas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {agendaLoading ? (
+            <div className="flex gap-3">
+              <Skeleton className="h-10 w-32 rounded-xl" />
+              <Skeleton className="h-10 w-32 rounded-xl" />
+              <Skeleton className="h-10 w-32 rounded-xl" />
+            </div>
+          ) : agendaItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">Nenhuma mensagem agendada para hoje. ✅</p>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {agendaItems.map(item => (
+                <div key={item.hour} className="flex items-center gap-2 bg-primary/5 border border-primary/10 rounded-xl px-3 py-2">
+                  <span className="text-sm font-bold text-primary tabular-nums">{item.hour}</span>
+                  <span className="text-xs text-muted-foreground max-w-[140px] truncate">{item.label}</span>
+                  <span className="text-xs font-semibold bg-primary/10 text-primary rounded-full px-2 py-0.5">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Second Row: Revenue + Engagement */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
