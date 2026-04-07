@@ -111,18 +111,83 @@ export default function WelcomePage() {
   // ETAPA 1: Aguardando liberação pela clínica
   if (isPending) {
     return (
-      <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen flex items-center justify-center">
-        <div className="max-w-md text-center space-y-6">
-          <div className="mx-auto w-20 h-20 bg-yellow-100 dark:bg-yellow-900/40 rounded-full flex items-center justify-center">
-            <Sparkles className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen">
+        <div className="max-w-2xl mx-auto space-y-8 pt-8">
+          {/* Status principal */}
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-20 h-20 bg-yellow-100 dark:bg-yellow-900/40 rounded-full flex items-center justify-center">
+              <Sparkles className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Quase lá, {firstName}!</h1>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Seu cadastro foi recebido. A equipe da clínica está preparando seu protocolo personalizado.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Estimativa: até 24 horas úteis. Vamos avisar no WhatsApp assim que tudo estiver pronto.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Cadastro Pendente</h1>
-          <p className="text-muted-foreground">
-            Seu cadastro foi recebido com sucesso! A clínica entrará em contato ou liberará seu acesso em breve.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Você receberá uma notificação assim que sua conta for ativada. Obrigado pela paciência! 🙏
-          </p>
+
+          {/* Conteúdo enquanto espera */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-primary" />
+                Enquanto isso, explore
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Link href="/portal/how-it-works" className="flex items-center gap-3 p-3 rounded-xl bg-background/80 hover:bg-background transition-colors group">
+                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                  <HelpCircle className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">Como funciona o Cuidar.me</p>
+                  <p className="text-xs text-muted-foreground">Entenda o sistema de pontos, níveis e recompensas</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </Link>
+
+              <Link href="/portal/education" className="flex items-center gap-3 p-3 rounded-xl bg-background/80 hover:bg-background transition-colors group">
+                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                  <HeartPulse className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">Conteúdo de Saúde</p>
+                  <p className="text-xs text-muted-foreground">Artigos e dicas selecionadas pela equipe médica</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </Link>
+
+              <Link href="/portal/community" className="flex items-center gap-3 p-3 rounded-xl bg-background/80 hover:bg-background transition-colors group">
+                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">Comunidade</p>
+                  <p className="text-xs text-muted-foreground">Conheça outros pacientes na mesma jornada</p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Perfil incompleto — lembrete gentil */}
+          {!isProfileComplete && (
+            <Card className="border-amber-200/50 bg-amber-50/50 dark:bg-amber-900/10">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-xl">
+                  <Target className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Complete seu perfil de saúde</p>
+                  <p className="text-xs text-amber-700/80 dark:text-amber-300/80">Quanto mais dados, mais personalizado será seu protocolo.</p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="border-amber-200 text-amber-700 hover:bg-amber-100 shrink-0">
+                  <Link href="/portal/profile">Completar</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     );
@@ -154,9 +219,9 @@ export default function WelcomePage() {
                   <Sparkles className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-amber-900 dark:text-amber-100">Perfil Incompleto</h3>
+                  <h3 className="font-bold text-amber-900 dark:text-amber-100">Falta pouco para personalizar seu protocolo</h3>
                   <p className="text-sm text-amber-700/80 dark:text-amber-300/80">
-                    Sua conta está ativa, mas precisamos dos seus dados de saúde para personalizar seu acompanhamento.
+                    Preencha seus dados de saúde para que a equipe médica ajuste seu acompanhamento ao seu perfil.
                   </p>
                 </div>
               </div>
@@ -232,12 +297,12 @@ export default function WelcomePage() {
             <CardContent className="space-y-6 relative z-10 flex-1 flex flex-col justify-center">
               <div>
                 <h3 className="text-3xl font-black text-foreground mb-3 leading-tight">
-                  {isProfileComplete ? "Continue sua Jornada de Habitos" : "Ative seu Prontuario"}
+                  {isProfileComplete ? "Continue sua Jornada de Saúde" : "Ative seu Acompanhamento"}
                 </h3>
                 <p className="text-muted-foreground text-base max-w-sm">
                   {isProfileComplete
-                    ? "Mantenha a consistência! Registre suas ações diárias para subir de nível e ganhar recompensas."
-                    : "Para personalizarmos seu plano de saúde e liberar a evolução, precisamos dos seus dados básicos."}
+                    ? "Cada check-in respondido te aproxima do próximo nível. Consistência transforma hábitos em resultados."
+                    : "Preencha seus dados de saúde para que a equipe personalize seu protocolo e comece seu acompanhamento via WhatsApp."}
                 </p>
               </div>
 

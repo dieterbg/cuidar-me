@@ -111,7 +111,7 @@ export default function PortalProfilePage() {
               Meu Perfil
             </h1>
             <p className="text-muted-foreground mt-2 max-w-xl">
-              Mantenha seus dados atualizados para um acompanhamento personalizado.
+              Seus dados são confidenciais e usados apenas para personalizar seu acompanhamento de saúde.
             </p>
           </div>
 
@@ -127,7 +127,7 @@ export default function PortalProfilePage() {
           <CardHeader>
             <CardTitle>Dados Pessoais & Saúde</CardTitle>
             <CardDescription>
-              Essas informações são confidenciais e usadas apenas pela equipe médica.
+              Preencha com calma — quanto mais completo, melhor seu protocolo será ajustado pela equipe médica.
             </CardDescription>
           </CardHeader>
           <CardContent>

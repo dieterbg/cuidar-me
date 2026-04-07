@@ -157,7 +157,7 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
                 </div>
             </div>
             <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
-                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Criar Conta Gratuita'}
+                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Começar Minha Jornada'}
             </Button>
         </form>
     );
@@ -202,10 +202,10 @@ export default function RootPage() {
                         />
                     </div>
                     <h1 className="text-4xl font-bold tracking-tight text-foreground max-w-lg leading-tight">
-                        Transformando o cuidado com a saúde através da tecnologia e empatia.
+                        Sua saúde acompanhada todos os dias — direto no seu WhatsApp.
                     </h1>
                     <p className="mt-6 text-lg text-muted-foreground max-w-md mx-auto">
-                        Acompanhamento personalizado, protocolos inteligentes e uma equipe dedicada ao seu bem-estar.
+                        Receba check-ins do seu médico, registre seus hábitos em 30 segundos e nunca mais se sinta sozinho entre as consultas.
                     </p>
                 </div>
 
@@ -218,7 +218,7 @@ export default function RootPage() {
                                 </div>
                             ))}
                         </div>
-                        <p>Junte-se a mais de 2.000 pacientes</p>
+                        <p>Programa exclusivo da Clínica Dornelles</p>
                     </div>
                 </div>
 
@@ -263,9 +263,9 @@ export default function RootPage() {
                                     />
                                 </div>
                             </div>
-                            <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo de volta</CardTitle>
+                            <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo ao Cuidar.me</CardTitle>
                             <CardDescription>
-                                Acesse sua conta para gerenciar sua saúde ou acompanhar seus pacientes.
+                                Acesse sua conta ou crie uma para começar seu acompanhamento de saúde.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
