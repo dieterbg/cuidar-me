@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { usePatients } from '@/hooks/usePatients';
 import { getProtocols } from '@/ai/actions/protocols';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ClipboardList, Users, UserPlus, Clock, ArrowRight, Activity, AlertCircle, TrendingUp, DollarSign, MessageSquare, Target, Sparkles, CalendarClock } from 'lucide-react';
+import { ClipboardList, Users, UserPlus, Clock, ArrowRight, Activity, AlertCircle, TrendingUp, DollarSign, MessageSquare, Target, Sparkles, CalendarClock, QrCode, Loader2, Copy, Check } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCommunityTopics } from '@/ai/actions-extended';
@@ -50,6 +55,18 @@ const PLAN_PRICES = {
   vip: 99.90,
 };
 
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  icon: React.ElementType;
+  link?: string;
+  isLoading: boolean;
+  className?: string;
+  description?: string;
+  trend?: { value: number; isPositive: boolean };
+  sparklineData?: number[];
+}
+
 const StatCard = ({
   title,
   value,
@@ -60,17 +77,7 @@ const StatCard = ({
   description,
   trend,
   sparklineData
-}: {
-  title: string;
-  value: number | string;
-  icon: React.ElementType;
-  link?: string;
-  isLoading: boolean;
-  className?: string;
-  description?: string;
-  trend?: { value: number; isPositive: boolean };
-  sparklineData?: number[];
-}) => (
+}: StatCardProps) => (
   <Card className={cn("overflow-hidden relative transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group border-l-4", className)}>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
       <CardTitle className="text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">{title}</CardTitle>
@@ -179,6 +186,54 @@ const DonutChart = ({ data, total }: { data: { plan: string; count: number; perc
 };
 
 export default function ClinicDashboardPage() {
+  const { user, session, patientsUpdateCount } = useAuth();
+  const { toast } = useToast();
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerateInvite = async () => {
+    setIsGeneratingInvite(true);
+    try {
+      const response = await fetch('/api/onboarding/generate-invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify({ plan: 'premium' })
+      });
+
+      const data = await response.json();
+      if (data.inviteUrl) {
+        setInviteLink(data.inviteUrl);
+        setIsInviteModalOpen(true);
+      } else {
+        throw new Error(data.error || 'Erro ao gerar convite');
+      }
+    } catch (err: any) {
+      console.error("Erro ao gerar convite:", err);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao gerar QR Code',
+        description: err.message || 'Ocorreu um erro ao tentar gerar o link de convite.',
+      });
+    } finally {
+      setIsGeneratingInvite(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    toast({
+      title: "Link Copiado!",
+      description: "O link de convite foi copiado para a área de transferência.",
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const { patients, loading: patientsLoading } = usePatients();
   const [stats, setStats] = useState<DashboardStats>({
     attentionCount: 0,
@@ -361,6 +416,65 @@ export default function ClinicDashboardPage() {
           <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Visão Geral</h2>
           <p className="text-muted-foreground">Acompanhe o desempenho da sua clínica em tempo real.</p>
         </div>
+        
+        <Button 
+          onClick={handleGenerateInvite} 
+          disabled={isGeneratingInvite}
+          className="bg-white text-[#899d5e] hover:bg-[#899d5e] hover:text-white border-2 border-[#899d5e]/20 hover:border-[#899d5e] font-bold rounded-2xl px-6 h-12 shadow-sm transition-all flex items-center gap-2 group"
+        >
+          {isGeneratingInvite ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <QrCode className="h-5 w-5 transition-transform group-hover:scale-110" />
+          )}
+          <span>Código QR da Clínica</span>
+        </Button>
+
+        <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+          <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-[#899d5e]">
+                <QrCode className="h-6 w-6" />
+                QR Code da Clínica
+              </DialogTitle>
+              <DialogDescription className="text-base text-muted-foreground font-medium">
+                Apresente este código para que o paciente seja ativado automaticamente na sua clínica.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="flex flex-col items-center justify-center p-6 space-y-6">
+              <div className="bg-white p-6 rounded-3xl shadow-xl shadow-[#899d5e]/10 border border-[#899d5e]/10">
+                <QRCodeSVG 
+                  value={inviteLink} 
+                  size={220}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+
+              <div className="w-full space-y-3">
+                <div className="flex items-center gap-2 p-4 bg-muted/40 rounded-2xl border border-border/50">
+                  <Input 
+                    value={inviteLink} 
+                    readOnly 
+                    className="bg-transparent border-none focus-visible:ring-0 text-sm font-medium"
+                  />
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    onClick={copyToClipboard}
+                    className="shrink-0 hover:bg-white/50 rounded-xl"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-center text-muted-foreground font-medium">
+                  O link expira em 24 horas por segurança.
+                </p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Top Stats Row */}
