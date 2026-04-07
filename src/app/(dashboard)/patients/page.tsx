@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
@@ -160,6 +160,11 @@ export default function PatientsListPage() {
       .filter(patient => {
         if (activeTab === 'attention') return patient.needsAttention && patient.status !== 'pending';
         if (activeTab === 'pending') return patient.status === 'pending';
+        if (activeTab === 'inactive') {
+          const threeDaysAgo = subDays(new Date(), 3);
+          return patient.status === 'active' &&
+            (!patient.lastMessageTimestamp || new Date(patient.lastMessageTimestamp as string) < threeDaysAgo);
+        }
         return true; // 'all' tab
       })
       .filter(patient =>
@@ -192,12 +197,20 @@ export default function PatientsListPage() {
 
   const attentionCount = useMemo(() => patients.filter(p => p.needsAttention && p.status !== 'pending').length, [patients]);
   const pendingCount = useMemo(() => patients.filter(p => p.status === 'pending').length, [patients]);
+  const inactiveCount = useMemo(() => {
+    const threeDaysAgo = subDays(new Date(), 3);
+    return patients.filter(p =>
+      p.status === 'active' &&
+      (!p.lastMessageTimestamp || new Date(p.lastMessageTimestamp as string) < threeDaysAgo)
+    ).length;
+  }, [patients]);
 
   const PatientList = ({ list }: { list: Patient[] }) => {
     if (list.length === 0) {
       const messages = {
         attention: 'Nenhum paciente precisando de atenção no momento.',
         pending: 'Nenhum paciente com cadastro pendente.',
+        inactive: 'Nenhum paciente inativo. Ótimo engajamento! 🎉',
         all: 'Nenhum paciente encontrado.',
       };
       return (
@@ -333,6 +346,10 @@ export default function PatientsListPage() {
             <TabsTrigger value="pending" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
               Pendentes
               {pendingCount > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-white/20 text-white">{pendingCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="inactive" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
+              Inativos
+              {inactiveCount > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5">{inactiveCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="all" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">Todos</TabsTrigger>
           </TabsList>

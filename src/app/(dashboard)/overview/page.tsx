@@ -7,8 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ClipboardList, Users, UserPlus, Clock, ArrowRight, Activity, AlertCircle, TrendingUp, DollarSign, MessageSquare, Target, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getCommunityTopics } from '@/ai/actions-extended';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -193,9 +194,7 @@ export default function ClinicDashboardPage() {
     },
   });
   const [protocolsLoading, setProtocolsLoading] = useState(true);
-
-  // Simulated sparkline data (últimos 30 dias)
-  const sparklineData = [45, 52, 48, 61, 68, 70, 73];
+  const [communityLoading, setCommunityLoading] = useState(true);
 
   useEffect(() => {
     async function fetchProtocolData() {
@@ -210,6 +209,33 @@ export default function ClinicDashboardPage() {
       }
     }
     fetchProtocolData();
+  }, []);
+
+  useEffect(() => {
+    async function fetchCommunityData() {
+      try {
+        setCommunityLoading(true);
+        const topics = await getCommunityTopics();
+        const today = new Date().toDateString();
+        const newTopicsToday = topics.filter(t =>
+          new Date(t.timestamp as string).toDateString() === today
+        ).length;
+        const totalComments = topics.reduce((sum, t) => sum + (t.commentCount || 0), 0);
+        setStats(prev => ({
+          ...prev,
+          communityStats: {
+            ...prev.communityStats,
+            newTopicsToday,
+            totalReactions: totalComments,
+          },
+        }));
+      } catch (error) {
+        console.error('Failed to fetch community data', error);
+      } finally {
+        setCommunityLoading(false);
+      }
+    }
+    fetchCommunityData();
   }, []);
 
   useEffect(() => {
@@ -235,18 +261,30 @@ export default function ClinicDashboardPage() {
         return acc;
       }, [] as { plan: string; count: number; revenue: number }[]);
 
-      // Mock: Pacientes em protocolo ativo
-      const patientsInProtocol = Math.floor(activePatients * 0.6);
+      // Real: pacientes premium/vip ativos = pacientes em protocolo
+      const patientsInProtocol = patients.filter(p =>
+        p.status === 'active' && p.subscription.plan !== 'freemium'
+      ).length;
 
-      // Mock: Aderência aos protocolos
-      const protocolAdherence = 78;
+      // Real: aderência = pacientes em protocolo que responderam nos últimos 7 dias
+      const sevenDaysAgo = subDays(new Date(), 7);
+      const engagedInProtocol = patients.filter(p =>
+        p.status === 'active' &&
+        p.subscription.plan !== 'freemium' &&
+        p.lastMessageTimestamp &&
+        new Date(p.lastMessageTimestamp as string) > sevenDaysAgo
+      ).length;
+      const protocolAdherence = patientsInProtocol > 0
+        ? Math.round((engagedInProtocol / patientsInProtocol) * 100)
+        : 0;
 
-      // Mock: Estatísticas da comunidade
-      const communityStats = {
-        newTopicsToday: 3,
-        totalReactions: 127,
-        participationRate: 34,
-      };
+      // Real: participação na comunidade (pacientes com username cadastrado)
+      const communityParticipants = patients.filter(p =>
+        p.status === 'active' && p.communityUsername
+      ).length;
+      const participationRate = activePatients > 0
+        ? Math.round((communityParticipants / activePatients) * 100)
+        : 0;
 
       setStats(prev => ({
         ...prev,
@@ -256,7 +294,10 @@ export default function ClinicDashboardPage() {
         planDistribution: planDist,
         patientsInProtocol,
         protocolAdherence,
-        communityStats,
+        communityStats: {
+          ...prev.communityStats, // preserva newTopicsToday/totalReactions do fetch de comunidade
+          participationRate,
+        },
       }));
     }
   }, [patients, patientsLoading]);
@@ -319,8 +360,6 @@ export default function ClinicDashboardPage() {
           isLoading={isLoading}
           className="bg-green-50/50 dark:bg-green-950/20 border-green-200/50 dark:border-green-800/50"
           description="Em acompanhamento regular"
-          trend={{ value: 12, isPositive: true }}
-          sparklineData={sparklineData}
         />
         <StatCard
           title="Em Protocolo Ativo"
@@ -422,7 +461,7 @@ export default function ClinicDashboardPage() {
             <CardDescription>Atividade e engajamento</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {isLoading || communityLoading ? (
               <Skeleton className="h-20 w-full" />
             ) : (
               <div className="space-y-3">
@@ -431,7 +470,7 @@ export default function ClinicDashboardPage() {
                   <span className="text-lg font-bold">{stats.communityStats.newTopicsToday}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Reações</span>
+                  <span className="text-sm text-muted-foreground">Comentários</span>
                   <span className="text-lg font-bold">{stats.communityStats.totalReactions}</span>
                 </div>
                 <div>
