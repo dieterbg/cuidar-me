@@ -170,8 +170,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       // Verificar se há convite pré-aprovado na metadata do usuário
       const invitePreApproved = user.user_metadata?.invite_pre_approved === true;
       const invitePlan = user.user_metadata?.invite_plan || 'freemium';
-      const patientStatus = invitePreApproved ? 'active' : 'pending';
       const patientPlan = invitePreApproved ? invitePlan : 'freemium';
+      // Freemium = ativa direto (só vê conteúdo/comunidade, sem risco clínico)
+      // Premium/VIP com convite = ativa direto (médico já decidiu na consulta)
+      // Premium/VIP sem convite = não deveria acontecer (default é freemium)
+      const patientStatus = (patientPlan === 'freemium' || invitePreApproved) ? 'active' : 'pending';
 
       const result = await createPatientRecord({
         userId: user.id,

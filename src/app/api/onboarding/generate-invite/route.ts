@@ -36,7 +36,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/paciente?invite=${data.token}`;
+        // Construir URL absoluta — necessário para QR Codes funcionarem no celular
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+            || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+            || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
+            || 'https://cuidar.me';
+
+        const inviteUrl = `${baseUrl}/paciente?invite=${data.token}`;
         return NextResponse.json({ token: data.token, inviteUrl });
     } catch (err: any) {
         console.error('Unexpected error in generate-invite:', err);
