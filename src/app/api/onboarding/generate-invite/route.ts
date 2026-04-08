@@ -1,21 +1,32 @@
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
     try {
         const supabase = createServiceRoleClient();
-        const { plan } = await req.json(); // 'freemium' | 'evolucao' | 'fundamentos' | 'performance'
+        const { plan } = await req.json();
 
-        // Get the authenticated user (admin)
-        const { data: { user }, error: authError } = await supabase.auth.getUser(
-            req.headers.get('Authorization')?.split('Bearer ')[1] || ''
-        );
+        // Verificar identidade do admin usando o JWT do header
+        const accessToken = req.headers.get('Authorization')?.split('Bearer ')[1];
+        let createdBy: string | null = null;
+
+        if (accessToken) {
+            // Criar client temporário com o token do usuário para verificar identidade
+            const userClient = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+            );
+            const { data: { user } } = await userClient.auth.getUser();
+            createdBy = user?.id || null;
+        }
 
         const { data, error } = await supabase
             .from('invite_tokens')
             .insert({
                 plan: plan || 'freemium',
-                created_by: user?.id
+                created_by: createdBy,
             })
             .select('token')
             .single();

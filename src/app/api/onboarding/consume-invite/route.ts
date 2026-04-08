@@ -34,20 +34,40 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Erro ao processar convite' }, { status: 500 });
         }
 
-        // 3. Update patient record to 'active'
-        // If the record doesn't exist yet, it's okay because the patient 
-        // will link it during their first login. But usually, 
-        // we want to pre-approve it here if it exists.
+        // 3. Salvar no profile que este usuário tem um convite pré-aprovado
+        // O portal/layout.tsx vai ler isso ao criar o registro de paciente
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+                invite_plan: invite.plan,
+                invite_pre_approved: true,
+            })
+            .eq('id', userId);
+
+        if (profileError) {
+            // Se as colunas não existem, tenta via auth metadata (fallback seguro)
+            console.warn('Could not update profile with invite data (columns may not exist):', profileError.message);
+
+            // Fallback: atualizar auth user metadata
+            await supabase.auth.admin.updateUserById(userId, {
+                user_metadata: {
+                    invite_plan: invite.plan,
+                    invite_pre_approved: true,
+                }
+            });
+        }
+
+        // 4. Tentar atualizar paciente se já existir (raro neste timing, mas seguro)
         const { error: patientUpdateError } = await supabase
             .from('patients')
-            .update({ 
+            .update({
                 status: 'active',
-                plan: invite.plan // Ensure plan is applied
+                plan: invite.plan,
             })
             .eq('user_id', userId);
 
         if (patientUpdateError) {
-            console.log('Patient record not found for user_id yet, will be activated on login.');
+            console.log('[consume-invite] Patient record not found yet — invite_pre_approved saved in profile/metadata for later.');
         }
 
         return NextResponse.json({ success: true, plan: invite.plan });

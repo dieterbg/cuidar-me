@@ -167,12 +167,18 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     setIsCreatingPatient(true);
 
     try {
+      // Verificar se há convite pré-aprovado na metadata do usuário
+      const invitePreApproved = user.user_metadata?.invite_pre_approved === true;
+      const invitePlan = user.user_metadata?.invite_plan || 'freemium';
+      const patientStatus = invitePreApproved ? 'active' : 'pending';
+      const patientPlan = invitePreApproved ? invitePlan : 'freemium';
+
       const result = await createPatientRecord({
         userId: user.id,
         email: user.email || '',
         fullName: activationName,
         whatsappNumber: activationPhone,
-        status: 'pending',
+        status: patientStatus,
       });
 
       if (!result.success) {
@@ -186,17 +192,21 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         email: user.email || '',
         fullName: activationName,
         phone: activationPhone,
-        status: 'pending',
+        status: patientStatus,
         gamification: {
-          level: 1, // Novo usuário começa no nível 1
+          level: 1,
           totalPoints: 0,
           badges: [],
           weeklyProgress: { weekStartDate: new Date(), perspectives: {} as any }
         },
-        subscription: { plan: 'freemium', priority: 1 }
+        subscription: { plan: patientPlan, priority: 1 }
       } as any);
 
-      toast({ title: "Conta Ativada!", description: "Bem-vindo ao portal!" });
+      if (invitePreApproved) {
+        toast({ title: "Conta Ativada!", description: "Convite aceito — seu protocolo será iniciado em breve!" });
+      } else {
+        toast({ title: "Conta Criada!", description: "A clínica liberará seu acesso em breve." });
+      }
       // router.push('/portal/welcome'); // No need to push if we update state, layout will render children
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erro", description: error.message });
