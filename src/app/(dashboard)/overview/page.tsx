@@ -202,7 +202,7 @@ export default function ClinicDashboardPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token || ''}`
         },
-        body: JSON.stringify({ plan: 'premium' })
+        body: JSON.stringify({ plan: 'freemium' }) // QR de recepção = freemium (walk-in)
       });
 
       const data = await response.json();
@@ -469,7 +469,7 @@ export default function ClinicDashboardPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-center text-muted-foreground font-medium">
-                  O link expira em 24 horas por segurança.
+                  O link expira em 48 horas por segurança.
                 </p>
               </div>
             </div>

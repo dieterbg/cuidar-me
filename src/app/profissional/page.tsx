@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, Building2, User, Phone } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, Mail, Lock, LayoutDashboard, Users, ClipboardList, TrendingUp } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -23,7 +23,7 @@ const handleAuthError = (error: any, toast: any) => {
             description = "Email ou senha incorretos. Verifique e tente novamente.";
         } else if (error.message.includes("Email not confirmed")) {
             title = "Email não confirmado";
-            description = "Por favor, verifique seu email para confirmar sua conta antes de fazer login.";
+            description = "Confirme seu email antes de fazer login.";
         } else if (error.message.includes("User already registered")) {
             title = "Email já cadastrado";
             description = "Este email já possui uma conta. Tente fazer login.";
@@ -36,7 +36,7 @@ const handleAuthError = (error: any, toast: any) => {
     toast({ variant: "destructive", title, description });
 };
 
-const LoginForm: FC = () => {
+const StaffLoginForm: FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isPending, setIsPending] = useState(false);
@@ -58,13 +58,13 @@ const LoginForm: FC = () => {
     return (
         <form onSubmit={handleLogin} className="space-y-4 pt-4">
             <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
+                <Label htmlFor="login-email">Email profissional</Label>
                 <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                         id="login-email"
                         type="email"
-                        placeholder="seu@email.com"
+                        placeholder="voce@clinica.com.br"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -88,8 +88,12 @@ const LoginForm: FC = () => {
                     />
                 </div>
             </div>
-            <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
-                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar na Plataforma'}
+            <Button
+                type="submit"
+                className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5"
+                disabled={isPending}
+            >
+                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Acessar Painel'}
             </Button>
 
             <div className="relative my-4">
@@ -134,28 +138,25 @@ const LoginForm: FC = () => {
     );
 };
 
-const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
+const StaffRegisterForm: FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [whatsapp, setWhatsapp] = useState('');
     const [isPending, setIsPending] = useState(false);
     const { toast } = useToast();
     const { signUp, signInWithGoogle, signInWithLinkedIn } = useAuth();
 
     const handleRegister = async (e: FormEvent) => {
         e.preventDefault();
-
         setIsPending(true);
         try {
-            const roleToAssign = userType === 'patient' ? 'paciente' : 'pendente';
-
             await signUp(email.toLowerCase().trim(), password, {
-                displayName: name.trim(),
-                role: roleToAssign,
-                phone: whatsapp.replace(/\D/g, ''), // Armazena só dígitos
+                displayName: '',
+                role: 'pendente', // Aguarda aprovação do admin
             });
-
+            toast({
+                title: "Solicitação enviada",
+                description: "Um administrador irá aprovar seu acesso em breve.",
+            });
         } catch (error: any) {
             handleAuthError(error, toast);
         } finally {
@@ -163,62 +164,16 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
         }
     };
 
-    // Máscara simples de telefone
-    const handleWhatsappChange = (value: string) => {
-        let v = value.replace(/\D/g, '');
-        if (v.length > 11) v = v.slice(0, 11);
-        if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-        if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
-        setWhatsapp(v);
-    };
-
     return (
         <form onSubmit={handleRegister} className="space-y-4 pt-4">
-            {/* Campos extras apenas para pacientes */}
-            {userType === 'patient' && (
-                <>
-                    <div className="space-y-2">
-                        <Label htmlFor="register-name">Nome Completo</Label>
-                        <div className="relative">
-                            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                id="register-name"
-                                type="text"
-                                placeholder="Seu nome completo"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                                disabled={isPending}
-                                className="pl-9 h-12 bg-white/50"
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="register-whatsapp">WhatsApp</Label>
-                        <div className="relative">
-                            <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                id="register-whatsapp"
-                                type="tel"
-                                placeholder="(11) 99999-9999"
-                                value={whatsapp}
-                                onChange={(e) => handleWhatsappChange(e.target.value)}
-                                required
-                                disabled={isPending}
-                                className="pl-9 h-12 bg-white/50"
-                            />
-                        </div>
-                    </div>
-                </>
-            )}
             <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
+                <Label htmlFor="register-email">Email profissional</Label>
                 <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                         id="register-email"
                         type="email"
-                        placeholder="seu@email.com"
+                        placeholder="voce@clinica.com.br"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -243,13 +198,15 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
                     />
                 </div>
             </div>
-            {userType === 'patient' && (
-                <p className="text-xs text-muted-foreground text-center">
-                    Sem app para baixar. O Cuidar.me funciona direto no seu WhatsApp.
-                </p>
-            )}
-            <Button type="submit" className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5" disabled={isPending}>
-                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Começar Minha Jornada'}
+            <p className="text-xs text-muted-foreground text-center">
+                O acesso ao painel requer aprovação do administrador da clínica.
+            </p>
+            <Button
+                type="submit"
+                className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5"
+                disabled={isPending}
+            >
+                {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Solicitar Acesso'}
             </Button>
 
             <div className="relative my-4">
@@ -294,25 +251,21 @@ const RegisterForm: FC<{ userType: 'staff' | 'patient' }> = ({ userType }) => {
     );
 };
 
-function RootPageContent() {
+const features = [
+    { icon: LayoutDashboard, label: 'Painel unificado', desc: 'Todos os pacientes em uma visão só' },
+    { icon: Users, label: 'Gestão de pacientes', desc: 'Histórico, planos e protocolos' },
+    { icon: ClipboardList, label: 'Protocolos clínicos', desc: 'Programas de 90 dias estruturados' },
+    { icon: TrendingUp, label: 'Métricas de engajamento', desc: 'Aderência e progresso em tempo real' },
+];
+
+function ProfissionalPageContent() {
     const { user, profile, loading } = useAuth();
     const router = useRouter();
-    const searchParams = useSearchParams();
-
-    useEffect(() => {
-        const inviteToken = searchParams.get('invite');
-        if (inviteToken) {
-            console.log('Capture-invite: Found token in URL:', inviteToken);
-            sessionStorage.setItem('pendingInvite', inviteToken);
-        }
-    }, [searchParams]);
 
     useEffect(() => {
         if (!loading && user && profile) {
             if (profile.role === 'paciente') {
                 router.replace('/portal/welcome');
-            } else if (profile.role === 'pendente') {
-                router.replace('/dashboard');
             } else {
                 router.replace('/overview');
             }
@@ -329,7 +282,7 @@ function RootPageContent() {
 
     return (
         <div className="flex min-h-screen bg-background">
-            {/* Left Side - Hero/Branding */}
+            {/* Left Side — Clinic Branding */}
             <div className="hidden lg:flex lg:w-1/2 bg-[#F9FAF6] relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-[#EBECE8]">
                 <div className="relative z-10 flex flex-col items-center">
                     <div className="relative h-72 w-full max-w-[50rem] mb-12">
@@ -342,24 +295,23 @@ function RootPageContent() {
                         />
                     </div>
                     <h1 className="text-4xl font-bold tracking-tight text-foreground max-w-lg leading-tight">
-                        Sua saúde acompanhada todos os dias — direto no seu WhatsApp.
+                        Gerencie seus pacientes com inteligência clínica.
                     </h1>
                     <p className="mt-6 text-lg text-muted-foreground max-w-md mx-auto">
-                        Receba check-ins do seu médico, registre seus hábitos em 30 segundos e nunca mais se sinta sozinho entre as consultas.
+                        Acompanhe protocolos, engajamento e resultados de toda a sua base — em tempo real, sem planilhas.
                     </p>
                 </div>
 
-                <div className="relative z-10 mt-12">
-                    <div className="flex flex-col items-center gap-4 text-sm font-medium text-muted-foreground">
-                        <div className="flex -space-x-3">
-                            {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="h-12 w-12 rounded-full border-4 border-[#F9FAF6] bg-muted flex items-center justify-center text-xs overflow-hidden shadow-sm">
-                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`} alt="Avatar" width={48} height={48} className="h-full w-full object-cover" />
-                                </div>
-                            ))}
+                <div className="relative z-10 mt-12 grid grid-cols-2 gap-4 w-full max-w-sm">
+                    {features.map(({ icon: Icon, label, desc }) => (
+                        <div key={label} className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white/60 border border-[#899d5e]/10 text-left">
+                            <div className="p-2 rounded-xl bg-[#899d5e]/10">
+                                <Icon className="h-4 w-4 text-[#899d5e]" />
+                            </div>
+                            <p className="text-sm font-semibold text-foreground">{label}</p>
+                            <p className="text-xs text-muted-foreground">{desc}</p>
                         </div>
-                        <p>Programa exclusivo da Clínica Dornelles</p>
-                    </div>
+                    ))}
                 </div>
 
                 {/* Abstract Background Shapes */}
@@ -367,7 +319,7 @@ function RootPageContent() {
                 <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-[#899d5e]/5 rounded-full blur-3xl" />
             </div>
 
-            {/* Right Side - Auth Forms */}
+            {/* Right Side — Auth Forms */}
             <div className="flex-1 flex flex-col bg-white">
                 <div className="flex justify-end p-4 lg:p-6">
                     <Link
@@ -389,49 +341,48 @@ function RootPageContent() {
                         </svg>
                     </Link>
                 </div>
+
                 <div className="flex-1 flex items-center justify-center p-4 lg:p-8 lg:pt-0">
                     <div className="w-full max-w-md space-y-6">
-                    <Card className="w-full border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
-                        <CardHeader className="text-center lg:text-left space-y-1 pb-2">
-                            <div className="lg:hidden flex justify-center mb-6">
-                                <div className="relative h-48 w-full max-w-[20rem]">
-                                    <Image
-                                        src="/logo_v2.svg"
-                                        alt="Cuidar.me Logo"
-                                        fill
-                                        className="object-contain"
-                                        priority
-                                    />
+                        <Card className="border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
+                            <CardHeader className="text-center lg:text-left space-y-1 pb-2">
+                                <div className="lg:hidden flex justify-center mb-6">
+                                    <div className="relative h-48 w-full max-w-[20rem]">
+                                        <Image
+                                            src="/logo_v2.svg"
+                                            alt="Cuidar.me Logo"
+                                            fill
+                                            className="object-contain"
+                                            priority
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                            <CardTitle className="text-2xl font-bold text-[#899d5e]">Bem-vindo ao Cuidar.me</CardTitle>
-                            <CardDescription>
-                                Acesse sua conta ou crie uma para começar seu acompanhamento de saúde.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Tabs defaultValue="login" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl bg-muted/30 p-1">
-                                    <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Entrar</TabsTrigger>
-                                    <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Criar Conta</TabsTrigger>
-                                </TabsList>
+                                <CardTitle className="text-2xl font-bold text-[#899d5e]">Acesso para Profissionais</CardTitle>
+                                <CardDescription>
+                                    Entre com sua conta da clínica ou solicite acesso ao administrador.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Tabs defaultValue="login" className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl bg-muted/30 p-1">
+                                        <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Entrar</TabsTrigger>
+                                        <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Solicitar Acesso</TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="login" className="mt-0">
+                                        <StaffLoginForm />
+                                    </TabsContent>
+                                    <TabsContent value="register" className="mt-0">
+                                        <StaffRegisterForm />
+                                    </TabsContent>
+                                </Tabs>
+                            </CardContent>
+                        </Card>
 
-                                <TabsContent value="login" className="mt-0">
-                                    <LoginForm />
-                                </TabsContent>
-
-                                <TabsContent value="register" className="mt-0">
-                                    <RegisterForm userType="patient" />
-                                </TabsContent>
-                            </Tabs>
-                        </CardContent>
-                    </Card>
-
-                        {/* Link para profissionais */}
+                        {/* Link para pacientes */}
                         <p className="text-center text-sm text-muted-foreground">
-                            É profissional de saúde?{' '}
-                            <Link href="/profissional" className="font-medium text-[#899d5e] hover:underline underline-offset-4">
-                                Acesse o painel da clínica
+                            É paciente?{' '}
+                            <Link href="/paciente" className="font-medium text-[#899d5e] hover:underline underline-offset-4">
+                                Acesse sua área aqui
                             </Link>
                         </p>
                     </div>
@@ -441,14 +392,14 @@ function RootPageContent() {
     );
 }
 
-export default function RootPage() {
+export default function ProfissionalPage() {
     return (
         <Suspense fallback={
             <div className="flex h-screen items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-[#899d5e]" />
             </div>
         }>
-            <RootPageContent />
+            <ProfissionalPageContent />
         </Suspense>
     );
 }
