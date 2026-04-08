@@ -27,7 +27,6 @@ export interface AuthContextType {
   signUp: (email: string, password: string, metadata: { displayName: string; role: UserRole; phone?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signInWithLinkedIn: () => Promise<void>;
   triggerPatientsUpdate: () => void;
   patientsUpdateCount: number;
 }
@@ -221,26 +220,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: 'Erro ao entrar com Google',
         description: error.message
       });
-      throw error;
-    }
-  };
-
-  const signInWithLinkedIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'linkedin_oidc' as any,
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`
-      }
-    });
-
-    if (error) {
-      console.error('LinkedIn sign in error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao entrar com LinkedIn',
-        description: error.message
-      });
-      throw error;
     }
   };
 
@@ -255,7 +234,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signOut,
         signInWithGoogle,
-        signInWithLinkedIn,
         triggerPatientsUpdate,
         patientsUpdateCount,
       }}
