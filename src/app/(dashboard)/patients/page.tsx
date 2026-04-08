@@ -531,20 +531,23 @@ export default function PatientsListPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <p className="text-sm font-medium text-muted-foreground">Protocolo:</p>
+                <p className="text-sm font-medium text-muted-foreground">Plano:</p>
                 <div className="flex-1">
                   <Select value={invitePlan} onValueChange={setInvitePlan}>
                     <SelectTrigger className="h-9 rounded-lg">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="freemium">Freemium</SelectItem>
-                      <SelectItem value="premium">Premium (Evolução)</SelectItem>
-                      <SelectItem value="vip">VIP (Performance)</SelectItem>
+                      <SelectItem value="freemium">Freemium (sem protocolo)</SelectItem>
+                      <SelectItem value="premium">Premium (Fundamentos ou Evolução)</SelectItem>
+                      <SelectItem value="vip">VIP (todos os protocolos)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                O protocolo específico é atribuído após a ativação, no perfil do paciente.
+              </p>
             </div>
           </div>
         </DialogContent>
