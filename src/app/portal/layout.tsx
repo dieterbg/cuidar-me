@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -43,6 +43,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
   const [activationName, setActivationName] = useState('');
   const [activationPhone, setActivationPhone] = useState('');
+  const autoCreateAttempted = useRef(false); // evita dupla chamada no StrictMode
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,15 +58,24 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     }
   }, [user, profile, authLoading, router]);
 
-  // Pré-preencher form de ativação com dados coletados no cadastro (se disponíveis)
+  // Se o perfil já tem nome + telefone (ex: cadastro via QR code), cria o
+  // registro de paciente automaticamente sem mostrar o formulário de ativação.
+  // Se faltar algum dado, pré-preenche o que tiver e exibe o form normalmente.
   useEffect(() => {
-    if (profile && !patient && !isStatusLoading) {
-      if (profile.display_name && !activationName) {
-        setActivationName(profile.display_name);
-      }
-      if (profile.phone && !activationPhone) {
-        // Aplicar máscara ao número armazenado (só dígitos)
-        let v = profile.phone.replace(/\D/g, '');
+    if (!profile || patient || isStatusLoading || autoCreateAttempted.current) return;
+
+    const name = profile.display_name?.trim();
+    const rawPhone = profile.phone?.replace(/\D/g, '');
+
+    if (name && rawPhone) {
+      // Dados completos — criação silenciosa, sem form
+      autoCreateAttempted.current = true;
+      autoCreatePatient(name, rawPhone);
+    } else {
+      // Dados incompletos — pré-preenche o que tiver e exibe o form
+      if (name && !activationName) setActivationName(name);
+      if (rawPhone && !activationPhone) {
+        let v = rawPhone;
         if (v.length > 11) v = v.slice(0, 11);
         if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
         if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
@@ -146,6 +156,49 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     }
   }, [user]);
 
+  // Criação automática quando perfil já tem nome + telefone do cadastro
+  const autoCreatePatient = async (name: string, rawPhone: string) => {
+    if (!user) return;
+    setIsCreatingPatient(true);
+    try {
+      const invitePreApproved = user.user_metadata?.invite_pre_approved === true;
+      const invitePlan = user.user_metadata?.invite_plan || 'freemium';
+      const patientPlan = invitePreApproved ? invitePlan : 'freemium';
+      const patientStatus = (patientPlan === 'freemium' || invitePreApproved) ? 'active' : 'pending';
+
+      const result = await createPatientRecord({
+        userId: user.id,
+        email: user.email || '',
+        fullName: name,
+        whatsappNumber: rawPhone,
+        status: patientStatus,
+      });
+
+      if (!result.success) throw new Error(result.error || 'Erro ao criar registro');
+
+      setPatient({
+        id: result.patientId || 'temp-id',
+        userId: user.id,
+        email: user.email || '',
+        fullName: name,
+        phone: rawPhone,
+        status: patientStatus,
+        gamification: { level: 1, totalPoints: 0, badges: [], weeklyProgress: { weekStartDate: new Date(), perspectives: {} as any } },
+        subscription: { plan: patientPlan, priority: 1 }
+      } as any);
+    } catch (error: any) {
+      console.error('[autoCreatePatient]', error);
+      // Fallback: exibe form manual com os dados que temos
+      setActivationName(name);
+      let v = rawPhone;
+      if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+      if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
+      setActivationPhone(v);
+    } finally {
+      setIsCreatingPatient(false);
+    }
+  };
+
   const createPatientDocument = async () => {
     if (!user) {
       console.error("createPatientDocument called but user is null");
@@ -219,7 +272,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   };
 
   // Se estiver redirecionando ou carregando, não renderize nada que dependa de 'patient'
-  if (authLoading || isStatusLoading || (profile && profile.role !== 'paciente')) {
+  if (authLoading || isStatusLoading || isCreatingPatient || (profile && profile.role !== 'paciente')) {
     return <div className="flex h-screen items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   }
 
