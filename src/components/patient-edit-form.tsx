@@ -204,23 +204,19 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
           }
         }
 
-        // Notificar paciente já ativo quando admin faz upgrade de plano + atribui protocolo
-        const isPlanUpgrade =
-          isAdminContext &&
-          patient.status === 'active' &&
-          patient.subscription.plan === 'freemium' &&
-          (values.plan === 'premium' || values.plan === 'vip') &&
-          !!values.protocolId;
-
-        // Também notifica se era premium/vip e o protocolo mudou (primeira atribuição ou troca)
-        const isProtocolChange =
+        // Notificar paciente já ativo quando plano ou protocolo muda para premium/vip
+        // Cobre: freemium→premium, freemium→vip, premium→vip, troca de protocolo
+        const shouldNotifyUpgrade =
           isAdminContext &&
           patient.status === 'active' &&
           (values.plan === 'premium' || values.plan === 'vip') &&
           !!values.protocolId &&
-          values.protocolId !== patient.protocol?.protocolId;
+          (
+            values.plan !== patient.subscription.plan ||
+            values.protocolId !== patient.protocol?.protocolId
+          );
 
-        if (isPlanUpgrade || isProtocolChange) {
+        if (shouldNotifyUpgrade) {
           const assignedProtocol = protocols.find(p => p.id === values.protocolId);
           const protocolName = assignedProtocol?.name || values.protocolId;
 
