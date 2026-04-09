@@ -72,6 +72,24 @@ export async function POST(request: NextRequest) {
         const { addMessage } = await import('@/ai/actions/messages');
         await addMessage(patientId, { sender: 'system', text: message });
 
+        // Marcar onboarding como concluído e atualizar o plano.
+        // O admin atribuiu um protocolo explicitamente — o onboarding WhatsApp
+        // é considerado superado, independentemente de o paciente ter respondido "Sim".
+        const { error: onbErr } = await supabase
+            .from('onboarding_states')
+            .update({
+                plan: newPlan,
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .eq('patient_id', patientId)
+            .is('completed_at', null); // só atualiza se ainda não estava completo
+
+        if (onbErr) {
+            // Não é crítico — loga mas não falha o request
+            console.warn('[notify-plan-upgrade] Aviso ao atualizar onboarding_states:', onbErr.message);
+        }
+
         return NextResponse.json({ success: true, message: 'Notificação enviada com sucesso' });
     } catch (error: any) {
         console.error('[notify-plan-upgrade] Error:', error);

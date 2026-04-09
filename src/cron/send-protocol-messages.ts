@@ -195,6 +195,30 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                         status: 'pending'
                     });
 
+                // Conceder 300 pontos + badge de conclusão de protocolo
+                try {
+                    const { data: patientRow } = await supabase
+                        .from('patients')
+                        .select('total_points, badges')
+                        .eq('id', patientProtocol.patient.id)
+                        .single();
+
+                    if (patientRow) {
+                        const currentBadges: any[] = patientRow.badges || [];
+                        const hasBadge = currentBadges.some((b: any) => b.id === 'protocol_complete');
+                        await supabase.from('patients').update({
+                            total_points: (patientRow.total_points || 0) + 300,
+                            badges: hasBadge ? currentBadges : [
+                                ...currentBadges,
+                                { id: 'protocol_complete', earnedAt: new Date().toISOString() }
+                            ]
+                        }).eq('id', patientProtocol.patient.id);
+                        console.log(`[SCHEDULER] 🏅 +300 pts + badge protocol_complete para ${patientProtocol.patient.id}`);
+                    }
+                } catch (badgeErr) {
+                    console.error('[SCHEDULER] Erro ao conceder badge de conclusão:', badgeErr);
+                }
+
                 messagesScheduled++;
                 protocolsCompleted++;
                 continue;

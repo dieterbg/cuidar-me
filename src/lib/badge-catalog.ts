@@ -160,6 +160,14 @@ export const BADGE_CATALOG: BadgeDefinition[] = [
 
     // ===== CATEGORIA: ESPECIAIS =====
     {
+        id: 'protocol_complete',
+        name: 'Transformação Completa',
+        description: 'Conclua um protocolo de acompanhamento do início ao fim',
+        icon: '🏅',
+        rarity: 'epico',
+        criteria: { type: 'special', requirement: 'protocol_completed' }
+    },
+    {
         id: 'perfectionist',
         name: 'Perfeccionista',
         description: 'Complete todas as metas semanais 4 semanas seguidas',
