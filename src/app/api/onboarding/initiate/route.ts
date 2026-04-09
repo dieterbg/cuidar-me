@@ -1,14 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase-server-utils';
+import { createServiceRoleClient, getCurrentUser } from '@/lib/supabase-server-utils';
 import { getStepMessage } from '@/ai/onboarding';
 import type { OnboardingStep } from '@/ai/onboarding';
 
 /**
  * API Route: POST /api/onboarding/initiate
  * Inicia o onboarding WhatsApp para um paciente
+ * Requer: usuário autenticado (staff ou paciente) ou CRON_SECRET header
  */
 export async function POST(request: NextRequest) {
     try {
+        // Verificar autenticação — permite usuário logado OU cron interno
+        const cronSecret = request.headers.get('x-cron-secret');
+        const isValidCron = cronSecret && cronSecret === process.env.CRON_SECRET;
+
+        if (!isValidCron) {
+            const user = await getCurrentUser();
+            if (!user) {
+                return NextResponse.json(
+                    { success: false, error: 'Unauthorized' },
+                    { status: 401 }
+                );
+            }
+        }
+
         const { patientId } = await request.json();
 
         if (!patientId) {
