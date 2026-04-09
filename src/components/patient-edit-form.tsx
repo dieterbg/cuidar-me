@@ -204,6 +204,51 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
           }
         }
 
+        // Notificar paciente já ativo quando admin faz upgrade de plano + atribui protocolo
+        const isPlanUpgrade =
+          isAdminContext &&
+          patient.status === 'active' &&
+          patient.subscription.plan === 'freemium' &&
+          (values.plan === 'premium' || values.plan === 'vip') &&
+          !!values.protocolId;
+
+        // Também notifica se era premium/vip e o protocolo mudou (primeira atribuição ou troca)
+        const isProtocolChange =
+          isAdminContext &&
+          patient.status === 'active' &&
+          (values.plan === 'premium' || values.plan === 'vip') &&
+          !!values.protocolId &&
+          values.protocolId !== patient.protocol?.protocolId;
+
+        if (isPlanUpgrade || isProtocolChange) {
+          const assignedProtocol = protocols.find(p => p.id === values.protocolId);
+          const protocolName = assignedProtocol?.name || values.protocolId;
+
+          try {
+            const res = await fetch('/api/onboarding/notify-plan-upgrade', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                patientId: patient.id,
+                newPlan: values.plan,
+                protocolName,
+              }),
+            });
+            if (res.ok) {
+              toast({
+                title: '📱 Paciente notificado!',
+                description: `Mensagem de upgrade enviada via WhatsApp.`,
+                className: 'bg-green-50 border-green-200 text-green-800',
+              });
+            } else {
+              const errData = await res.json();
+              console.error('[PatientEditForm] notify-plan-upgrade failed:', errData.error);
+            }
+          } catch (err) {
+            console.error('[PatientEditForm] notify-plan-upgrade error:', err);
+          }
+        }
+
         // If patient context and profile is now complete AND consent given, initiate WhatsApp onboarding
         if (isPatientContext) {
           const isComplete = !!(
