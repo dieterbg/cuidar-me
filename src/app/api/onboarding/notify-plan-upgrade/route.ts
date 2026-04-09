@@ -60,8 +60,24 @@ export async function POST(request: NextRequest) {
             `Qualquer dúvida, é só responder esta mensagem. 💪`,
         ].join('\n');
 
+        // Usar template aprovado se disponível — necessário fora da janela de 24h
+        // TWILIO_PLAN_UPGRADE_SID: template dedicado (vars: {{1}}=nome, {{2}}=plano, {{3}}=protocolo)
+        // Fallback: TWILIO_PROTOCOL_INCENTIVO_SID (vars: {{1}}=nome, {{2}}=mensagem)
+        const upgradeSid = process.env.TWILIO_PLAN_UPGRADE_SID?.trim();
+        const genericSid = process.env.TWILIO_PROTOCOL_INCENTIVO_SID?.trim();
+        const contentSid = upgradeSid || genericSid;
+
+        const contentVariables: Record<string, string> | undefined = upgradeSid
+            ? { "1": firstName, "2": `${planEmoji} ${planLabel}`, "3": protocolName }
+            : genericSid
+                ? { "1": firstName, "2": message }
+                : undefined;
+
         // Enviar via WhatsApp
-        const sent = await sendWhatsappMessage(patient.whatsapp_number, message);
+        const sent = await sendWhatsappMessage(patient.whatsapp_number, message, {
+            contentSid,
+            contentVariables,
+        });
 
         if (!sent) {
             console.error('[notify-plan-upgrade] Falha ao enviar WhatsApp para', patientId);

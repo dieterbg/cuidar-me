@@ -192,7 +192,10 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
                         message_content: congratsMessage,
                         send_at: congratsTime.toISOString(),
                         source: 'protocol',
-                        status: 'pending'
+                        status: 'pending',
+                        // metadata com título garante que o processador use TWILIO_PROTOCOL_INCENTIVO_SID
+                        // (handle-patient-reply.ts: title.includes('Parabéns') → incentivo template)
+                        metadata: { messageTitle: 'Parabéns - Conclusão de Protocolo' }
                     });
 
                 // Conceder 300 pontos + badge de conclusão de protocolo
