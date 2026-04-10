@@ -53,18 +53,19 @@ async function handleCronRequest(request: NextRequest) {
 
         console.log(`[UNIFIED CRON] Starting execution at ${brazilTime.toISOString()} (${currentHour}h BRT)`);
 
-        // TASK 1: Pulse Protocol Scheduling (Runs every time to handle fast-track protocols like "Protocolo Teste")
-        if (currentHour !== 6) {
-            try {
-                results.protocolSchedulingPulse = await scheduleProtocolMessages(true);
-                console.log(`[UNIFIED CRON] Protocol pulse results:`, results.protocolSchedulingPulse);
-            } catch (e: any) {
-                console.error('[UNIFIED CRON] Protocol pulse error:', e);
-                results.protocolSchedulingPulse = { success: false, error: e.message };
-            }
+        // TASK 1: Protocol Scheduling — agenda mensagens de TODOS os protocolos ativos
+        // (normais + fast-track). A idempotência por paciente (updated_at === hoje) garante
+        // que cada paciente normal seja processado no máximo 1x por dia, mesmo que
+        // cron-job.org bata a cada 5 min. Fast-track bypassa a idempotência.
+        try {
+            results.protocolScheduling = await scheduleProtocolMessages();
+            console.log(`[UNIFIED CRON] Protocol scheduling results:`, results.protocolScheduling);
+        } catch (e: any) {
+            console.error('[UNIFIED CRON] Protocol scheduling error:', e);
+            results.protocolScheduling = { success: false, error: e.message };
         }
 
-        // TASK 2: Process Message Queue (Always runs to send any pending protocol/system messages)
+        // TASK 2: Process Message Queue — envia mensagens pendentes com send_at no passado
         try {
             const queueSupabase = createServiceRoleClient();
             results.messageQueue = await processMessageQueue(queueSupabase);
@@ -72,17 +73,6 @@ async function handleCronRequest(request: NextRequest) {
         } catch (e: any) {
             console.error('[UNIFIED CRON] Queue error:', e);
             results.messageQueue = { success: false, error: e.message };
-        }
-
-        // TASK 3: Regular Protocol Scheduling (Runs at 6 AM BRT)
-        if (currentHour === 6) {
-            try {
-                results.protocolScheduling = await scheduleProtocolMessages(false);
-                console.log(`[UNIFIED CRON] Protocol scheduling results:`, results.protocolScheduling);
-            } catch (e: any) {
-                console.error('[UNIFIED CRON] Protocol scheduling error:', e);
-                results.protocolScheduling = { success: false, error: e.message };
-            }
         }
 
         // TASK 3: Daily Check-ins — DESATIVADO

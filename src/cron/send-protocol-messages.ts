@@ -74,18 +74,25 @@ function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boo
  * Agenda mensagens de protocolo para todos os pacientes com protocolo ativo
  * Deve ser chamado uma vez por dia às 6h da manhã
  */
-export async function scheduleProtocolMessages(isPulse: boolean = false): Promise<{
+// IDs dos protocolos fast-track (testes acelerados — bypassam idempotência diária)
+const FAST_TRACK_PROTOCOL_IDS = ['2412145d-c346-4012-9040-65e9d43073a3'];
+
+export async function scheduleProtocolMessages(_isPulse: boolean = false): Promise<{
     success: boolean;
     messagesScheduled: number;
     protocolsCompleted: number;
     error?: string;
 }> {
+    // Nota: o parâmetro _isPulse foi mantido apenas por compatibilidade com chamadores antigos.
+    // O scheduler agora processa TODOS os protocolos em uma única chamada, usando idempotência
+    // por paciente (updated_at === hoje) para evitar duplicatas. Protocolos fast-track
+    // bypassam essa idempotência automaticamente via FAST_TRACK_PROTOCOL_IDS.
     const supabase = createServiceRoleClient();
     const today = new Date();
     const brazilNow = toZonedTime(today, 'America/Sao_Paulo');
     const todayDateStr = brazilNow.toISOString().split('T')[0]; // YYYY-MM-DD
 
-    console.log(`[SCHEDULER] Starting protocol message scheduling (Pulse: ${isPulse})...`);
+    console.log(`[SCHEDULER] Starting protocol message scheduling (unified mode)...`);
     console.log(`[SCHEDULER] Date: ${today.toLocaleDateString('pt-BR')}`);
 
     try {
@@ -113,19 +120,16 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             return { success: false, messagesScheduled: 0, protocolsCompleted: 0, error: fetchError.message };
         }
 
-        // Se for Pulse, filtrar apenas protocolos de teste/rápidos
-        // Senao, filtrar para ignorar protocolos pulse
-        const fastTrackProtocols = ['2412145d-c346-4012-9040-65e9d43073a3'];
-        const protocolsToProcess = isPulse
-            ? activeProtocols.filter((p: any) => fastTrackProtocols.includes(p.protocol.id))
-            : activeProtocols.filter((p: any) => !fastTrackProtocols.includes(p.protocol.id));
+        // Processa TODOS os protocolos ativos — a distinção fast-track vs normal é feita
+        // por-paciente na idempotência abaixo (updated_at check).
+        const protocolsToProcess = activeProtocols || [];
 
-        if (!protocolsToProcess || protocolsToProcess.length === 0) {
-            console.log(`[SCHEDULER] No protocols to process (Pulse: ${isPulse})`);
+        if (protocolsToProcess.length === 0) {
+            console.log(`[SCHEDULER] No active protocols to process`);
             return { success: true, messagesScheduled: 0, protocolsCompleted: 0 };
         }
 
-        console.log(`[SCHEDULER] Processing ${protocolsToProcess.length} protocols`);
+        console.log(`[SCHEDULER] Processing ${protocolsToProcess.length} active protocols`);
 
         let messagesScheduled = 0;
         let protocolsCompleted = 0;
@@ -135,17 +139,21 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             const protocolId = patientProtocol.protocol.id;
             const durationDays = patientProtocol.protocol.duration_days;
             const patientName = patientProtocol.patient.full_name;
+            const isFastTrackProtocol = FAST_TRACK_PROTOCOL_IDS.includes(protocolId);
 
             // Log detalhado: "ID do paciente está no dia X do protocolo Y"
-            console.log(`[SCHEDULER] 👤 ID: ${patientProtocol.patient.id} está no dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}`);
+            console.log(`[SCHEDULER] 👤 ID: ${patientProtocol.patient.id} está no dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}${isFastTrackProtocol ? ' [FAST-TRACK]' : ''}`);
 
-            // ✨ IDEMPOTÊNCIA: Verificar se já agendamos mensagens para este paciente HOJE ✨
-            // Isso previne que o cron rode múltiplas vezes no mesmo dia e duplique/avance
+            // ✨ IDEMPOTÊNCIA DIÁRIA: Verificar se já agendamos mensagens para este paciente HOJE ✨
+            // Isso previne que o cron (rodando a cada 5 min via cron-job.org) processe o mesmo
+            // paciente múltiplas vezes no mesmo dia e duplique/avance o current_day.
+            // Protocolos fast-track (teste acelerado) bypassam este check pois precisam
+            // ser processados várias vezes ao longo do dia.
             const updatedAtDate = patientProtocol.updated_at
                 ? new Date(patientProtocol.updated_at).toISOString().split('T')[0]
                 : null;
 
-            if (updatedAtDate === todayDateStr && !isPulse) {
+            if (updatedAtDate === todayDateStr && !isFastTrackProtocol) {
                 console.log(`[SCHEDULER] ⏭ Já processado hoje: ID ${patientProtocol.patient.id} (updated_at: ${updatedAtDate})`);
                 continue;
             }
@@ -230,7 +238,7 @@ export async function scheduleProtocolMessages(isPulse: boolean = false): Promis
             // Buscar mensagens do dia
             const protocolData = protocols.find(p => p.id === protocolId);
             const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
-            const isFastTrack = protocolId === '2412145d-c346-4012-9040-65e9d43073a3';
+            const isFastTrack = isFastTrackProtocol;
 
             let allMessages: any[] = [];
             

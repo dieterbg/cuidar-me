@@ -1,8 +1,3 @@
 {
-    "crons": [
-        {
-            "path": "/api/cron/unified",
-            "schedule": "0 11 * * *"
-        }
-    ]
+    "_comment": "Vercel cron removido intencionalmente. O agendamento é feito exclusivamente por cron-job.org, que bate em /api/cron/unified a cada 5 minutos. Ver memory/project_cron_setup.md."
 }
