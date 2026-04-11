@@ -289,8 +289,6 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
             const interval = isFastTrack ? 120 : 5;
             const sendTime = getScheduledTime(message.title, today, isFastTrack, idx * interval);
 
-                console.log(`[SCHEDULER]   [DBG] msg="${message.title}" sendTime=${sendTime.toISOString()} now=${today.toISOString()} passed=${sendTime.getTime() < today.getTime()}`);
-
                 // ✨ PROTEÇÃO: Nunca agendar mensagem para horário que já passou ✨
                 if (sendTime.getTime() < today.getTime() && !isFastTrack) {
                     console.log(`[SCHEDULER]   ⏭ Horário já passou: ${message.title} (${sendTime.toLocaleTimeString('pt-BR')})`);
