@@ -19,9 +19,20 @@ import { toZonedTime } from 'date-fns-tz';
  * Determina o horário de envio baseado no tipo de mensagem
  * Suporta horários fixos ou intervalos relativos para protocolos de teste
  */
-function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boolean = false, offsetMinutes: number = 0): Date {
-    const date = new Date(baseDate);
+/**
+ * Constrói um Date para um horário específico em BRT (America/Sao_Paulo).
+ * Usa a data de `baseDate` convertida para BRT e aplica HH:MM BRT via offset -03:00.
+ * BRT não tem mais DST desde 2019, então -03:00 é estável ano-todo.
+ */
+function brtTime(baseDate: Date, hour: number, minute: number = 0): Date {
+    const brazilDate = toZonedTime(baseDate, 'America/Sao_Paulo');
+    const dateStr = brazilDate.toISOString().split('T')[0]; // YYYY-MM-DD em BRT
+    const hh = String(hour).padStart(2, '0');
+    const mm = String(minute).padStart(2, '0');
+    return new Date(`${dateStr}T${hh}:${mm}:00-03:00`);
+}
 
+function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boolean = false, offsetMinutes: number = 0): Date {
     // Se for fast track, o agendamento é relativo ao AGORA (ao pulsar do cron)
     // para evitar rajadas de mensagens com horários do passado.
     if (isFastTrack) {
@@ -30,44 +41,40 @@ function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boo
         return now;
     }
 
-    // Pesagem: 7h (jejum, ao acordar)
+    // Pesagem: 7h BRT (jejum, ao acordar)
     if (messageTitle.includes('Peso')) {
-        date.setHours(7, 0, 0, 0);
+        return brtTime(baseDate, 7);
     }
-    // Planejamento: 9h (início do dia)
-    else if (messageTitle.includes('Planejamento')) {
-        date.setHours(9, 0, 0, 0);
+    // Planejamento: 9h BRT (início do dia)
+    if (messageTitle.includes('Planejamento')) {
+        return brtTime(baseDate, 9);
     }
-    // Almoço: 14h (após almoço)
-    else if (messageTitle.includes('Almoço')) {
-        date.setHours(14, 0, 0, 0);
+    // Almoço: 14h BRT (após almoço)
+    if (messageTitle.includes('Almoço')) {
+        return brtTime(baseDate, 14);
     }
-    // Atividade: 19h (fim da tarde)
-    else if (messageTitle.includes('Atividade')) {
-        date.setHours(19, 0, 0, 0);
+    // Atividade: 19h BRT (fim da tarde)
+    if (messageTitle.includes('Atividade')) {
+        return brtTime(baseDate, 19);
     }
-    // Jantar: 20h30 (após jantar)
-    else if (messageTitle.includes('Jantar')) {
-        date.setHours(20, 30, 0, 0);
+    // Jantar: 20h30 BRT (após jantar)
+    if (messageTitle.includes('Jantar')) {
+        return brtTime(baseDate, 20, 30);
     }
-    // Bem-Estar (Geral): 21h (noite)
-    else if (messageTitle.includes('Bem-Estar') && !messageTitle.includes('sono')) {
-        date.setHours(21, 0, 0, 0);
+    // Bem-Estar (Geral): 21h BRT (noite)
+    if (messageTitle.includes('Bem-Estar') && !messageTitle.includes('sono')) {
+        return brtTime(baseDate, 21);
     }
-    // Hidratação: 20h (início da noite — ainda dá tempo de se hidratar se necessário)
-    else if (messageTitle.includes('Hidratação')) {
-        date.setHours(20, 0, 0, 0);
+    // Hidratação: 20h BRT (início da noite — ainda dá tempo de se hidratar se necessário)
+    if (messageTitle.includes('Hidratação')) {
+        return brtTime(baseDate, 20);
     }
-    // Bem-Estar (Sono): 9h (manhã depois)
-    else if (messageTitle.includes('Bem-Estar') && messageTitle.includes('sono')) {
-        date.setHours(9, 0, 0, 0);
+    // Bem-Estar (Sono): 9h BRT (manhã depois)
+    if (messageTitle.includes('Bem-Estar') && messageTitle.includes('sono')) {
+        return brtTime(baseDate, 9);
     }
-    // Mensagens de conteúdo: 10h (meio da manhã)
-    else {
-        date.setHours(10, 0, 0, 0);
-    }
-
-    return date;
+    // Mensagens de conteúdo: 10h BRT (meio da manhã)
+    return brtTime(baseDate, 10);
 }
 
 /**
@@ -185,9 +192,8 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
                     })
                     .eq('id', patientProtocol.id);
 
-                // Agendar mensagem de parabéns para 9h
-                const congratsTime = new Date(today);
-                congratsTime.setHours(9, 0, 0, 0);
+                // Agendar mensagem de parabéns para 9h BRT
+                const congratsTime = brtTime(today, 9);
 
                 const congratsMessage = `🎉 PARABÉNS! Você completou o ${patientProtocol.protocol.name}! ` +
                     `Foram ${durationDays} dias de dedicação e crescimento. Estamos muito orgulhosos de você! 💪`;
