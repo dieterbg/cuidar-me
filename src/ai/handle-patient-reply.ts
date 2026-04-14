@@ -503,66 +503,80 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             });
             processed++;
 
-            // ✨ FIX 4.2: Verificar se TODAS as msgs de protocolo deste paciente foram enviadas ✨
-            // Se sim, avançar o current_day do patient_protocol.
+            // ✨ FIX 4.2: Avançar current_day quando todas as msgs DO DIA foram enviadas ✨
+            // Com bulk scheduling, existem mensagens pendentes para dias futuros.
+            // Só conta como "dia concluído" quando não há mais msgs pendentes com send_at <= agora.
             if (msg.source === 'protocol') {
-                const { count: remainingCount } = await supabase
+                const protocolDay = (msg.metadata as any)?.protocolDay;
+
+                // Contar apenas mensagens pendentes que JÁ estão no horário (due now)
+                const { count: remainingDueCount } = await supabase
                     .from('scheduled_messages')
                     .select('*', { count: 'exact', head: true })
                     .eq('patient_id', msg.patient_id)
                     .eq('status', 'pending')
-                    .eq('source', 'protocol');
+                    .eq('source', 'protocol')
+                    .lte('send_at', now.toISOString());
 
-                if (!remainingCount || remainingCount === 0) {
-                    // Todas as mensagens de protocolo foram enviadas — avançar dia
-                    // Mas... se já avançamos o dia recentemente (menos de 2 min), talvez o agendador 
-                    // ainda não tenha rodado. Vamos evitar pulos múltiplos em cascata.
+                if (!remainingDueCount || remainingDueCount === 0) {
+                    // Todas as msgs do horário foram enviadas — avançar current_day
                     const { data: pp } = await supabase
                         .from('patient_protocols')
-                        .select('id, current_day, protocol_id, updated_at, protocol:protocols(duration_days)')
+                        .select('id, current_day, protocol_id, protocol:protocols(duration_days)')
                         .eq('patient_id', msg.patient_id)
                         .eq('is_active', true)
                         .single();
 
-                    if (!pp) continue;
-
-                    const lastUpdate = new Date(pp.updated_at).getTime();
-                    const nowMs = new Date().getTime();
-                    if (nowMs - lastUpdate < 60000) {
-                        console.log(`[QUEUE] ⏳ Aguardando agendador para paciente ${msg.patient_id} (dia recém-avançado)`);
-                        continue;
-                    }
-
-                    const FAST_TRACK_ID = '2412145d-c346-4012-9040-65e9d43073a3';
-                    if (pp.protocol_id === FAST_TRACK_ID) {
-                        const nextDay = (pp.current_day || 1) + 1;
+                    if (pp && protocolDay) {
+                        const nextDay = protocolDay + 1;
                         const durationDays = (pp.protocol as any)?.duration_days || 90;
 
                         if (nextDay > durationDays) {
-                            // Protocolo completado!
                             await supabase
                                 .from('patient_protocols')
                                 .update({
                                     current_day: nextDay,
                                     is_active: false,
-                                    completed_at: new Date().toISOString(),
-                                    updated_at: new Date().toISOString()
+                                    completed_at: new Date().toISOString()
                                 })
                                 .eq('id', pp.id);
-                            console.log(`[QUEUE] 🎉 Protocolo completado para paciente ${msg.patient_id}! (Dia ${nextDay}/${durationDays})`);
-                        } else {
+
+                            // Badge + pontos de conclusão
+                            try {
+                                const { data: patientRow } = await supabase
+                                    .from('patients')
+                                    .select('total_points, badges')
+                                    .eq('id', msg.patient_id)
+                                    .single();
+
+                                if (patientRow) {
+                                    const currentBadges: any[] = patientRow.badges || [];
+                                    const hasBadge = currentBadges.some((b: any) => b.id === 'protocol_complete');
+                                    await supabase.from('patients').update({
+                                        total_points: (patientRow.total_points || 0) + 300,
+                                        badges: hasBadge ? currentBadges : [
+                                            ...currentBadges,
+                                            { id: 'protocol_complete', earnedAt: new Date().toISOString() }
+                                        ]
+                                    }).eq('id', msg.patient_id);
+                                    console.log(`[QUEUE] 🏅 +300 pts + badge protocol_complete para ${msg.patient_id}`);
+                                }
+                            } catch (badgeErr) {
+                                console.error('[QUEUE] Erro ao conceder badge:', badgeErr);
+                            }
+
+                            console.log(`[QUEUE] 🎉 Protocolo completado para ${msg.patient_id}! (Dia ${protocolDay}/${durationDays})`);
+                        } else if (nextDay > pp.current_day) {
+                            // Só avança se protocolDay é maior que current_day (evita regressão)
                             await supabase
                                 .from('patient_protocols')
-                                .update({
-                                    current_day: nextDay,
-                                    updated_at: new Date().toISOString()
-                                })
+                                .update({ current_day: nextDay })
                                 .eq('id', pp.id);
-                            console.log(`[QUEUE] ↗️ Dia avançado: ${pp.current_day} → ${nextDay} para paciente ${msg.patient_id}`);
+                            console.log(`[QUEUE] ↗️ Dia avançado: ${pp.current_day} → ${nextDay} para ${msg.patient_id}`);
                         }
                     }
                 } else {
-                    console.log(`[QUEUE] 📋 ${remainingCount} mensagens de protocolo pendentes restantes para paciente ${msg.patient_id}`);
+                    console.log(`[QUEUE] 📋 ${remainingDueCount} msgs de protocolo pendentes (due) para ${msg.patient_id}`);
                 }
             }
         } else {

@@ -1,27 +1,21 @@
 'use server';
 
 /**
- * @fileOverview Agendador de mensagens de protocolo
- * Agenda mensagens ao longo do dia em horários específicos
- * Roda uma vez por dia às 6h da manhã (com idempotência para evitar duplicatas)
+ * @fileOverview Agendador BULK de mensagens de protocolo
+ * Quando um paciente inicia um protocolo (current_day === 1 e sem mensagens pendentes),
+ * agenda TODAS as mensagens dos 90 dias de uma vez.
+ * O cron roda a cada 5 min apenas para detectar novos protocolos e re-agendar se necessário.
  */
 
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
-import { 
-    protocols, 
-    mandatoryGamificationSteps,
-    fundamentosGamificationSteps,
-    performanceGamificationSteps
+import {
+    protocols,
+    getGamificationSteps
 } from '@/lib/data';
 import { toZonedTime } from 'date-fns-tz';
 
 /**
- * Determina o horário de envio baseado no tipo de mensagem
- * Suporta horários fixos ou intervalos relativos para protocolos de teste
- */
-/**
  * Constrói um Date para um horário específico em BRT (America/Sao_Paulo).
- * Usa a data de `baseDate` convertida para BRT e aplica HH:MM BRT via offset -03:00.
  * BRT não tem mais DST desde 2019, então -03:00 é estável ano-todo.
  */
 function brtTime(baseDate: Date, hour: number, minute: number = 0): Date {
@@ -32,78 +26,155 @@ function brtTime(baseDate: Date, hour: number, minute: number = 0): Date {
     return new Date(`${dateStr}T${hh}:${mm}:00-03:00`);
 }
 
-function getScheduledTime(messageTitle: string, baseDate: Date, isFastTrack: boolean = false, offsetMinutes: number = 0): Date {
-    // Se for fast track, o agendamento é relativo ao AGORA (ao pulsar do cron)
-    // para evitar rajadas de mensagens com horários do passado.
+/**
+ * Determina o horário de envio baseado no tipo de mensagem.
+ * Para bulk scheduling, usa a data do dia do protocolo (não "hoje").
+ */
+function getScheduledTime(messageTitle: string, calendarDate: Date, isFastTrack: boolean = false, offsetMinutes: number = 0): Date {
     if (isFastTrack) {
         const now = new Date();
         now.setMinutes(now.getMinutes() + offsetMinutes);
         return now;
     }
 
-    // Pesagem: 7h BRT (jejum, ao acordar)
-    if (messageTitle.includes('Peso')) {
-        return brtTime(baseDate, 7);
+    // Pesagem: 7h BRT
+    if (messageTitle.includes('Peso')) return brtTime(calendarDate, 7);
+    // Planejamento: 9h BRT
+    if (messageTitle.includes('Planejamento')) return brtTime(calendarDate, 9);
+    // Almoço: 14h BRT
+    if (messageTitle.includes('Almoço')) return brtTime(calendarDate, 14);
+    // Atividade: 19h BRT
+    if (messageTitle.includes('Atividade')) return brtTime(calendarDate, 19);
+    // Jantar: 20h30 BRT
+    if (messageTitle.includes('Jantar')) return brtTime(calendarDate, 20, 30);
+    // Bem-Estar (Geral): 21h BRT
+    if (messageTitle.includes('Bem-Estar') && !messageTitle.includes('sono')) return brtTime(calendarDate, 21);
+    // Hidratação: 20h BRT
+    if (messageTitle.includes('Hidratação')) return brtTime(calendarDate, 20);
+    // Bem-Estar (Sono): 9h BRT
+    if (messageTitle.includes('Bem-Estar') && messageTitle.includes('sono')) return brtTime(calendarDate, 9);
+    // Mensagens de conteúdo: 10h BRT
+    return brtTime(calendarDate, 10);
+}
+
+// IDs dos protocolos fast-track (testes acelerados)
+const FAST_TRACK_PROTOCOL_IDS = ['2412145d-c346-4012-9040-65e9d43073a3'];
+const MAX_MESSAGES_PER_DAY_PRODUCTION = 3;
+const MAX_MESSAGES_PER_DAY_FAST_TRACK = 10;
+
+/**
+ * Agenda TODAS as mensagens de um protocolo de uma vez (bulk).
+ * Itera do current_day até durationDays, gerando gamificação + conteúdo por dia.
+ */
+async function bulkScheduleAllDays(
+    supabase: any,
+    patientProtocol: any
+): Promise<number> {
+    const startDate = new Date(patientProtocol.start_date);
+    const protocolId = patientProtocol.protocol.id;
+    const durationDays = patientProtocol.protocol.duration_days;
+    const currentDay = patientProtocol.current_day;
+    const patientId = patientProtocol.patient.id;
+    const whatsappNumber = patientProtocol.patient.whatsapp_number;
+
+    // Usar gamificação correta por protocolo (Fundamentos=acolhedor, Performance=técnico, etc.)
+    const gamificationSteps = getGamificationSteps(protocolId);
+    const protocolData = protocols.find(p => p.id === protocolId);
+
+    const messagesToInsert: any[] = [];
+
+    for (let day = currentDay; day <= durationDays; day++) {
+        // Data real no calendário para este dia do protocolo
+        const calendarDate = new Date(startDate);
+        calendarDate.setDate(calendarDate.getDate() + (day - 1));
+
+        const gamificationMsgs = gamificationSteps.filter(m => m.day === day);
+        const contentMsgs = protocolData?.messages.filter(m => m.day === day) || [];
+
+        // Marcar origem de cada mensagem antes de mesclar
+        const tagged: { msg: any; isGamification: boolean }[] = [
+            ...gamificationMsgs.map(m => ({ msg: m, isGamification: true })),
+            ...contentMsgs.map(m => ({ msg: m, isGamification: false })),
+        ];
+
+        // Limite de mensagens por dia
+        const limited = tagged.slice(0, MAX_MESSAGES_PER_DAY_PRODUCTION);
+
+        for (const { msg: message, isGamification } of limited) {
+            const sendTime = getScheduledTime(message.title, calendarDate);
+
+            const messageContent = isGamification
+                ? `${message.title}\n\n${message.message}`
+                : message.message;
+
+            messagesToInsert.push({
+                patient_id: patientId,
+                patient_whatsapp_number: whatsappNumber,
+                message_content: messageContent,
+                send_at: sendTime.toISOString(),
+                source: 'protocol',
+                status: 'pending',
+                metadata: {
+                    isGamification,
+                    protocolDay: day,
+                    perspective: message.perspective || null,
+                    checkinTitle: isGamification ? message.title : null,
+                    messageTitle: message.title,
+                }
+            });
+        }
     }
-    // Planejamento: 9h BRT (início do dia)
-    if (messageTitle.includes('Planejamento')) {
-        return brtTime(baseDate, 9);
+
+    if (messagesToInsert.length === 0) {
+        console.log(`[SCHEDULER] ⚠️ Nenhuma mensagem para agendar (dias ${currentDay}-${durationDays})`);
+        return 0;
     }
-    // Almoço: 14h BRT (após almoço)
-    if (messageTitle.includes('Almoço')) {
-        return brtTime(baseDate, 14);
+
+    // Batch insert (100 por batch para Supabase)
+    let totalInserted = 0;
+    for (let i = 0; i < messagesToInsert.length; i += 100) {
+        const batch = messagesToInsert.slice(i, i + 100);
+        const { error } = await supabase.from('scheduled_messages').insert(batch);
+        if (error) {
+            console.error(`[SCHEDULER] ❌ Batch insert falhou no offset ${i}:`, error);
+            break;
+        }
+        totalInserted += batch.length;
     }
-    // Atividade: 19h BRT (fim da tarde)
-    if (messageTitle.includes('Atividade')) {
-        return brtTime(baseDate, 19);
-    }
-    // Jantar: 20h30 BRT (após jantar)
-    if (messageTitle.includes('Jantar')) {
-        return brtTime(baseDate, 20, 30);
-    }
-    // Bem-Estar (Geral): 21h BRT (noite)
-    if (messageTitle.includes('Bem-Estar') && !messageTitle.includes('sono')) {
-        return brtTime(baseDate, 21);
-    }
-    // Hidratação: 20h BRT (início da noite — ainda dá tempo de se hidratar se necessário)
-    if (messageTitle.includes('Hidratação')) {
-        return brtTime(baseDate, 20);
-    }
-    // Bem-Estar (Sono): 9h BRT (manhã depois)
-    if (messageTitle.includes('Bem-Estar') && messageTitle.includes('sono')) {
-        return brtTime(baseDate, 9);
-    }
-    // Mensagens de conteúdo: 10h BRT (meio da manhã)
-    return brtTime(baseDate, 10);
+
+    // Calcular resumo por dia
+    const daysWithMessages = new Set(messagesToInsert.map(m => m.metadata.protocolDay));
+    const firstDate = messagesToInsert[0]?.send_at;
+    const lastDate = messagesToInsert[messagesToInsert.length - 1]?.send_at;
+
+    console.log(`[SCHEDULER] 📦 BULK: ${totalInserted} mensagens agendadas para ${daysWithMessages.size} dias`);
+    console.log(`[SCHEDULER]   📅 Primeira: ${firstDate}`);
+    console.log(`[SCHEDULER]   📅 Última: ${lastDate}`);
+
+    return totalInserted;
 }
 
 /**
- * Agenda mensagens de protocolo para todos os pacientes com protocolo ativo
- * Deve ser chamado uma vez por dia às 6h da manhã
+ * Agenda mensagens de protocolo para todos os pacientes com protocolo ativo.
+ *
+ * MODO BULK (produção): agenda TODOS os dias restantes de uma vez.
+ * MODO FAST-TRACK (teste): agenda apenas o dia atual (comportamento legado).
+ *
+ * O cron roda a cada 5 min mas só age se não houver mensagens pendentes.
  */
-// IDs dos protocolos fast-track (testes acelerados — bypassam idempotência diária)
-const FAST_TRACK_PROTOCOL_IDS = ['2412145d-c346-4012-9040-65e9d43073a3'];
-
 export async function scheduleProtocolMessages(_isPulse: boolean = false): Promise<{
     success: boolean;
     messagesScheduled: number;
     protocolsCompleted: number;
     error?: string;
 }> {
-    // Nota: o parâmetro _isPulse foi mantido apenas por compatibilidade com chamadores antigos.
-    // O scheduler agora processa TODOS os protocolos em uma única chamada, usando idempotência
-    // por paciente (updated_at === hoje) para evitar duplicatas. Protocolos fast-track
-    // bypassam essa idempotência automaticamente via FAST_TRACK_PROTOCOL_IDS.
     const supabase = createServiceRoleClient();
     const today = new Date();
-    const brazilNow = toZonedTime(today, 'America/Sao_Paulo');
-    const todayDateStr = brazilNow.toISOString().split('T')[0]; // YYYY-MM-DD
 
-    console.log(`[SCHEDULER] Starting protocol message scheduling (unified mode)...`);
+    console.log(`[SCHEDULER] Starting protocol message scheduling (bulk mode)...`);
     console.log(`[SCHEDULER] Date: ${today.toLocaleDateString('pt-BR')}`);
 
     try {
-        // Buscar todos os pacientes com protocolo ativo
         const { data: activeProtocols, error: fetchError } = await supabase
             .from('patient_protocols')
             .select(`
@@ -127,8 +198,6 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
             return { success: false, messagesScheduled: 0, protocolsCompleted: 0, error: fetchError.message };
         }
 
-        // Processa TODOS os protocolos ativos — a distinção fast-track vs normal é feita
-        // por-paciente na idempotência abaixo (updated_at check).
         const protocolsToProcess = activeProtocols || [];
 
         if (protocolsToProcess.length === 0) {
@@ -145,44 +214,13 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
             const currentDay = patientProtocol.current_day;
             const protocolId = patientProtocol.protocol.id;
             const durationDays = patientProtocol.protocol.duration_days;
-            const patientName = patientProtocol.patient.full_name;
-            const isFastTrackProtocol = FAST_TRACK_PROTOCOL_IDS.includes(protocolId);
+            const isFastTrack = FAST_TRACK_PROTOCOL_IDS.includes(protocolId);
 
-            // Log detalhado: "ID do paciente está no dia X do protocolo Y"
-            console.log(`[SCHEDULER] 👤 ID: ${patientProtocol.patient.id} está no dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}${isFastTrackProtocol ? ' [FAST-TRACK]' : ''}`);
+            console.log(`[SCHEDULER] 👤 ID: ${patientProtocol.patient.id} dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}${isFastTrack ? ' [FAST-TRACK]' : ''}`);
 
-            // ✨ IDEMPOTÊNCIA DIÁRIA: Verificar se já agendamos mensagens para este paciente HOJE ✨
-            // Isso previne que o cron (rodando a cada 5 min via cron-job.org) processe o mesmo
-            // paciente múltiplas vezes no mesmo dia e duplique/avance o current_day.
-            // Protocolos fast-track (teste acelerado) bypassam este check pois precisam
-            // ser processados várias vezes ao longo do dia.
-            const updatedAtDate = patientProtocol.updated_at
-                ? new Date(patientProtocol.updated_at).toISOString().split('T')[0]
-                : null;
-
-            if (updatedAtDate === todayDateStr && !isFastTrackProtocol) {
-                console.log(`[SCHEDULER] ⏭ Já processado hoje: ID ${patientProtocol.patient.id} (updated_at: ${updatedAtDate})`);
-                continue;
-            }
-
-            // ✨ IDEMPOTÊNCIA (Pulse e Normal): Verificar se já existem mensagens pendentes ✨
-            // Se já há mensagens agendadas (pending) para este paciente, não reagendar.
-            // Isso evita destruir mensagens que ainda não foram enviadas pelo queue processor.
-            const { count: pendingCount } = await supabase
-                .from('scheduled_messages')
-                .select('*', { count: 'exact', head: true })
-                .eq('patient_id', patientProtocol.patient.id)
-                .eq('status', 'pending')
-                .eq('source', 'protocol');
-
-            if (pendingCount && pendingCount > 0) {
-                console.log(`[SCHEDULER] ⏭ Já existem ${pendingCount} mensagens pendentes para ID ${patientProtocol.patient.id}. Aguardando processamento.`);
-                continue;
-            }
-
-            // Verificar se completou o protocolo
+            // ── Verificar se completou o protocolo ──
             if (currentDay > durationDays) {
-                console.log(`[SCHEDULER] ✓ ID ${patientProtocol.patient.id} completou o protocolo! (Dia ${currentDay}/${durationDays})`);
+                console.log(`[SCHEDULER] ✓ ID ${patientProtocol.patient.id} completou o protocolo!`);
 
                 await supabase
                     .from('patient_protocols')
@@ -192,27 +230,22 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
                     })
                     .eq('id', patientProtocol.id);
 
-                // Agendar mensagem de parabéns para 9h BRT
+                // Mensagem de parabéns
                 const congratsTime = brtTime(today, 9);
-
-                const congratsMessage = `🎉 PARABÉNS! Você completou o ${patientProtocol.protocol.name}! ` +
-                    `Foram ${durationDays} dias de dedicação e crescimento. Estamos muito orgulhosos de você! 💪`;
-
                 await supabase
                     .from('scheduled_messages')
                     .insert({
                         patient_id: patientProtocol.patient.id,
                         patient_whatsapp_number: patientProtocol.patient.whatsapp_number,
-                        message_content: congratsMessage,
+                        message_content: `🎉 PARABÉNS! Você completou o ${patientProtocol.protocol.name}! ` +
+                            `Foram ${durationDays} dias de dedicação e crescimento. Estamos muito orgulhosos de você! 💪`,
                         send_at: congratsTime.toISOString(),
                         source: 'protocol',
                         status: 'pending',
-                        // metadata com título garante que o processador use TWILIO_PROTOCOL_INCENTIVO_SID
-                        // (handle-patient-reply.ts: title.includes('Parabéns') → incentivo template)
                         metadata: { messageTitle: 'Parabéns - Conclusão de Protocolo' }
                     });
 
-                // Conceder 300 pontos + badge de conclusão de protocolo
+                // Badge + pontos
                 try {
                     const { data: patientRow } = await supabase
                         .from('patients')
@@ -230,10 +263,10 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
                                 { id: 'protocol_complete', earnedAt: new Date().toISOString() }
                             ]
                         }).eq('id', patientProtocol.patient.id);
-                        console.log(`[SCHEDULER] 🏅 +300 pts + badge protocol_complete para ${patientProtocol.patient.id}`);
+                        console.log(`[SCHEDULER] 🏅 +300 pts + badge protocol_complete`);
                     }
                 } catch (badgeErr) {
-                    console.error('[SCHEDULER] Erro ao conceder badge de conclusão:', badgeErr);
+                    console.error('[SCHEDULER] Erro ao conceder badge:', badgeErr);
                 }
 
                 messagesScheduled++;
@@ -241,168 +274,38 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
                 continue;
             }
 
-            // Buscar mensagens do dia
-            const protocolData = protocols.find(p => p.id === protocolId);
-            const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
-            const isFastTrack = isFastTrackProtocol;
+            // ── Verificar se já tem mensagens pendentes (já agendado) ──
+            const { count: pendingCount } = await supabase
+                .from('scheduled_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('patient_id', patientProtocol.patient.id)
+                .eq('status', 'pending')
+                .eq('source', 'protocol');
 
-            let allMessages: any[] = [];
-            
-            if (isFastTrack) {
-                // Modo Fast-Track usa apenas as mensagens configuradas NO arquivo protocols.ts
-                allMessages = contentMessages;
-                console.log(`[SCHEDULER] 🧪 MODO TESTE (15 min): Usando ${allMessages.length} mensagens configuradas.`);
-            } else {
-                const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
-                allMessages = [...gamificationMessages, ...contentMessages];
-            }
-
-            // Limite de mensagens/dia: 10 para teste intensivo (Dia 1 tem 7), 3 p/ produção
-            const MAX_MESSAGES_PER_DAY = isFastTrack ? 10 : 3;
-            const totalRaw = allMessages.length;
-            allMessages = allMessages.slice(0, MAX_MESSAGES_PER_DAY);
-
-            if (allMessages.length < totalRaw) {
-                console.log(`[SCHEDULER] ⚠️ Limite de ${MAX_MESSAGES_PER_DAY} msgs/dia: cortando ${totalRaw - allMessages.length} mensagem(ns).`);
-            }
-
-            if (allMessages.length === 0) {
-                console.log(`[SCHEDULER] ⚠️ Nenhuma mensagem para o dia ${currentDay}`);
-
-                // Incrementar dia mesmo sem mensagens
-                await supabase
-                    .from('patient_protocols')
-                    .update({ current_day: currentDay + 1 })
-                    .eq('id', patientProtocol.id);
-
+            if (pendingCount && pendingCount > 0) {
+                console.log(`[SCHEDULER] ⏭ Já existem ${pendingCount} mensagens pendentes para ID ${patientProtocol.patient.id}. Bulk já ativo.`);
                 continue;
             }
 
-            console.log(`[SCHEDULER] 📅 Agendando ${allMessages.length} mensagens para ID ${patientProtocol.patient.id}:`);
+            // ── AGENDAR ──
+            if (isFastTrack) {
+                // Fast-track: agendar apenas o dia atual (comportamento legado)
+                const scheduled = await scheduleSingleDay(supabase, patientProtocol, today);
+                messagesScheduled += scheduled;
+            } else {
+                // Produção: BULK — agendar TODOS os dias restantes de uma vez
+                console.log(`[SCHEDULER] 📦 Iniciando agendamento BULK para ${patientProtocol.patient.full_name} (dias ${currentDay}-${durationDays})...`);
+                const scheduled = await bulkScheduleAllDays(supabase, patientProtocol);
+                messagesScheduled += scheduled;
 
-            let scheduledCount = 0;
-
-            // Agendar cada mensagem no horário específico
-            for (let idx = 0; idx < allMessages.length; idx++) {
-                const message = allMessages[idx];
-            // Intervalo de 120 minutos (2 horas) para o teste intensivo conforme solicitado
-            const interval = isFastTrack ? 120 : 5;
-            const sendTime = getScheduledTime(message.title, today, isFastTrack, idx * interval);
-
-                // ✨ PROTEÇÃO: Nunca agendar mensagem para horário que já passou ✨
-                if (sendTime.getTime() < today.getTime() && !isFastTrack) {
-                    console.log(`[SCHEDULER]   ⏭ Horário já passou: ${message.title} (${sendTime.toLocaleTimeString('pt-BR')})`);
-                    continue;
-                }
-
-                // Verificar se é mensagem de gamificação
-                const isGamification = message.title?.includes('[GAMIFICAÇÃO]') || false;
-
-                // Preparar conteúdo da mensagem (adicionar tag se gamificação)
-                const messageContent = isGamification
-                    ? `${message.title}\n\n${message.message}`
-                    : message.message;
-
-                // Preparar metadata
-                const metadata = {
-                    isGamification,
-                    protocolDay: currentDay,
-                    perspective: message.perspective || null,
-                    checkinTitle: isGamification ? message.title : null,
-                    messageTitle: message.title, // Sempre salvar título para logging e fallback de template
-                };
-
-                // ✨ FIX 2: Dedup habilitado para TODOS os modos (inclusive FastTrack) ✨
-                // Verifica se esta mensagem já existe (pending OU sent) nas últimas 24h
-                // Janela de 24h evita falsos positivos em gamificação recorrente (mesma msg em semanas diferentes)
-                {
-                    const dedupWindowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-                    const { data: existing } = await supabase
-                        .from('scheduled_messages')
-                        .select('id')
-                        .eq('patient_id', patientProtocol.patient.id)
-                        .in('status', ['pending', 'sent'])
-                        .eq('message_content', messageContent)
-                        .gte('created_at', dedupWindowStart)
-                        .limit(1)
-                        .maybeSingle();
-
-                    if (existing) {
-                        console.log(`[SCHEDULER]   ⏭ Dedup: "${message.title}" já agendada/enviada`);
-                        continue;
-                    }
-                }
-
-                const insertResult = await supabase
-                    .from('scheduled_messages')
-                    .insert({
-                        patient_id: patientProtocol.patient.id,
-                        patient_whatsapp_number: patientProtocol.patient.whatsapp_number,
-                        message_content: messageContent,
-                        send_at: sendTime.toISOString(),
-                        source: 'protocol',
-                        status: 'pending',
-                        metadata
-                    });
-
-                if (insertResult.error) {
-                    console.error(`[SCHEDULER]   ❌ Insert falhou para "${message.title}":`, insertResult.error);
-                    continue;
-                }
-
-                scheduledCount++;
-                messagesScheduled++;
-
-                const timeStr = sendTime.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-
-                console.log(`[SCHEDULER]   ✓ ${timeStr} → ${message.title}`);
-            }
-
-            // ✨ FIX 1.3: Comportamento diferente para FastTrack vs Produção ✨
-            // - FastTrack: NÃO avança dia aqui → será feito pelo processMessageQueue
-            //   (porque roda vários triggers por dia, precisa esperar envio das mensagens)
-            // - Produção: Avança dia aqui como antes → cron roda 1x/dia, mensagens já
-            //   estão agendadas com horários fixos e serão processadas ao longo do dia
-            if (scheduledCount > 0) {
-                if (isFastTrack) {
-                    // FastTrack: apenas registrar, dia avançará no queue
+                if (scheduled > 0) {
+                    // Marcar que já processamos (updated_at) — não avançar current_day
+                    // O queue processor avançará current_day à medida que envia as mensagens
                     await supabase
                         .from('patient_protocols')
                         .update({ updated_at: new Date().toISOString() })
                         .eq('id', patientProtocol.id);
-                    console.log(`[SCHEDULER]   📋 FastTrack: ${scheduledCount} msgs agendadas para dia ${currentDay}. Dia avançará após envio.`);
-                } else {
-                    // Produção: avançar dia agora (comportamento original)
-                    const nextDay = currentDay + 1;
-                    if (nextDay > durationDays) {
-                        // Protocolo completado
-                        await supabase
-                            .from('patient_protocols')
-                            .update({
-                                current_day: nextDay,
-                                is_active: false,
-                                completed_at: new Date().toISOString(),
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', patientProtocol.id);
-                        protocolsCompleted++;
-                        console.log(`[SCHEDULER]   🎉 Protocolo completado! (Dia ${currentDay}/${durationDays})`);
-                    } else {
-                        await supabase
-                            .from('patient_protocols')
-                            .update({
-                                current_day: nextDay,
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', patientProtocol.id);
-                        console.log(`[SCHEDULER]   ✅ ${scheduledCount} msgs agendadas. Dia avançado: ${currentDay} → ${nextDay}`);
-                    }
                 }
-            } else {
-                console.log(`[SCHEDULER]   ⚠️ Nenhuma mensagem agendada (horários já passaram ou dedup).`);
             }
         }
 
@@ -410,21 +313,124 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
         console.log(`[SCHEDULER] 📊 Mensagens agendadas: ${messagesScheduled}`);
         console.log(`[SCHEDULER] 🎉 Protocolos completados: ${protocolsCompleted}`);
 
-        return {
-            success: true,
-            messagesScheduled,
-            protocolsCompleted
-        };
+        return { success: true, messagesScheduled, protocolsCompleted };
 
     } catch (error: any) {
         console.error('[SCHEDULER] ❌ Erro:', error);
-        return {
-            success: false,
-            messagesScheduled: 0,
-            protocolsCompleted: 0,
-            error: error.message
-        };
+        return { success: false, messagesScheduled: 0, protocolsCompleted: 0, error: error.message };
     }
+}
+
+/**
+ * Agenda mensagens apenas para o dia atual (modo fast-track / legado).
+ */
+async function scheduleSingleDay(supabase: any, patientProtocol: any, today: Date): Promise<number> {
+    const currentDay = patientProtocol.current_day;
+    const protocolId = patientProtocol.protocol.id;
+    const durationDays = patientProtocol.protocol.duration_days;
+    const isFastTrack = FAST_TRACK_PROTOCOL_IDS.includes(protocolId);
+
+    const protocolData = protocols.find(p => p.id === protocolId);
+    const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
+    const gamificationSteps = getGamificationSteps(protocolId);
+    const gamificationMessages = gamificationSteps.filter(m => m.day === currentDay);
+
+    let allMessages: any[] = isFastTrack
+        ? contentMessages
+        : [...gamificationMessages, ...contentMessages];
+
+    const maxPerDay = isFastTrack ? MAX_MESSAGES_PER_DAY_FAST_TRACK : MAX_MESSAGES_PER_DAY_PRODUCTION;
+    allMessages = allMessages.slice(0, maxPerDay);
+
+    if (allMessages.length === 0) {
+        console.log(`[SCHEDULER] ⚠️ Nenhuma mensagem para o dia ${currentDay}`);
+        await supabase
+            .from('patient_protocols')
+            .update({ current_day: currentDay + 1 })
+            .eq('id', patientProtocol.id);
+        return 0;
+    }
+
+    console.log(`[SCHEDULER] 📅 Agendando ${allMessages.length} mensagens (dia ${currentDay}):`);
+    let scheduledCount = 0;
+
+    for (let idx = 0; idx < allMessages.length; idx++) {
+        const message = allMessages[idx];
+        const interval = isFastTrack ? 120 : 5;
+        const sendTime = getScheduledTime(message.title, today, isFastTrack, idx * interval);
+
+        if (sendTime.getTime() < today.getTime() && !isFastTrack) {
+            console.log(`[SCHEDULER]   ⏭ Horário já passou: ${message.title}`);
+            continue;
+        }
+
+        const isGamification = gamificationMessages.includes(message);
+        const messageContent = isGamification
+            ? `${message.title}\n\n${message.message}`
+            : message.message;
+
+        const { error } = await supabase
+            .from('scheduled_messages')
+            .insert({
+                patient_id: patientProtocol.patient.id,
+                patient_whatsapp_number: patientProtocol.patient.whatsapp_number,
+                message_content: messageContent,
+                send_at: sendTime.toISOString(),
+                source: 'protocol',
+                status: 'pending',
+                metadata: {
+                    isGamification,
+                    protocolDay: currentDay,
+                    perspective: message.perspective || null,
+                    checkinTitle: isGamification ? message.title : null,
+                    messageTitle: message.title,
+                }
+            });
+
+        if (error) {
+            console.error(`[SCHEDULER]   ❌ Insert falhou para "${message.title}":`, error);
+            continue;
+        }
+
+        scheduledCount++;
+        const timeStr = sendTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        console.log(`[SCHEDULER]   ✓ ${timeStr} → ${message.title}`);
+    }
+
+    if (scheduledCount > 0 && isFastTrack) {
+        await supabase
+            .from('patient_protocols')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', patientProtocol.id);
+        console.log(`[SCHEDULER]   📋 FastTrack: ${scheduledCount} msgs agendadas para dia ${currentDay}.`);
+    }
+
+    return scheduledCount;
+}
+
+/**
+ * Cancela todas as mensagens futuras pendentes de um paciente.
+ * Usar quando o paciente sai do protocolo ou é resetado.
+ */
+export async function cancelPendingMessages(patientId: string): Promise<number> {
+    const supabase = createServiceRoleClient();
+
+    const { data, error } = await supabase
+        .from('scheduled_messages')
+        .delete()
+        .eq('patient_id', patientId)
+        .eq('status', 'pending')
+        .eq('source', 'protocol')
+        .select('id');
+
+    if (error) {
+        console.error(`[SCHEDULER] ❌ Erro ao cancelar mensagens para ${patientId}:`, error);
+        return 0;
+    }
+
+    const count = data?.length || 0;
+    console.log(`[SCHEDULER] 🗑 ${count} mensagens pendentes canceladas para ${patientId}`);
+    return count;
 }
 
 /**
@@ -436,7 +442,6 @@ export async function testProtocolScheduling(patientId: string): Promise<{
     error?: string;
 }> {
     const supabase = createServiceRoleClient();
-    const today = new Date();
 
     console.log(`[TEST] Testando agendamento para paciente ${patientId}`);
 
@@ -465,26 +470,28 @@ export async function testProtocolScheduling(patientId: string): Promise<{
         }
 
         const currentDay = patientProtocol.current_day;
-        const protocolData = protocols.find(p => p.id === patientProtocol.protocol.id);
-        const contentMessages = protocolData?.messages.filter(m => m.day === currentDay) || [];
-        const gamificationMessages = mandatoryGamificationSteps.filter(m => m.day === currentDay);
+        const protocolId = patientProtocol.protocol.id;
+        const protocolData = protocols.find(p => p.id === protocolId);
+        const gamificationSteps = getGamificationSteps(protocolId);
 
-        const allMessages = [...gamificationMessages, ...contentMessages];
-
+        let totalMessages = 0;
         console.log(`[TEST] 👤 ${patientProtocol.patient.full_name} - Dia ${currentDay}/${patientProtocol.protocol.duration_days}`);
-        console.log(`[TEST] 📅 ${allMessages.length} mensagens para agendar:`);
 
-        for (const message of allMessages) {
-            const sendTime = getScheduledTime(message.title, today);
-            const timeStr = sendTime.toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+        for (let day = currentDay; day <= patientProtocol.protocol.duration_days; day++) {
+            const gamMsgs = gamificationSteps.filter(m => m.day === day);
+            const contentMsgs = protocolData?.messages.filter(m => m.day === day) || [];
+            const allMsgs = [...gamMsgs, ...contentMsgs].slice(0, MAX_MESSAGES_PER_DAY_PRODUCTION);
 
-            console.log(`[TEST]   ${timeStr} → ${message.title}`);
+            if (allMsgs.length > 0) {
+                totalMessages += allMsgs.length;
+                if (day <= currentDay + 2 || day === patientProtocol.protocol.duration_days) {
+                    console.log(`[TEST] 📅 Dia ${day}: ${allMsgs.length} msgs → ${allMsgs.map(m => m.title).join(', ')}`);
+                }
+            }
         }
 
-        return { success: true, messagesScheduled: allMessages.length };
+        console.log(`[TEST] 📊 Total: ${totalMessages} mensagens em ${patientProtocol.protocol.duration_days - currentDay + 1} dias`);
+        return { success: true, messagesScheduled: totalMessages };
 
     } catch (error: any) {
         console.error('[TEST] Erro:', error);
