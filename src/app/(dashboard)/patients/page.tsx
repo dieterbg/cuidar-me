@@ -192,6 +192,12 @@ export default function PatientsListPage() {
         if (activeTab === 'pending') return patient.status === 'pending';
         if (activeTab === 'inactive') {
           const threeDaysAgo = subDays(new Date(), 3);
+          const sevenDaysAgo = subDays(new Date(), 7);
+          // Excluir pacientes recém-enrolled em protocolo (start_date nos últimos 7 dias
+          // ou ainda no futuro) — eles ainda não tiveram tempo de interagir.
+          const protocolStart = patient.protocol?.startDate ? new Date(patient.protocol.startDate as string) : null;
+          const isRecentlyEnrolled = protocolStart && protocolStart > sevenDaysAgo;
+          if (isRecentlyEnrolled) return false;
           return patient.status === 'active' &&
             (!patient.lastMessageTimestamp || new Date(patient.lastMessageTimestamp as string) < threeDaysAgo);
         }
@@ -270,10 +276,14 @@ export default function PatientsListPage() {
   const pendingCount = useMemo(() => patients.filter(p => p.status === 'pending').length, [patients]);
   const inactiveCount = useMemo(() => {
     const threeDaysAgo = subDays(new Date(), 3);
-    return patients.filter(p =>
-      p.status === 'active' &&
-      (!p.lastMessageTimestamp || new Date(p.lastMessageTimestamp as string) < threeDaysAgo)
-    ).length;
+    const sevenDaysAgo = subDays(new Date(), 7);
+    return patients.filter(p => {
+      const protocolStart = p.protocol?.startDate ? new Date(p.protocol.startDate as string) : null;
+      const isRecentlyEnrolled = protocolStart && protocolStart > sevenDaysAgo;
+      if (isRecentlyEnrolled) return false;
+      return p.status === 'active' &&
+        (!p.lastMessageTimestamp || new Date(p.lastMessageTimestamp as string) < threeDaysAgo);
+    }).length;
   }, [patients]);
 
   const PatientList = ({ list }: { list: Patient[] }) => {
