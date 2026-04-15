@@ -89,7 +89,7 @@ export async function scheduleReminder(
 }
 
 export async function getScheduledMessagesForPatient(patientId: string): Promise<ScheduledMessage[]> {
-    const supabase = createClient();
+    const supabase = createServiceRoleClient();
 
     const { data, error } = await supabase
         .from('scheduled_messages')
@@ -102,7 +102,19 @@ export async function getScheduledMessagesForPatient(patientId: string): Promise
         return [];
     }
 
-    return data || [];
+    // Mapear snake_case do Supabase para camelCase do tipo ScheduledMessage
+    return (data || []).map((row: any) => ({
+        id: row.id,
+        patientId: row.patient_id,
+        patientWhatsappNumber: row.patient_whatsapp_number,
+        messageContent: row.message_content,
+        sendAt: row.send_at,
+        status: row.status,
+        source: row.source,
+        createdAt: row.created_at,
+        errorInfo: row.error_info,
+        metadata: row.metadata,
+    }));
 }
 
 export async function getScheduledMessagesToday(): Promise<ScheduledMessage[]> {
