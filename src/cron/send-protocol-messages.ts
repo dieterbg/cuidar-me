@@ -70,7 +70,10 @@ async function bulkScheduleAllDays(
     supabase: any,
     patientProtocol: any
 ): Promise<number> {
-    const startDate = new Date(patientProtocol.start_date);
+    // start_date vem como "YYYY-MM-DD" — usar meio-dia BRT como âncora para evitar
+    // que a conversão UTC→BRT mude o dia (meia-noite UTC = 21h BRT do dia anterior).
+    const startDateStr = patientProtocol.start_date; // "YYYY-MM-DD"
+    const startDateNoon = new Date(`${startDateStr}T12:00:00-03:00`);
     const protocolId = patientProtocol.protocol.id;
     const durationDays = patientProtocol.protocol.duration_days;
     const currentDay = patientProtocol.current_day;
@@ -85,7 +88,8 @@ async function bulkScheduleAllDays(
 
     for (let day = currentDay; day <= durationDays; day++) {
         // Data real no calendário para este dia do protocolo
-        const calendarDate = new Date(startDate);
+        // Usar noon BRT como base para que brtTime() extraia a data correta
+        const calendarDate = new Date(startDateNoon);
         calendarDate.setDate(calendarDate.getDate() + (day - 1));
 
         const gamificationMsgs = gamificationSteps.filter(m => m.day === day);

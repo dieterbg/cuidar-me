@@ -214,6 +214,13 @@ export interface ScheduledMessage {
     source: 'protocol' | 'dynamic_reminder';
     createdAt: string | Date;
     errorInfo: string | null;
+    metadata?: {
+        isGamification?: boolean;
+        protocolDay?: number;
+        messageTitle?: string;
+        checkinTitle?: string;
+        perspective?: string;
+    };
 }
 
 

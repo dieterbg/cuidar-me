@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { PatientEditForm } from '@/components/patient-edit-form';
 import { PatientProfileSummary } from '@/components/patient-profile-summary';
+import { ScheduledMessagesPanel } from '@/components/scheduled-messages-panel';
 import {
     Dialog,
     DialogContent,
@@ -498,6 +499,15 @@ export default function PatientProfilePage() {
                                     <ClipboardList className="mr-2 h-4 w-4" />
                                     Prontuário
                                 </TabsTrigger>
+                                <TabsTrigger value="scheduled" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    Agendadas
+                                    {scheduledMessages.filter(m => m.status === 'pending').length > 0 && (
+                                        <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 min-w-[20px] justify-center">
+                                            {scheduledMessages.filter(m => m.status === 'pending').length}
+                                        </Badge>
+                                    )}
+                                </TabsTrigger>
                                 {showAnalysisPanel && (
                                     <TabsTrigger value="analysis" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-amber-600 data-[state=active]:text-amber-700">
                                         <ShieldAlert className="mr-2 h-4 w-4" />
@@ -518,6 +528,14 @@ export default function PatientProfilePage() {
 
                             <TabsContent value="profile" className="mt-0 pb-12">
                                 <PatientProfileSummary patient={patient} />
+                            </TabsContent>
+
+                            <TabsContent value="scheduled" className="mt-0 pb-12">
+                                <ScheduledMessagesPanel
+                                    messages={scheduledMessages}
+                                    currentDay={patient?.protocol?.currentDay}
+                                    durationDays={activeProtocol?.durationDays}
+                                />
                             </TabsContent>
 
                             <TabsContent value="analysis" className="mt-0 pb-12">
