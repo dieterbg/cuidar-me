@@ -487,6 +487,23 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             }
         }
 
+        // ── ATOMIC CLAIM: marca como 'sent' ANTES de enviar ao Twilio ──
+        // Evita race condition: se dois crons leram a mesma mensagem como 'pending',
+        // apenas o que conseguir fazer este UPDATE (WHERE status='pending') prossegue.
+        // O outro receberá data=[] (nenhuma linha atualizada) e vai skipar.
+        const { data: claimed } = await supabase
+            .from('scheduled_messages')
+            .update({ status: 'sent', error_info: 'claiming...' })
+            .eq('id', msg.id)
+            .eq('status', 'pending')  // só atualiza se ainda for pending
+            .select('id');
+
+        if (!claimed || claimed.length === 0) {
+            console.log(`[QUEUE] ⏭ Msg ${msg.id} já foi reivindicada por outra execução — skip`);
+            skipped++;
+            continue;
+        }
+
         const twilioSid = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content, {
             contentSid,
             contentVariables
