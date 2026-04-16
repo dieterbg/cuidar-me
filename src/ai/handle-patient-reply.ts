@@ -417,52 +417,73 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             const metadata = (msg.metadata as any) || {};
             const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
             const isGamification = !!metadata.isGamification;
+            const protocolDay = metadata.protocolDay || 1;
 
             const env = (key: string) => process.env[key]?.trim();
 
-            // ── FIX 3: TEMPLATES DE GAMIFICAÇÃO USAM TEMPLATES GENÉRICOS DE PROTOCOLO ──
-            // Mensagens de gamificação de protocolo contêm o texto completo com A/B/C
-            // no message_content. Usamos templates genéricos que exibem o conteúdo textual,
-            // em vez dos templates interativos do daily-checkin (que têm formato diferente).
+            // ── TEMPLATES UTILITY (substituem INCENTIVO/DICA/REFLEXAO/WEIGHT que eram MARKETING e geravam 63049) ──
+            // Estratégia:
+            //   - Pesagem semanal  → TWILIO_PESAGEM_SEMANAL_SID       (vars: dia, protocolo, nome)
+            //   - Check-in (gamif) → TWILIO_CHECKIN_DIARIO_SID        (vars: dia, protocolo, nome, pergunta)
+            //   - Conteúdo diário  → TWILIO_PROTOCOLO_REGISTRO_SID    (vars: dia, durationDays, protocolo, nome, conteúdo)
+            //
+            // Todos os 3 novos templates são categoria UTILITY pela Meta — imunes a 63049.
+            // Os SIDs antigos ficam como fallback apenas se os novos ainda não estiverem configurados no env.
+
+            const sidPesagem = env('TWILIO_PESAGEM_SEMANAL_SID') || env('TWILIO_CHECKIN_WEIGHT_SID');
+            const sidCheckin = env('TWILIO_CHECKIN_DIARIO_SID') || env('TWILIO_PROTOCOL_INCENTIVO_SID');
+            const sidRegistro = env('TWILIO_PROTOCOLO_REGISTRO_SID') || env('TWILIO_PROTOCOL_INCENTIVO_SID');
+
+            // Buscar paciente + protocolo ativo em uma query
+            const { data: patientRow } = await supabase
+                .from('patients')
+                .select(`
+                    full_name,
+                    patient_protocols!inner (
+                        current_day,
+                        is_active,
+                        protocols:protocol_id ( name, duration_days )
+                    )
+                `)
+                .eq('id', msg.patient_id)
+                .eq('patient_protocols.is_active', true)
+                .maybeSingle();
+
+            const patientName = patientRow?.full_name?.split(' ')[0] || 'lá';
+            const activeProto = (patientRow as any)?.patient_protocols?.[0];
+            const protocolName = activeProto?.protocols?.name || 'Cuidar.me';
+            const durationDays = activeProto?.protocols?.duration_days || protocolDay;
+
+            const usingNewTemplates = !!(env('TWILIO_PROTOCOLO_REGISTRO_SID') && env('TWILIO_CHECKIN_DIARIO_SID') && env('TWILIO_PESAGEM_SEMANAL_SID'));
+
             if (isGamification) {
-                if (title.includes('Peso')) contentSid = env('TWILIO_CHECKIN_WEIGHT_SID');
-                else if (title.includes('Reflexão') || title.includes('Sono') || title.includes('Bem-Estar'))
-                    contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
-                else
-                    contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
+                if (title.includes('Peso') || title.toLowerCase().includes('pesagem')) {
+                    contentSid = sidPesagem;
+                    contentVariables = usingNewTemplates
+                        ? { "1": String(protocolDay), "2": protocolName, "3": patientName }
+                        : { "1": patientName, "2": msg.message_content };
+                } else {
+                    contentSid = sidCheckin;
+                    contentVariables = usingNewTemplates
+                        ? { "1": String(protocolDay), "2": protocolName, "3": patientName, "4": msg.message_content }
+                        : { "1": patientName, "2": msg.message_content };
+                }
+            } else {
+                // Conteúdo diário do protocolo (ex-incentivo/dica/reflexão, todos unificados)
+                contentSid = sidRegistro;
+                contentVariables = usingNewTemplates
+                    ? {
+                        "1": String(protocolDay),
+                        "2": String(durationDays),
+                        "3": protocolName,
+                        "4": patientName,
+                        "5": msg.message_content,
+                      }
+                    : { "1": patientName, "2": msg.message_content };
             }
 
-            // ── TEMPLATES NÃO-INTERATIVOS: para mensagens de conteúdo do protocolo ──
             if (!contentSid) {
-                if (
-                    title.includes('Dica') || title.includes('Curiosidade') || title.includes('Energia')
-                ) contentSid = env('TWILIO_PROTOCOL_DICA_SID');
-                else if (
-                    title.includes('Reflexão') || title.includes('Respiração') || title.includes('Sono')
-                ) contentSid = env('TWILIO_PROTOCOL_REFLEXAO_SID');
-                else if (
-                    title.includes('Incentivo') || title.includes('Movimento') || title.includes('Quase') ||
-                    title.includes('Bem-vindo') || title.includes('Parabéns') || title.includes('Conquista')
-                ) contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
-            }
-
-            if (!contentSid) {
-                contentSid = env('TWILIO_PROTOCOL_INCENTIVO_SID');
-                console.log(`[QUEUE] 📝 Template incentivo (fallback) para: "${title || msg.message_content?.substring(0, 50)}"`);
-            }
-
-            if (contentSid) {
-                const { data: patientRow } = await supabase
-                    .from('patients')
-                    .select('full_name')
-                    .eq('id', msg.patient_id)
-                    .single();
-                const patientName = patientRow?.full_name?.split(' ')[0] || "lá";
-
-                contentVariables = {
-                    "1": patientName,
-                    "2": msg.message_content
-                };
+                console.warn(`[QUEUE] ⚠ Nenhum contentSid resolvido para msg ${msg.id} (title="${title}")`);
             }
         }
 

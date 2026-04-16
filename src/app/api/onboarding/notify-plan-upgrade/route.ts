@@ -62,16 +62,22 @@ export async function POST(request: NextRequest) {
 
         // Usar template aprovado se disponível — necessário fora da janela de 24h
         // TWILIO_PLAN_UPGRADE_SID: template dedicado (vars: {{1}}=nome, {{2}}=plano, {{3}}=protocolo)
-        // Fallback: TWILIO_PROTOCOL_INCENTIVO_SID (vars: {{1}}=nome, {{2}}=mensagem)
+        // Fallback principal (UTILITY): TWILIO_PROTOCOLO_REGISTRO_SID (vars: dia, total, protocolo, nome, conteúdo)
+        // Fallback legado (MARKETING, deprecated): TWILIO_PROTOCOL_INCENTIVO_SID
         const upgradeSid = process.env.TWILIO_PLAN_UPGRADE_SID?.trim();
-        const genericSid = process.env.TWILIO_PROTOCOL_INCENTIVO_SID?.trim();
-        const contentSid = upgradeSid || genericSid;
+        const registroSid = process.env.TWILIO_PROTOCOLO_REGISTRO_SID?.trim();
+        const legacySid = process.env.TWILIO_PROTOCOL_INCENTIVO_SID?.trim();
+        const contentSid = upgradeSid || registroSid || legacySid;
 
-        const contentVariables: Record<string, string> | undefined = upgradeSid
-            ? { "1": firstName, "2": `${planEmoji} ${planLabel}`, "3": protocolName }
-            : genericSid
-                ? { "1": firstName, "2": message }
-                : undefined;
+        let contentVariables: Record<string, string> | undefined;
+        if (upgradeSid) {
+            contentVariables = { "1": firstName, "2": `${planEmoji} ${planLabel}`, "3": protocolName };
+        } else if (registroSid) {
+            // TWILIO_PROTOCOLO_REGISTRO_SID — UTILITY (vars: dia, durationDays, protocolo, nome, conteúdo)
+            contentVariables = { "1": "1", "2": "90", "3": protocolName, "4": firstName, "5": message };
+        } else if (legacySid) {
+            contentVariables = { "1": firstName, "2": message };
+        }
 
         // Enviar via WhatsApp
         const sent = await sendWhatsappMessage(patient.whatsapp_number, message, {
