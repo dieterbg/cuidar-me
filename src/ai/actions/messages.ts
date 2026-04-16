@@ -230,6 +230,35 @@ export async function getMessages(patientId: string): Promise<Message[]> {
         timestamp: msg.created_at
     })) as Message[];
 }
+/**
+ * Reagenda uma mensagem pendente para um novo send_at.
+ * sendAt deve ser pelo menos 10 minutos no futuro.
+ */
+export async function rescheduleMessage(
+    messageId: string,
+    sendAt: string // ISO string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = createServiceRoleClient();
+
+    const minAllowed = new Date(Date.now() + 10 * 60 * 1000);
+    if (new Date(sendAt) < minAllowed) {
+        return { success: false, error: 'O horário deve ser pelo menos 10 minutos no futuro.' };
+    }
+
+    const { error } = await supabase
+        .from('scheduled_messages')
+        .update({ send_at: sendAt })
+        .eq('id', messageId)
+        .eq('status', 'pending');
+
+    if (error) {
+        console.error('Error rescheduling message:', error);
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
 export async function deleteMessages(patientId: string): Promise<{ success: boolean; error?: string }> {
     const supabase = createServiceRoleClient();
 

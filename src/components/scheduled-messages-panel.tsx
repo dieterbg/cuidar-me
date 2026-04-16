@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, CheckCircle, AlertTriangle, Calendar, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, Calendar, ChevronDown, ChevronUp, Send, Pencil, X, Check, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ScheduledMessage } from '@/lib/types';
+import { rescheduleMessage } from '@/ai/actions/messages';
 
 interface ScheduledMessagesPanelProps {
     messages: ScheduledMessage[];
@@ -18,9 +19,11 @@ interface ScheduledMessagesPanelProps {
 
 type FilterMode = 'all' | 'pending' | 'sent' | 'today' | 'week';
 
-export function ScheduledMessagesPanel({ messages, currentDay, durationDays }: ScheduledMessagesPanelProps) {
+export function ScheduledMessagesPanel({ messages: initialMessages, currentDay, durationDays }: ScheduledMessagesPanelProps) {
     const [filter, setFilter] = useState<FilterMode>('week');
     const [expandedDay, setExpandedDay] = useState<number | null>(currentDay || null);
+    // Local copy so optimistic updates work without page reload
+    const [messages, setMessages] = useState<ScheduledMessage[]>(initialMessages);
 
     const stats = useMemo(() => {
         const now = new Date();
@@ -85,6 +88,11 @@ export function ScheduledMessagesPanel({ messages, currentDay, durationDays }: S
         { mode: 'sent', label: 'Enviadas', count: stats.sent },
         { mode: 'all', label: 'Todas' },
     ];
+
+    // Called by MessageRow after successful reschedule
+    const handleRescheduled = (msgId: string, newSendAt: string) => {
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, sendAt: newSendAt } : m));
+    };
 
     if (messages.length === 0) {
         return (
@@ -169,6 +177,7 @@ export function ScheduledMessagesPanel({ messages, currentDay, durationDays }: S
                                 isTodayGroup={isTodayGroup}
                                 isExpanded={expandedDay === day}
                                 onToggle={() => setExpandedDay(expandedDay === day ? null : day)}
+                                onRescheduled={handleRescheduled}
                             />
                         );
                     })
@@ -192,13 +201,14 @@ function StatCard({ label, value, icon, color }: { label: string; value: number;
     );
 }
 
-function DayGroup({ day, messages, isCurrentDay, isTodayGroup, isExpanded, onToggle }: {
+function DayGroup({ day, messages, isCurrentDay, isTodayGroup, isExpanded, onToggle, onRescheduled }: {
     day: number;
     messages: ScheduledMessage[];
     isCurrentDay: boolean;
     isTodayGroup: boolean;
     isExpanded: boolean;
     onToggle: () => void;
+    onRescheduled: (msgId: string, newSendAt: string) => void;
 }) {
     const allSent = messages.every(m => m.status === 'sent');
     const hasPending = messages.some(m => m.status === 'pending');
@@ -260,7 +270,7 @@ function DayGroup({ day, messages, isCurrentDay, isTodayGroup, isExpanded, onTog
                 <CardContent className="pt-0 pb-3 px-3 sm:px-4">
                     <div className="space-y-1.5 border-t pt-3">
                         {messages.map((msg) => (
-                            <MessageRow key={msg.id} message={msg} />
+                            <MessageRow key={msg.id} message={msg} onRescheduled={onRescheduled} />
                         ))}
                     </div>
                 </CardContent>
@@ -269,7 +279,16 @@ function DayGroup({ day, messages, isCurrentDay, isTodayGroup, isExpanded, onTog
     );
 }
 
-function MessageRow({ message }: { message: ScheduledMessage }) {
+// Returns "YYYY-MM-DDTHH:MM" local time string for datetime-local input
+function toLocalDateTimeValue(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function MessageRow({ message, onRescheduled }: {
+    message: ScheduledMessage;
+    onRescheduled: (msgId: string, newSendAt: string) => void;
+}) {
     const meta = (message as any).metadata || {};
     const title = meta.messageTitle || meta.checkinTitle || '';
     const isGamification = !!meta.isGamification;
@@ -278,6 +297,43 @@ function MessageRow({ message }: { message: ScheduledMessage }) {
     const isFailed = message.errorInfo?.startsWith('FAILED');
     const isOverdue = !isSent && !isFailed && isPast(sendAt);
     const timeStr = format(sendAt, 'HH:mm');
+
+    const [editing, setEditing] = useState(false);
+    const [inputValue, setInputValue] = useState('');
+    const [error, setError] = useState('');
+    const [isPending, startTransition] = useTransition();
+
+    const openEdit = () => {
+        // Default: now + 11 min rounded to next minute
+        const defaultTime = new Date(Date.now() + 11 * 60 * 1000);
+        defaultTime.setSeconds(0, 0);
+        setInputValue(toLocalDateTimeValue(defaultTime));
+        setError('');
+        setEditing(true);
+    };
+
+    const handleSave = () => {
+        if (!inputValue) { setError('Selecione um horário.'); return; }
+        const selected = new Date(inputValue);
+        const minTime = new Date(Date.now() + 10 * 60 * 1000);
+        if (selected < minTime) {
+            setError('Mínimo: 10 minutos a partir de agora.');
+            return;
+        }
+        setError('');
+        startTransition(async () => {
+            const result = await rescheduleMessage(message.id, selected.toISOString());
+            if (result.success) {
+                onRescheduled(message.id, selected.toISOString());
+                setEditing(false);
+            } else {
+                setError(result.error || 'Erro ao reagendar.');
+            }
+        });
+    };
+
+    // Min datetime-local value: now + 10 min
+    const minDateTimeLocal = toLocalDateTimeValue(new Date(Date.now() + 10 * 60 * 1000));
 
     return (
         <div className={cn(
@@ -298,6 +354,7 @@ function MessageRow({ message }: { message: ScheduledMessage }) {
                     <Clock className="h-4 w-4 text-amber-400" />
                 )}
             </div>
+
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono font-medium text-xs bg-muted px-1.5 py-0.5 rounded">{timeStr}</span>
@@ -319,7 +376,55 @@ function MessageRow({ message }: { message: ScheduledMessage }) {
                 {isFailed && message.errorInfo && (
                     <p className="text-xs text-red-500 mt-1">{message.errorInfo}</p>
                 )}
+
+                {/* Inline reschedule form */}
+                {editing && (
+                    <div className="mt-2 p-2 bg-background border rounded-lg space-y-2">
+                        <p className="text-xs font-medium text-foreground">Reagendar para:</p>
+                        <input
+                            type="datetime-local"
+                            value={inputValue}
+                            min={minDateTimeLocal}
+                            onChange={e => { setInputValue(e.target.value); setError(''); }}
+                            className="w-full text-xs border rounded px-2 py-1.5 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={isPending}
+                        />
+                        {error && <p className="text-xs text-red-500">{error}</p>}
+                        <div className="flex gap-1.5">
+                            <Button
+                                size="sm"
+                                className="h-7 text-xs px-3"
+                                onClick={handleSave}
+                                disabled={isPending}
+                            >
+                                {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                <span className="ml-1">{isPending ? 'Salvando...' : 'Confirmar'}</span>
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs px-2"
+                                onClick={() => setEditing(false)}
+                                disabled={isPending}
+                            >
+                                <X className="h-3 w-3" />
+                                Cancelar
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* Edit button — only for pending messages */}
+            {!isSent && !editing && (
+                <button
+                    onClick={openEdit}
+                    className="flex-shrink-0 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors mt-0.5"
+                    title="Reagendar"
+                >
+                    <Pencil className="h-3.5 w-3.5" />
+                </button>
+            )}
         </div>
     );
 }
