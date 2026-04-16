@@ -363,273 +363,243 @@ export async function handlePatientReply(
 export async function processMessageQueue(externalSupabase?: any): Promise<{ success: boolean; processed: number; skipped?: number; error?: string }> {
     const supabase = externalSupabase || createServiceRoleClient();
     const now = new Date();
-    const MAX_AGE_HOURS = 24; // Mensagens mais velhas que isso são descartadas (stale) - aumentado para 24h para testes
-    const BATCH_LIMIT = 30;   // Máximo de mensagens por execução do cron
-    const processedPatientsCount = new Map<string, number>(); // Para permitir até X mensagens por paciente por run
+    const MAX_AGE_HOURS = 24;
+    const BATCH_LIMIT = 30;
+    const CONCURRENT = 10; // mensagens Twilio em paralelo por chunk
 
+    // ── Env vars computados uma vez (não por mensagem) ──
+    const env = (key: string) => process.env[key]?.trim();
+    const templateConfig = {
+        usingNewTemplates: !!(env('TWILIO_PROTOCOLO_REGISTRO_SID') && env('TWILIO_CHECKIN_DIARIO_SID') && env('TWILIO_PESAGEM_SEMANAL_SID')),
+        sidPesagem: env('TWILIO_PESAGEM_SEMANAL_SID') || env('TWILIO_CHECKIN_WEIGHT_SID'),
+        sidCheckin: env('TWILIO_CHECKIN_DIARIO_SID')  || env('TWILIO_PROTOCOL_INCENTIVO_SID'),
+        sidRegistro: env('TWILIO_PROTOCOLO_REGISTRO_SID') || env('TWILIO_PROTOCOL_INCENTIVO_SID'),
+    };
+
+    // ── 1. Buscar mensagens due ──
     const { data: pendingMessages, error: queueError } = await supabase
         .from('scheduled_messages')
         .select('*')
         .eq('status', 'pending')
         .lte('send_at', now.toISOString())
-        .order('send_at', { ascending: true }) // Priorizar as mais antigas
-        .limit(BATCH_LIMIT * 5); // Busca mais para filtrar duplicatas controladas de paciente
+        .order('send_at', { ascending: true })
+        .limit(BATCH_LIMIT * 5);
 
     if (queueError) {
-        console.error('[QUEUE] Erro ao buscar mensagens pendentes:', JSON.stringify(queueError));
+        console.error('[QUEUE] Erro ao buscar pendentes:', queueError.message);
         return { success: false, processed: 0, error: queueError.message };
     }
-
     if (!pendingMessages || pendingMessages.length === 0) {
         return { success: true, processed: 0 };
     }
 
-    let processed = 0;
-    let skipped = 0;
+    // ── 2. Filtrar: limite por paciente + stale ──
+    const patientCountMap = new Map<string, number>();
+    const toProcess: typeof pendingMessages = [];
+    const staleMessages: typeof pendingMessages = [];
 
     for (const msg of pendingMessages) {
-        if (processed >= BATCH_LIMIT) break;
+        const ageHours = (now.getTime() - new Date(msg.send_at).getTime()) / 3600000;
+        if (ageHours > MAX_AGE_HOURS) { staleMessages.push(msg); continue; }
+        const count = patientCountMap.get(msg.patient_id) || 0;
+        if (count >= 10) continue;
+        patientCountMap.set(msg.patient_id, count + 1);
+        toProcess.push(msg);
+        if (toProcess.length >= BATCH_LIMIT) break;
+    }
 
-        // 1. Verificar se já atingimos o limite por paciente nesta execução
-        // FIX 4.1: Limite aumentado para 10 (suporta protocolos de teste com até 7 msgs/dia)
-        const patientCount = processedPatientsCount.get(msg.patient_id) || 0;
-        if (patientCount >= 10) {
-            continue;
-        }
-
-        const ageMs = now.getTime() - new Date(msg.send_at).getTime();
-        const ageHours = ageMs / (1000 * 60 * 60);
-        if (ageHours > MAX_AGE_HOURS) {
-            console.log(`[QUEUE] ⏭ Skipping stale message ${msg.id} (${ageHours.toFixed(1)}h old)`);
-            await supabase.from('scheduled_messages')
-                .update({ status: 'sent', error_info: `Skipped: ${ageHours.toFixed(0)}h late` })
+    // Marcar stale em paralelo (sem bloquear)
+    if (staleMessages.length > 0) {
+        await Promise.all(staleMessages.map((msg: any) => {
+            const h = ((now.getTime() - new Date(msg.send_at).getTime()) / 3600000).toFixed(0);
+            console.log(`[QUEUE] ⏭ Stale ${msg.id} (${h}h)`);
+            return supabase.from('scheduled_messages')
+                .update({ status: 'sent', error_info: `Skipped: ${h}h late` })
                 .eq('id', msg.id);
-            skipped++;
-            continue;
+        }));
+    }
+
+    if (toProcess.length === 0) return { success: true, processed: 0, skipped: staleMessages.length };
+
+    // ── 3. PRE-FETCH paciente + protocolo em UMA query (elimina N+1) ──
+    const uniquePatientIds = [...new Set(toProcess.map((m: any) => m.patient_id))];
+    const { data: patientRows } = await supabase
+        .from('patients')
+        .select(`
+            id, full_name,
+            patient_protocols!inner (
+                id, current_day, is_active,
+                protocols:protocol_id ( name, duration_days )
+            )
+        `)
+        .in('id', uniquePatientIds)
+        .eq('patient_protocols.is_active', true);
+
+    const patientMap = new Map<string, any>(
+        (patientRows || []).map((p: any) => [p.id, p])
+    );
+
+    // ── 4. Processar em chunks paralelos de CONCURRENT ──
+    let processed = 0;
+    let skipped = staleMessages.length;
+
+    for (let i = 0; i < toProcess.length; i += CONCURRENT) {
+        const chunk = toProcess.slice(i, i + CONCURRENT);
+        const results = await Promise.all(
+            chunk.map((msg: any) => _processSingleMessage(msg, supabase, patientMap, now, templateConfig))
+        );
+        for (const r of results) {
+            if (r === 'sent') processed++;
+            else if (r === 'skipped' || r === 'failed') skipped++;
         }
+    }
 
-        processedPatientsCount.set(msg.patient_id, patientCount + 1);
+    console.log(`[QUEUE] ✅ processed=${processed} skipped=${skipped} patients=${uniquePatientIds.length}`);
+    return { success: true, processed, skipped };
+}
 
-        let contentSid = undefined;
-        let contentVariables = undefined;
+/**
+ * Processa uma única mensagem: claim atômico → Twilio → DB updates.
+ * Extraído do loop para permitir execução paralela via Promise.all.
+ */
+async function _processSingleMessage(
+    msg: any,
+    supabase: any,
+    patientMap: Map<string, any>,
+    now: Date,
+    templateConfig: { usingNewTemplates: boolean; sidPesagem?: string; sidCheckin?: string; sidRegistro?: string }
+): Promise<'sent' | 'skipped' | 'failed'> {
+    const { usingNewTemplates, sidPesagem, sidCheckin, sidRegistro } = templateConfig;
 
-        if (msg.source === 'protocol' || (msg.metadata && (msg.metadata as any).isGamification)) {
-            const metadata = (msg.metadata as any) || {};
-            const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
-            const isGamification = !!metadata.isGamification;
-            const protocolDay = metadata.protocolDay || 1;
+    // Resolver template e variáveis
+    let contentSid: string | undefined;
+    let contentVariables: Record<string, string> | undefined;
 
-            const env = (key: string) => process.env[key]?.trim();
+    if (msg.source === 'protocol' || msg.metadata?.isGamification) {
+        const metadata = msg.metadata || {};
+        const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
+        const isGamification = !!metadata.isGamification;
+        const protocolDay = metadata.protocolDay || 1;
 
-            // ── TEMPLATES UTILITY (substituem INCENTIVO/DICA/REFLEXAO/WEIGHT que eram MARKETING e geravam 63049) ──
-            // Estratégia:
-            //   - Pesagem semanal  → TWILIO_PESAGEM_SEMANAL_SID       (vars: dia, protocolo, nome)
-            //   - Check-in (gamif) → TWILIO_CHECKIN_DIARIO_SID        (vars: dia, protocolo, nome, pergunta)
-            //   - Conteúdo diário  → TWILIO_PROTOCOLO_REGISTRO_SID    (vars: dia, durationDays, protocolo, nome, conteúdo)
-            //
-            // Todos os 3 novos templates são categoria UTILITY pela Meta — imunes a 63049.
-            // Os SIDs antigos ficam como fallback apenas se os novos ainda não estiverem configurados no env.
+        const patientRow = patientMap.get(msg.patient_id);
+        const patientName = patientRow?.full_name?.split(' ')[0] || 'lá';
+        const activeProto = patientRow?.patient_protocols?.[0];
+        const protocolName = activeProto?.protocols?.name || 'Cuidar.me';
+        const durationDays = activeProto?.protocols?.duration_days || protocolDay;
 
-            const sidPesagem = env('TWILIO_PESAGEM_SEMANAL_SID') || env('TWILIO_CHECKIN_WEIGHT_SID');
-            const sidCheckin = env('TWILIO_CHECKIN_DIARIO_SID') || env('TWILIO_PROTOCOL_INCENTIVO_SID');
-            const sidRegistro = env('TWILIO_PROTOCOLO_REGISTRO_SID') || env('TWILIO_PROTOCOL_INCENTIVO_SID');
-
-            // Buscar paciente + protocolo ativo em uma query
-            const { data: patientRow } = await supabase
-                .from('patients')
-                .select(`
-                    full_name,
-                    patient_protocols!inner (
-                        current_day,
-                        is_active,
-                        protocols:protocol_id ( name, duration_days )
-                    )
-                `)
-                .eq('id', msg.patient_id)
-                .eq('patient_protocols.is_active', true)
-                .maybeSingle();
-
-            const patientName = patientRow?.full_name?.split(' ')[0] || 'lá';
-            const activeProto = (patientRow as any)?.patient_protocols?.[0];
-            const protocolName = activeProto?.protocols?.name || 'Cuidar.me';
-            const durationDays = activeProto?.protocols?.duration_days || protocolDay;
-
-            const usingNewTemplates = !!(env('TWILIO_PROTOCOLO_REGISTRO_SID') && env('TWILIO_CHECKIN_DIARIO_SID') && env('TWILIO_PESAGEM_SEMANAL_SID'));
-
-            if (isGamification) {
-                if (title.includes('Peso') || title.toLowerCase().includes('pesagem')) {
-                    contentSid = sidPesagem;
-                    contentVariables = usingNewTemplates
-                        ? { "1": String(protocolDay), "2": protocolName, "3": patientName }
-                        : { "1": patientName, "2": msg.message_content };
-                } else {
-                    contentSid = sidCheckin;
-                    contentVariables = usingNewTemplates
-                        ? { "1": String(protocolDay), "2": protocolName, "3": patientName, "4": msg.message_content }
-                        : { "1": patientName, "2": msg.message_content };
-                }
-            } else {
-                // Conteúdo diário do protocolo (ex-incentivo/dica/reflexão, todos unificados)
-                contentSid = sidRegistro;
+        if (isGamification) {
+            if (title.includes('Peso') || title.toLowerCase().includes('pesagem')) {
+                contentSid = sidPesagem;
                 contentVariables = usingNewTemplates
-                    ? {
-                        "1": String(protocolDay),
-                        "2": String(durationDays),
-                        "3": protocolName,
-                        "4": patientName,
-                        "5": msg.message_content,
-                      }
+                    ? { "1": String(protocolDay), "2": protocolName, "3": patientName }
+                    : { "1": patientName, "2": msg.message_content };
+            } else {
+                contentSid = sidCheckin;
+                contentVariables = usingNewTemplates
+                    ? { "1": String(protocolDay), "2": protocolName, "3": patientName, "4": msg.message_content }
                     : { "1": patientName, "2": msg.message_content };
             }
-
-            if (!contentSid) {
-                console.warn(`[QUEUE] ⚠ Nenhum contentSid resolvido para msg ${msg.id} (title="${title}")`);
-            }
+        } else {
+            contentSid = sidRegistro;
+            contentVariables = usingNewTemplates
+                ? { "1": String(protocolDay), "2": String(durationDays), "3": protocolName, "4": patientName, "5": msg.message_content }
+                : { "1": patientName, "2": msg.message_content };
         }
+    }
 
-        // ── ATOMIC CLAIM: marca como 'sent' ANTES de enviar ao Twilio ──
-        // Evita race condition: se dois crons leram a mesma mensagem como 'pending',
-        // apenas o que conseguir fazer este UPDATE (WHERE status='pending') prossegue.
-        // O outro receberá data=[] (nenhuma linha atualizada) e vai skipar.
-        const { data: claimed } = await supabase
-            .from('scheduled_messages')
-            .update({ status: 'sent', error_info: 'claiming...' })
-            .eq('id', msg.id)
-            .eq('status', 'pending')  // só atualiza se ainda for pending
-            .select('id');
+    // ── Atomic claim: só prossegue se ganhou o lock ──
+    const { data: claimed } = await supabase
+        .from('scheduled_messages')
+        .update({ status: 'sent', error_info: 'claiming...' })
+        .eq('id', msg.id)
+        .eq('status', 'pending')
+        .select('id');
 
-        if (!claimed || claimed.length === 0) {
-            console.log(`[QUEUE] ⏭ Msg ${msg.id} já foi reivindicada por outra execução — skip`);
-            skipped++;
-            continue;
-        }
+    if (!claimed || claimed.length === 0) {
+        console.log(`[QUEUE] ⏭ Msg ${msg.id} já reivindicada — skip`);
+        return 'skipped';
+    }
 
-        const twilioSid = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content, {
-            contentSid,
-            contentVariables
-        });
+    // ── Enviar via Twilio ──
+    const twilioSid = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content, {
+        contentSid, contentVariables
+    });
 
-        if (twilioSid) {
-            // Atualizar o contexto do paciente para que a IA saiba qual foi a ÚLTIMA mensagem enviada
-            const checkinTitle = (msg.metadata as any)?.checkinTitle || (msg.metadata as any)?.title || (msg.metadata as any)?.messageTitle || 'Mensagem do Sistema';
-            const { data: updateData, error: updateErr } = await supabase.from('patients').update({
+    if (twilioSid) {
+        const checkinTitle = msg.metadata?.checkinTitle || msg.metadata?.title || msg.metadata?.messageTitle || 'Mensagem do Sistema';
+
+        // Três writes em paralelo (context + mark sent + log)
+        await Promise.all([
+            supabase.from('patients').update({
                 last_checkin_type: checkinTitle,
                 last_checkin_at: new Date().toISOString()
-            }).eq('id', msg.patient_id).select('id, last_checkin_type, last_checkin_at, user_id').single();
+            }).eq('id', msg.patient_id),
 
-            console.log(`[DEBUG-QUEUE] ========== MESSAGE CONTEXT SET ==========`);
-            console.log(`[DEBUG-QUEUE] patient_id: ${msg.patient_id}`);
-            console.log(`[DEBUG-QUEUE] contextTitle: "${checkinTitle}"`);
-            console.log(`[DEBUG-QUEUE] isGamification: ${!!(msg.metadata && (msg.metadata as any).isGamification)}`);
-            console.log(`[DEBUG-QUEUE] update result: ${JSON.stringify(updateData)}`);
-            console.log(`[DEBUG-QUEUE] update error: ${updateErr ? JSON.stringify(updateErr) : 'none'}`);
-            console.log(`[DEBUG-QUEUE] ================================================`);
+            supabase.from('scheduled_messages').update({
+                status: 'sent',
+                sent_at: new Date().toISOString(),
+                error_info: `Sent via Twilio SID: ${twilioSid}${contentSid ? ' (Template)' : ''}`
+            }).eq('id', msg.id),
 
-            await supabase.from('scheduled_messages')
-                .update({
-                    status: 'sent',
-                    sent_at: new Date().toISOString(),
-                    error_info: `Sent via Twilio SID: ${twilioSid}${contentSid ? ' (Template)' : ''}`
-                })
-                .eq('id', msg.id);
-
-            await supabase.from('messages').insert({
+            supabase.from('messages').insert({
                 patient_id: msg.patient_id,
                 sender: 'system',
                 text: msg.message_content,
                 metadata: msg.metadata || null,
-            });
-            processed++;
+            }),
+        ]);
 
-            // ✨ FIX 4.2: Avançar current_day quando todas as msgs DO DIA foram enviadas ✨
-            // Com bulk scheduling, existem mensagens pendentes para dias futuros.
-            // Só conta como "dia concluído" quando não há mais msgs pendentes com send_at <= agora.
-            if (msg.source === 'protocol') {
-                const protocolDay = (msg.metadata as any)?.protocolDay;
+        // Avançar current_day se todas as msgs due foram enviadas
+        if (msg.source === 'protocol') {
+            const protocolDay = msg.metadata?.protocolDay;
+            const { count: remainingDueCount } = await supabase
+                .from('scheduled_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('patient_id', msg.patient_id)
+                .eq('status', 'pending')
+                .eq('source', 'protocol')
+                .lte('send_at', now.toISOString());
 
-                // Contar apenas mensagens pendentes que JÁ estão no horário (due now)
-                const { count: remainingDueCount } = await supabase
-                    .from('scheduled_messages')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('patient_id', msg.patient_id)
-                    .eq('status', 'pending')
-                    .eq('source', 'protocol')
-                    .lte('send_at', now.toISOString());
+            if (!remainingDueCount || remainingDueCount === 0) {
+                const patientRow = patientMap.get(msg.patient_id);
+                const pp = patientRow?.patient_protocols?.[0];
 
-                if (!remainingDueCount || remainingDueCount === 0) {
-                    // Todas as msgs do horário foram enviadas — avançar current_day
-                    const { data: pp } = await supabase
-                        .from('patient_protocols')
-                        .select('id, current_day, protocol_id, protocol:protocols(duration_days)')
-                        .eq('patient_id', msg.patient_id)
-                        .eq('is_active', true)
-                        .single();
+                if (pp && protocolDay) {
+                    const nextDay = protocolDay + 1;
+                    const durationDays = pp.protocols?.duration_days || 90;
 
-                    if (pp && protocolDay) {
-                        const nextDay = protocolDay + 1;
-                        const durationDays = (pp.protocol as any)?.duration_days || 90;
-
-                        if (nextDay > durationDays) {
-                            await supabase
-                                .from('patient_protocols')
-                                .update({
-                                    current_day: nextDay,
-                                    is_active: false,
-                                    completed_at: new Date().toISOString()
-                                })
-                                .eq('id', pp.id);
-
-                            // Badge + pontos de conclusão
-                            try {
-                                const { data: patientRow } = await supabase
-                                    .from('patients')
-                                    .select('total_points, badges')
-                                    .eq('id', msg.patient_id)
-                                    .single();
-
-                                if (patientRow) {
-                                    const currentBadges: any[] = patientRow.badges || [];
-                                    const hasBadge = currentBadges.some((b: any) => b.id === 'protocol_complete');
-                                    await supabase.from('patients').update({
-                                        total_points: (patientRow.total_points || 0) + 300,
-                                        badges: hasBadge ? currentBadges : [
-                                            ...currentBadges,
-                                            { id: 'protocol_complete', earnedAt: new Date().toISOString() }
-                                        ]
-                                    }).eq('id', msg.patient_id);
-                                    console.log(`[QUEUE] 🏅 +300 pts + badge protocol_complete para ${msg.patient_id}`);
-                                }
-                            } catch (badgeErr) {
-                                console.error('[QUEUE] Erro ao conceder badge:', badgeErr);
+                    if (nextDay > durationDays) {
+                        await supabase.from('patient_protocols').update({
+                            current_day: nextDay, is_active: false, completed_at: new Date().toISOString()
+                        }).eq('id', pp.id);
+                        try {
+                            const { data: patRow } = await supabase.from('patients').select('total_points, badges').eq('id', msg.patient_id).single();
+                            if (patRow) {
+                                const badges = patRow.badges || [];
+                                const hasBadge = badges.some((b: any) => b.id === 'protocol_complete');
+                                await supabase.from('patients').update({
+                                    total_points: (patRow.total_points || 0) + 300,
+                                    badges: hasBadge ? badges : [...badges, { id: 'protocol_complete', earnedAt: new Date().toISOString() }]
+                                }).eq('id', msg.patient_id);
                             }
-
-                            console.log(`[QUEUE] 🎉 Protocolo completado para ${msg.patient_id}! (Dia ${protocolDay}/${durationDays})`);
-                        } else if (nextDay > pp.current_day) {
-                            // Só avança se protocolDay é maior que current_day (evita regressão)
-                            await supabase
-                                .from('patient_protocols')
-                                .update({ current_day: nextDay })
-                                .eq('id', pp.id);
-                            console.log(`[QUEUE] ↗️ Dia avançado: ${pp.current_day} → ${nextDay} para ${msg.patient_id}`);
-                        }
+                        } catch {}
+                        console.log(`[QUEUE] 🎉 Protocolo completo: ${msg.patient_id} (dia ${protocolDay}/${durationDays})`);
+                    } else if (nextDay > pp.current_day) {
+                        await supabase.from('patient_protocols').update({ current_day: nextDay }).eq('id', pp.id);
+                        console.log(`[QUEUE] ↗️ ${msg.patient_id}: dia ${pp.current_day} → ${nextDay}`);
                     }
-                } else {
-                    console.log(`[QUEUE] 📋 ${remainingDueCount} msgs de protocolo pendentes (due) para ${msg.patient_id}`);
                 }
             }
-        } else {
-            // Se falhou, registrar erro mas manter como 'sent' para evitar reenvio infinito
-            // (enum message_status só aceita 'pending' e 'sent')
-            await supabase.from('scheduled_messages')
-                .update({
-                    status: 'sent',
-                    error_info: `FAILED to send via Twilio API${contentSid ? ` (ContentSID: ${contentSid})` : ''}`
-                })
-                .eq('id', msg.id);
         }
-    }
 
-    return { success: true, processed, skipped };
+        return 'sent';
+    } else {
+        await supabase.from('scheduled_messages').update({
+            status: 'sent',
+            error_info: `FAILED to send via Twilio API${contentSid ? ` (ContentSID: ${contentSid})` : ''}`
+        }).eq('id', msg.id);
+        return 'failed';
+    }
 }
 
 /**
