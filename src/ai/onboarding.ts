@@ -1,4 +1,13 @@
-export type { OnboardingState, OnboardingStep } from '@/types/onboarding';
+export type OnboardingStep = 'welcome' | 'preferences' | 'complete';
+export type OnboardingState = {
+    patient_id: string;
+    step: OnboardingStep;
+    plan: 'freemium' | 'premium' | 'vip';
+    data: {
+        preferredTime?: 'morning' | 'afternoon' | 'night';
+    };
+    completed_at?: string;
+};
 
 /**
  * Retorna a mensagem para o passo atual do onboarding
@@ -8,7 +17,8 @@ export function getStepMessage(
     step: OnboardingStep,
     plan: 'freemium' | 'premium' | 'vip' = 'freemium',
     data: OnboardingState['data'] = {},
-    firstName: string = 'Paciente'
+    firstName: string = 'Paciente',
+    fullMessage: boolean = true
 ): string {
     switch (step) {
         case 'welcome':

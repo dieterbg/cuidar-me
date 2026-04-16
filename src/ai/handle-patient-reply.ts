@@ -21,6 +21,7 @@ export async function handlePatientReply(
     messageSid?: string
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = createServiceRoleClient();
+    let patient: any = null;
 
     try {
         logger.info('Processing patient message', { 
@@ -35,7 +36,7 @@ export async function handlePatientReply(
         // 1. Buscar paciente (agora APENAS busca, não cria)
         const { findPatientByPhone } = await import('@/services/patient-service');
         const patientRaw = await findPatientByPhone(supabase, whatsappNumber);
-        const patient = patientRaw ? transformPatientFromSupabase(patientRaw) : null;
+        patient = patientRaw ? transformPatientFromSupabase(patientRaw) : null;
 
         logger.debug('Patient lookup details', { 
             found: !!patientRaw, 
