@@ -116,4 +116,30 @@ describe('WhatsApp Webhook API', () => {
             profile_name: 'Novo Contato'
         }));
     });
+
+    it('should handle duplicate webhooks gracefully (Idempotency)', async () => {
+        (validateTwilioWebhook as any).mockResolvedValue(true);
+
+        // Mock Supabase returning a "Unique Constraint Violation" code 23505
+        const insertMock = vi.fn().mockResolvedValue({ error: { code: '23505' } });
+        mockSupabase.from = vi.fn().mockReturnValue({ insert: insertMock });
+
+        const formData = new FormData();
+        formData.append('From', 'whatsapp:+1234567890');
+        formData.append('Body', 'Hello Again');
+        formData.append('MessageSid', 'SM_RETRY_123');
+
+        const req = new NextRequest('http://localhost/api/whatsapp', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const res = await POST(req);
+
+        // Should still return 200 to Twilio to acknowledge receipt, even if it's a duplicate
+        expect(res.status).toBe(200);
+        
+        // Should NOT trigger the background processor for a duplicate
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
 });
