@@ -4,6 +4,9 @@ import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { generateChatbotReply } from '@/ai/flows/generate-chatbot-reply';
 import { sendWhatsappMessage } from '@/lib/twilio';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
+import { loggers } from '@/lib/logger';
+
+const logger = loggers.ai;
 
 /**
  * Sistema Completo Integrado de Processamento de Mensagens
@@ -20,7 +23,11 @@ export async function handlePatientReply(
     const supabase = createServiceRoleClient();
 
     try {
-        console.log(`[handlePatientReply] Processing msg (len: ${messageText.length}, from: ...${whatsappNumber.slice(-4)}, SID: ${messageSid || 'N/A'})`);
+        logger.info('Processing patient message', { 
+            whatsappNumber, 
+            messageLength: messageText.length, 
+            messageSid 
+        });
 
         // 0. Idempotency check: Removido pois twilio_sid não existe no DB.
         // Se houver necessidade de idempotência rigorosa, deve-se adicionar a coluna twilio_sid (texto, único) na tabela messages.
@@ -30,27 +37,20 @@ export async function handlePatientReply(
         const patientRaw = await findPatientByPhone(supabase, whatsappNumber);
         const patient = patientRaw ? transformPatientFromSupabase(patientRaw) : null;
 
-        console.log(`[DEBUG-PATIENT] ========== PATIENT LOOKUP ==========`);
-        console.log(`[DEBUG-PATIENT] whatsappNumber: "${whatsappNumber}"`);
-        console.log(`[DEBUG-PATIENT] found: ${!!patientRaw}`);
-        if (patientRaw) {
-            console.log(`[DEBUG-PATIENT] patientRaw.id: "${patientRaw.id}"`);
-            console.log(`[DEBUG-PATIENT] patientRaw.user_id: "${patientRaw.user_id}"`);
-            console.log(`[DEBUG-PATIENT] patientRaw.full_name: "${patientRaw.full_name}"`);
-            console.log(`[DEBUG-PATIENT] patientRaw.last_checkin_type: "${patientRaw.last_checkin_type}"`);
-            console.log(`[DEBUG-PATIENT] patientRaw.last_checkin_at: "${patientRaw.last_checkin_at}"`);
-            console.log(`[DEBUG-PATIENT] patientRaw.plan: "${patientRaw.plan}"`);
-            console.log(`[DEBUG-PATIENT] transformed patient.userId: "${patient?.userId}"`);
-        }
-        console.log(`[DEBUG-PATIENT] ====================================`);
+        logger.debug('Patient lookup details', { 
+            found: !!patientRaw, 
+            patientId: patientRaw?.id, 
+            fullName: patientRaw?.full_name,
+            plan: patientRaw?.plan
+        });
 
         // Se não encontrou paciente, envia mensagem de cadastro e encerra
         if (!patient) {
-            console.log(`[HANDLE-REPLY] Unknown number ${whatsappNumber}. Sending registration link.`);
-            await sendWhatsappMessage(
-                whatsappNumber,
-                "Olá! 👋 Para utilizar nossa assistente virtual, você precisa ter um cadastro ativo.\n\nPor favor, entre em contato com a Clínica Dornelles para se cadastrar: https://www.clinicadornelles.com.br"
-            );
+            logger.info('Unknown number, sending registration link', { whatsappNumber });
+            const registrationLink = `https://clinicadornelles.com.br/cadastro?phone=${encodeURIComponent(whatsappNumber)}`;
+            const messageText = `Olá! 👋 Notamos que você ainda não possui um cadastro completo conosco. Para utilizar nossa assistente virtual, por favor entre em contato com a Clínica Dornelles para se cadastrar: ${registrationLink}`;
+            
+            await sendWhatsappMessage(whatsappNumber, messageText);
             return { success: true };
         }
 
@@ -65,7 +65,7 @@ export async function handlePatientReply(
         };
 
         const patientPlan = patient.subscription.plan || 'freemium';
-        console.log(`[handlePatientReply] Patient ${patient.id} plan: ${patientPlan}`);
+        logger.info('Patient plan identified', { patientId: patient.id, plan: patientPlan });
         const dailyLimit = DAILY_LIMITS[patientPlan] ?? DAILY_LIMITS.freemium;
 
         if (dailyLimit !== Infinity) {
@@ -80,7 +80,11 @@ export async function handlePatientReply(
                 .gte('created_at', todayStart.toISOString());
 
             if ((todayMsgCount ?? 0) >= dailyLimit) {
-                console.log(`[RATE LIMIT] Patient ${patient.id} (${patientPlan}) hit daily limit of ${dailyLimit}`);
+                logger.warn('Rate limit hit', { 
+                    patientId: patient.id, 
+                    plan: patientPlan, 
+                    limit: dailyLimit 
+                });
                 const limitMsg = patientPlan === 'freemium'
                     ? "Você atingiu o limite diário de mensagens do plano gratuito. 💡 Conheça nossos planos Premium para acompanhamento ilimitado! Acesse: https://clinicadornelles.com.br/portal/journey"
                     : "Você atingiu o limite diário de mensagens. Tente novamente amanhã! 😊";
@@ -89,7 +93,7 @@ export async function handlePatientReply(
                 // Salvar no histórico para o admin ver o bloqueio
                 await supabase.from('messages').insert({
                     patient_id: patient.id,
-                    sender: 'me',
+                    sender: 'system',
                     text: limitMsg,
                 });
 
@@ -106,7 +110,7 @@ export async function handlePatientReply(
         });
 
         if (insertError) {
-            console.error(`[handlePatientReply] Insert message error:`, insertError);
+            logger.error('Insert message error', insertError, { patientId: patient.id });
             throw insertError;
         }
 
@@ -123,8 +127,8 @@ export async function handlePatientReply(
         const normalizedMsg = messageText.toLowerCase().trim();
 
         if (OPT_OUT_KEYWORDS.includes(normalizedMsg)) {
-            console.log(`[OPT-OUT] Keyword detected for patient ${patient.id}`);
-            const { handleOptOut } = await import('./handlers/opt-out-handler');
+            logger.info('Opt-out keyword detected', { patientId: patient.id, keyword: normalizedMsg });
+            const { handleOptOut } = await import('@/ai/handlers/opt-out-handler');
             await handleOptOut(patient, whatsappNumber, supabase);
             return { success: true };
         }
@@ -133,14 +137,15 @@ export async function handlePatientReply(
         // 🚀 GATE 2: ONBOARDING ATIVO
         // Intercepta qualquer mensagem se o paciente estiver em onboarding
         // =====================================================
-        const { isOnboardingActive, handleOnboardingReply } = await import('./actions/onboarding');
+        const { isOnboardingActive, handleOnboardingReply } = await import('@/ai/actions/onboarding');
         const onboardingActive = await isOnboardingActive(patient.id);
 
         if (onboardingActive) {
-            console.log(`[ONBOARDING] Active flow detected for patient ${patient.id}. Routing to handler.`);
+            logger.info('Routing to onboarding handler', { patientId: patient.id });
             const result = await handleOnboardingReply(patient.id, whatsappNumber, messageText, patient.fullName);
             return { success: result.success };
         }
+
 
         // =====================================================
         // 🚀 FLUXO DE BOAS-VINDAS (PRIMEIRO CONTATO)
@@ -153,10 +158,9 @@ export async function handlePatientReply(
             .eq('sender', 'system');
 
         if (systemMessageCount === 0) {
-            const { loggers } = await import('@/lib/logger');
-            const { sendWelcomeMessage } = await import('./handlers/welcome-handler');
+            const { sendWelcomeMessage } = await import('@/ai/handlers/welcome-handler');
 
-            loggers.ai.info('First contact detected, sending welcome message', { patientId: patient.id });
+            logger.info('First contact detected, sending welcome message', { patientId: patient.id });
             await sendWelcomeMessage(patient, supabase);
             return { success: true };
         }
@@ -184,26 +188,26 @@ export async function handlePatientReply(
             const isEmergencyByKeyword = EMERGENCY_PATTERNS.some(p => p.test(messageText));
 
             if (isEmergencyByKeyword) {
-                console.log(`[EMERGENCY GATE] Keyword match for FREEMIUM patient ${patient.id}. Sending safety message (no escalation).`);
+                logger.info('Emergency keyword match for FREEMIUM patient', { patientId: patient.id });
                 const safetyMsg = `⚠️ Percebemos que você pode estar passando por uma situação de saúde importante.\n\nPor favor, procure atendimento médico imediatamente:\n\n🚑 **SAMU:** Ligue **192**\n🏥 **Pronto-socorro** mais próximo\n📞 **CVV (apoio emocional):** Ligue **188**\n\nSua saúde é prioridade. Não deixe de buscar ajuda profissional! ❤️`;
 
                 await sendWhatsappMessage(whatsappNumber, safetyMsg);
                 await supabase.from('messages').insert({
                     patient_id: patient.id,
-                    sender: 'me',
+                    sender: 'system',
                     text: safetyMsg,
                 });
                 return { success: true };
             }
 
             // Qualquer outra mensagem → upsell
-            console.log(`[FREEMIUM GATE] Blocking chat for patient ${patient.id}. Sending upsell.`);
+            logger.info('Blocking freemium chat, sending upsell', { patientId: patient.id });
             const upsellMsg = `Obrigado pela sua mensagem! 😊\n\nNo plano Gratuito, você recebe dicas de saúde diárias às 8h.\n\n💎 Quer ir além? Com o Plano **Premium** você tem:\n✅ Assistente de saúde com IA 24h\n✅ Check-in diário personalizado\n✅ Gamificação e conquistas\n✅ Protocolos de acompanhamento\n\nFale com a clínica para fazer o upgrade! 🚀`;
 
             await sendWhatsappMessage(whatsappNumber, upsellMsg);
             await supabase.from('messages').insert({
                 patient_id: patient.id,
-                sender: 'me',
+                sender: 'system',
                 text: upsellMsg,
             });
             return { success: true };
@@ -230,8 +234,8 @@ export async function handlePatientReply(
         const isEmergencyByKeyword = EMERGENCY_PATTERNS.some(p => p.test(messageText));
 
         if (isEmergencyByKeyword) {
-            console.log(`[EMERGENCY GATE] Keyword match detected for patient ${patient.id}`);
-            const { handleEmergency } = await import('./handlers/emergency-handler');
+            logger.info('Emergency keyword match detected', { patientId: patient.id });
+            const { handleEmergency } = await import('@/ai/handlers/emergency-handler');
             return await handleEmergency(patient, messageText, whatsappNumber, supabase);
         }
 
@@ -247,50 +251,51 @@ export async function handlePatientReply(
         const isPendingCheckin = pendingType && pendingAt &&
             (ageMs! < 2 * 60 * 60 * 1000); // janela de 2 horas
 
-        console.log(`[DEBUG-GATE] ========== CHECK-IN GATE ==========`);
-        console.log(`[DEBUG-GATE] patientId: ${patient.id}`);
-        console.log(`[DEBUG-GATE] patientRaw.last_checkin_type: "${pendingType}"`);
-        console.log(`[DEBUG-GATE] patientRaw.last_checkin_at: "${(patientRaw as any).last_checkin_at}"`);
-        console.log(`[DEBUG-GATE] pendingAt parsed: ${pendingAt?.toISOString() || 'null'}`);
-        console.log(`[DEBUG-GATE] age: ${ageMs !== null ? (ageMs / 60000).toFixed(1) + ' min' : 'N/A'}`);
-        console.log(`[DEBUG-GATE] isPendingCheckin: ${isPendingCheckin}`);
-        console.log(`[DEBUG-GATE] messageText: "${messageText}"`);
-        console.log(`[DEBUG-GATE] patient.userId: "${(patient as any).userId}"`);
-        console.log(`[DEBUG-GATE] patient.user_id: "${(patient as any).user_id}"`);
-        console.log(`[DEBUG-GATE] patientRaw.user_id: "${(patientRaw as any).user_id}"`);
-        console.log(`[DEBUG-GATE] ====================================`);
+        logger.debug('Check-in gate details', { 
+            patientId: patient.id, 
+            pendingType,
+            ageMin: ageMs !== null ? (ageMs / 60000).toFixed(1) : null,
+            isPendingCheckin
+        });
 
         if (isPendingCheckin) {
-            console.log(`[DEBUG-GATE] ✅ Entering checkin handler for type="${pendingType}"`);
-            const { processCheckinResponse } = await import('./handlers/checkin-response-handler');
+            logger.debug('Entering checkin handler', { patientId: patient.id, pendingType });
+            const { processCheckinResponse } = await import('@/ai/handlers/checkin-response-handler');
             const result = await processCheckinResponse(
-                patient, messageText, pendingType, whatsappNumber, supabase
+                patient, messageText, pendingType!, whatsappNumber, supabase
             );
 
-            console.log(`[DEBUG-GATE] Handler returned: processed=${result.processed}`);
-
             if (result.processed) {
-                console.log(`[ROUTING] ✅ Check-in consumed: "${pendingType}" → "${messageText}". IA silenced.`);
+                logger.info('Check-in response consumed', { 
+                    patientId: patient.id, 
+                    type: pendingType 
+                });
                 return { success: true };
             }
-            // Resposta não reconhecida como simples → continua para IA
-            console.log(`[ROUTING] ⚠️ Check-in pending but reply not simple. Passing to AI.`);
+            logger.info('Check-in pending but reply not simple, passing to AI', { patientId: patient.id });
         } else {
-            console.log(`[DEBUG-GATE] ❌ NOT entering checkin handler. Reason: ${!pendingType ? 'no last_checkin_type' : !pendingAt ? 'no last_checkin_at' : 'expired (>' + (ageMs! / 60000).toFixed(0) + 'min)'}`);
+            logger.debug('Skipping checkin handler', { 
+                patientId: patient.id, 
+                reason: !pendingType ? 'no last_checkin_type' : !pendingAt ? 'no last_checkin_at' : 'expired' 
+            });
         }
 
         // =====================================================
         // 🚀 PRIORIDADE 2: CLASSICAÇÃO DE INTENÇÃO POR IA
         // Se a gamificação não consumiu a mensagem, deixa a IA classificar.
         // =====================================================
-        const { classifyMessageIntent, MessageIntent } = await import('./message-intent-classifier');
+        const { classifyMessageIntent, MessageIntent } = await import('@/ai/message-intent-classifier');
 
         const classification = await classifyMessageIntent(messageText, {
             hasActiveCheckin: !!isPendingCheckin,
             checkinTitle: pendingType || undefined,
         });
 
-        console.log(`[Intent] ${classification.intent} (${classification.confidence})`);
+        logger.info('Message intent classified', { 
+            patientId: patient.id, 
+            intent: classification.intent, 
+            confidence: classification.confidence 
+        });
 
         // =====================================================
         // 🚀 PRIORIDADE 3: ROTEAMENTO BASEADO NA INTENÇÃO (IA)
@@ -333,25 +338,29 @@ export async function handlePatientReply(
 
         // 5.4 SOCIAL - Resposta rápida
         if (classification.intent === MessageIntent.SOCIAL || classification.intent === MessageIntent.QUESTION) {
-            const { handleAIConversation } = await import('./handlers/conversation-handler');
+            const { handleAIConversation } = await import('@/ai/handlers/conversation-handler');
             return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
         }
 
         // 5.5 IA CONVERSACIONAL (padrão)
-        const { handleAIConversation: defaultConv } = await import('./handlers/conversation-handler');
+        const { handleAIConversation: defaultConv } = await import('@/ai/handlers/conversation-handler');
         return await defaultConv(patient, messageText, whatsappNumber, supabase);
 
     } catch (error: any) {
-        console.error('[handlePatientReply] Error:', error);
+        logger.error('Error in handlePatientReply', { 
+            error: error.message, 
+            stack: error.stack,
+            whatsappNumber 
+        });
         try {
             const supabase = createServiceRoleClient();
             await supabase.from('messages').insert({
-                patient_id: (error as any).patientId || null,
+                patient_id: patient?.id || null,
                 sender: 'system',
                 text: `[FATAL-ERROR] handlePatientReply: ${error.message || error}`
             });
         } catch (logErr) {
-            console.error('Failed to log error to DB:', logErr);
+            logger.error('Failed to log error to DB', logErr);
         }
         return { success: false, error: error.message };
     }
@@ -386,7 +395,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
         .limit(BATCH_LIMIT * 5);
 
     if (queueError) {
-        console.error('[QUEUE] Erro ao buscar pendentes:', queueError.message);
+        logger.error('Erro ao buscar pendentes na fila', queueError);
         return { success: false, processed: 0, error: queueError.message };
     }
     if (!pendingMessages || pendingMessages.length === 0) {
@@ -412,7 +421,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
     if (staleMessages.length > 0) {
         await Promise.all(staleMessages.map((msg: any) => {
             const h = ((now.getTime() - new Date(msg.send_at).getTime()) / 3600000).toFixed(0);
-            console.log(`[QUEUE] ⏭ Stale ${msg.id} (${h}h)`);
+            logger.debug('Skipping stale message', { messageId: msg.id, ageHours: h });
             return supabase.from('scheduled_messages')
                 .update({ status: 'sent', error_info: `Skipped: ${h}h late` })
                 .eq('id', msg.id);
@@ -454,7 +463,11 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
         }
     }
 
-    console.log(`[QUEUE] ✅ processed=${processed} skipped=${skipped} patients=${uniquePatientIds.length}`);
+    logger.info('Queue processing finished', { 
+        processed, 
+        skipped, 
+        patientsCount: uniquePatientIds.length 
+    });
     return { success: true, processed, skipped };
 }
 
@@ -699,20 +712,23 @@ Como está indo? 😊`;
                     text: reminderMessage
                 });
 
-                console.log(`[MISSED CHECKINS] ✓ Sent reminder to ${protocol.patient.full_name}`);
+                logger.info('Missed checkin reminder sent', { patientName: protocol.patient.full_name });
                 processedCount++;
 
             } catch (sendError) {
-                console.error(`[MISSED CHECKINS] Failed to send reminder to ${protocol.patient.full_name}:`, sendError);
+                logger.error('Failed to send missed checkin reminder', sendError as Error, { 
+                    patientName: protocol.patient.full_name 
+                });
                 // Continua para próximo paciente
             }
         }
 
-        console.log(`[MISSED CHECKINS] ✅ Processed ${processedCount} reminders`);
+        logger.info('Missed checkins processing finished', { processed: processedCount });
         return { success: true, processed: processedCount };
 
-    } catch (error: any) {
-        console.error('[MISSED CHECKINS] Fatal error:', error);
-        return { success: false, processed: 0, error: error.message };
+    } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Fatal error in processMissedCheckins', err);
+        return { success: false, processed: 0, error: err.message };
     }
 }

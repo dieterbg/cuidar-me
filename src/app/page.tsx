@@ -218,13 +218,13 @@ function ClockIcon({ className }: { className?: string }) {
 
 export default function ClinicaPage() {
     return (
-        <div className="min-h-screen bg-[#FAFBF7]">
+        <div className="min-h-screen bg-brand-muted">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
             {/* ─── Navbar ─── */}
-            <nav className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-[#E8E9E4]">
+            <nav className="sticky top-0 z-50 backdrop-blur-lg bg-white/80 border-b border-brand-border">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                         <Image
@@ -239,22 +239,22 @@ export default function ClinicaPage() {
                         </span>
                     </div>
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-[#5A6B5A]">
-                        <a href="#sobre" className="hover:text-[#899d5e] transition-colors">
+                        <a href="#sobre" className="hover:text-brand transition-colors">
                             Sobre
                         </a>
-                        <a href="#servicos" className="hover:text-[#899d5e] transition-colors">
+                        <a href="#servicos" className="hover:text-brand transition-colors">
                             Serviços
                         </a>
-                        <a href="#equipe" className="hover:text-[#899d5e] transition-colors">
+                        <a href="#equipe" className="hover:text-brand transition-colors">
                             Equipe
                         </a>
-                        <a href="#contato" className="hover:text-[#899d5e] transition-colors">
+                        <a href="#contato" className="hover:text-brand transition-colors">
                             Contato
                         </a>
                     </div>
                     <Link
                         href="/paciente"
-                        className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-full text-sm font-medium text-white bg-[#899d5e] hover:bg-[#7a8c53] transition-all hover:-translate-y-0.5 shadow-md shadow-[#899d5e]/20"
+                        className="hidden sm:inline-flex items-center px-5 py-2.5 rounded-full text-sm font-medium text-white bg-brand hover:bg-brand-hover transition-all hover:-translate-y-0.5 shadow-md shadow-brand/20"
                     >
                         Área do Paciente
                     </Link>
@@ -264,8 +264,8 @@ export default function ClinicaPage() {
             {/* ─── Hero ─── */}
             <section className="relative overflow-hidden">
                 <div className="absolute inset-0 -z-10">
-                    <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-[#899d5e]/8 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4" />
-                    <div className="absolute bottom-0 left-0 w-[30rem] h-[30rem] bg-[#899d5e]/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/4" />
+                    <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-brand/8 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/4" />
+                    <div className="absolute bottom-0 left-0 w-[30rem] h-[30rem] bg-brand/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/4" />
                 </div>
 
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
@@ -279,14 +279,14 @@ export default function ClinicaPage() {
                                     height={80}
                                     className="rounded-full shadow-lg"
                                 />
-                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#899d5e]/10 text-[#899d5e] text-sm font-medium">
+                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 text-brand text-sm font-medium">
                                     <LeafIcon className="h-4 w-4" />
                                     Novo Hamburgo, RS
                                 </div>
                             </div>
                             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#2D3B2D] leading-tight tracking-tight">
                                 Saúde metabólica e emagrecimento{' '}
-                                <span className="text-[#899d5e]">individualizado</span>
+                                <span className="text-brand">individualizado</span>
                             </h1>
                             <p className="text-lg text-[#5A6B5A] leading-relaxed max-w-lg">
                                 Na Clínica Dornelles, tratamos cada paciente como único.
@@ -298,14 +298,14 @@ export default function ClinicaPage() {
                                     href="https://www.instagram.com/clinica.dornelles/"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold text-white bg-[#899d5e] hover:bg-[#7a8c53] transition-all hover:-translate-y-0.5 shadow-lg shadow-[#899d5e]/25"
+                                    className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold text-white bg-brand hover:bg-brand-hover transition-all hover:-translate-y-0.5 shadow-lg shadow-brand/25"
                                 >
                                     <InstagramIcon className="h-5 w-5" />
                                     Agende sua Consulta
                                 </a>
                                 <a
                                     href="#servicos"
-                                    className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold text-[#2D3B2D] bg-white hover:bg-[#F5F6F2] transition-all border border-[#E8E9E4] shadow-sm"
+                                    className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-base font-semibold text-[#2D3B2D] bg-white hover:bg-brand-muted transition-all border border-brand-border shadow-sm"
                                 >
                                     Conheça nossos serviços
                                 </a>
@@ -315,30 +315,24 @@ export default function ClinicaPage() {
                         {/* Hero Visual Card */}
                         <div className="hidden md:flex justify-center">
                             <div className="relative">
-                                <div className="absolute -inset-4 bg-[#899d5e]/10 rounded-[2.5rem] blur-xl" />
-                                <div className="relative bg-white rounded-[2rem] p-8 shadow-2xl shadow-[#899d5e]/10 border border-[#E8E9E4] space-y-6">
+                                <div className="absolute -inset-4 bg-brand/10 rounded-[2.5rem] blur-xl" />
+                                <div className="relative bg-white rounded-[2rem] p-8 shadow-2xl shadow-brand/10 border border-brand-border space-y-6">&gt;
                                     <div className="flex items-center gap-4">
-                                        <div className="h-14 w-14 rounded-2xl bg-[#899d5e]/10 flex items-center justify-center">
-                                            <HeartPulseIcon className="h-7 w-7 text-[#899d5e]" />
-                                        </div>
+                                            <HeartPulseIcon className="h-7 w-7 text-brand" />
                                         <div>
                                             <p className="font-semibold text-[#2D3B2D]">Saúde Metabólica</p>
                                             <p className="text-sm text-[#5A6B5A]">Avaliação completa</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <div className="h-14 w-14 rounded-2xl bg-[#899d5e]/10 flex items-center justify-center">
-                                            <UserIcon className="h-7 w-7 text-[#899d5e]" />
-                                        </div>
+                                            <UserIcon className="h-7 w-7 text-brand" />
                                         <div>
                                             <p className="font-semibold text-[#2D3B2D]">Individualizado</p>
                                             <p className="text-sm text-[#5A6B5A]">Protocolo personalizado</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <div className="h-14 w-14 rounded-2xl bg-[#899d5e]/10 flex items-center justify-center">
-                                            <SmartphoneIcon className="h-7 w-7 text-[#899d5e]" />
-                                        </div>
+                                            <SmartphoneIcon className="h-7 w-7 text-brand" />
                                         <div>
                                             <p className="font-semibold text-[#2D3B2D]">Acompanhamento Digital</p>
                                             <p className="text-sm text-[#5A6B5A]">WhatsApp + IA</p>
@@ -346,7 +340,7 @@ export default function ClinicaPage() {
                                     </div>
                                     <div className="h-3 rounded-full bg-[#F5F6F2] overflow-hidden">
                                         <div
-                                            className="h-full rounded-full bg-gradient-to-r from-[#899d5e] to-[#a8b87a]"
+                                            className="h-full rounded-full bg-gradient-to-r from-brand to-[#a8b87a]"
                                             style={{ width: '78%' }}
                                         />
                                     </div>
@@ -364,7 +358,7 @@ export default function ClinicaPage() {
             <section id="servicos" className="py-20 md:py-28 bg-white overflow-hidden">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
-                        <p className="text-sm font-semibold text-[#899d5e] uppercase tracking-widest mb-3">
+                        <p className="text-sm font-semibold text-brand uppercase tracking-widest mb-3">&gt;
                             Nossos Serviços
                         </p>
                         <h2 className="text-3xl md:text-4xl font-bold text-[#2D3B2D]">
@@ -413,11 +407,11 @@ export default function ClinicaPage() {
                         ].map((service, i) => (
                             <div
                                 key={i}
-                                className="group relative bg-[#FAFBF7] rounded-2xl p-8 border border-[#E8E9E4] hover:border-[#899d5e]/30 hover:shadow-lg hover:shadow-[#899d5e]/5 transition-all duration-300 animate-in fade-in zoom-in duration-700 fill-mode-both"
+                                className="group relative bg-brand-muted rounded-2xl p-8 border border-brand-border hover:border-brand/30 hover:shadow-lg hover:shadow-brand/5 transition-all duration-300 animate-in fade-in zoom-in duration-700 fill-mode-both"
                                 style={{ animationDelay: `${i * 100}ms` }}
                             >
-                                <div className="h-12 w-12 rounded-xl bg-[#899d5e]/10 flex items-center justify-center mb-5 group-hover:bg-[#899d5e]/15 transition-colors">
-                                    <service.icon className="h-6 w-6 text-[#899d5e]" />
+                                <div className="h-12 w-12 rounded-xl bg-brand/10 flex items-center justify-center mb-5 group-hover:bg-brand/15 transition-colors">
+                                    <service.icon className="h-6 w-6 text-brand" />
                                 </div>
                                 <h3 className="text-lg font-semibold text-[#2D3B2D] mb-3">
                                     {service.title}
@@ -435,7 +429,7 @@ export default function ClinicaPage() {
             <section id="equipe" className="py-20 md:py-28 bg-[#FAFBF7]">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center max-w-2xl mx-auto mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both">
-                        <p className="text-sm font-semibold text-[#899d5e] uppercase tracking-widest mb-3">
+                        <p className="text-sm font-semibold text-brand uppercase tracking-widest mb-3">&gt;
                             Nossa Equipe
                         </p>
                         <h2 className="text-3xl md:text-4xl font-bold text-[#2D3B2D]">
@@ -462,11 +456,11 @@ export default function ClinicaPage() {
                         ].map((doctor, i) => (
                             <div
                                 key={i}
-                                className="bg-white rounded-2xl p-8 border border-[#E8E9E4] shadow-sm hover:shadow-lg hover:shadow-[#899d5e]/5 transition-all duration-300 animate-in fade-in slide-in-from-right-8 duration-700 fill-mode-both"
+                                className="bg-white rounded-2xl p-8 border border-brand-border shadow-sm hover:shadow-lg hover:shadow-brand/5 transition-all duration-300 animate-in fade-in slide-in-from-right-8 duration-700 fill-mode-both"
                                 style={{ animationDelay: `${i * 200}ms` }}
                             >
                                 <div className="flex items-start gap-5">
-                                    <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[#899d5e] to-[#a8b87a] flex items-center justify-center flex-shrink-0">
+                                    <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-brand to-[#a8b87a] flex items-center justify-center flex-shrink-0">&gt;
                                         <span className="text-2xl font-bold text-white">
                                             {doctor.initials}
                                         </span>
@@ -475,7 +469,7 @@ export default function ClinicaPage() {
                                         <h3 className="text-xl font-bold text-[#2D3B2D]">
                                             {doctor.name}
                                         </h3>
-                                        <p className="text-sm font-medium text-[#899d5e]">
+                                        <p className="text-sm font-medium text-brand">&gt;
                                             {doctor.crm}
                                         </p>
                                         <p className="text-[#5A6B5A] text-sm leading-relaxed mt-3">
@@ -495,7 +489,7 @@ export default function ClinicaPage() {
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid md:grid-cols-2 gap-16 items-center">
                         <div className="space-y-6">
-                            <p className="text-sm font-semibold text-[#899d5e] uppercase tracking-widest">
+                            <p className="text-sm font-semibold text-brand uppercase tracking-widest">&gt;
                                 Sobre a Clínica
                             </p>
                             <h2 className="text-3xl md:text-4xl font-bold text-[#2D3B2D] leading-tight">
@@ -519,7 +513,7 @@ export default function ClinicaPage() {
                                     { value: '3+', label: 'Anos' },
                                 ].map((stat, i) => (
                                     <div key={i} className="text-center">
-                                        <p className="text-2xl md:text-3xl font-bold text-[#899d5e]">
+                                        <p className="text-2xl md:text-3xl font-bold text-brand">&gt;
                                             {stat.value}
                                         </p>
                                         <p className="text-sm text-[#5A6B5A] mt-1">{stat.label}</p>
@@ -529,10 +523,10 @@ export default function ClinicaPage() {
                         </div>
 
                         <div className="relative">
-                            <div className="absolute -inset-4 bg-[#899d5e]/5 rounded-[2rem] blur-xl" />
-                            <div className="relative bg-[#FAFBF7] rounded-[2rem] p-8 border border-[#E8E9E4]">
+                            <div className="absolute -inset-4 bg-brand/5 rounded-[2rem] blur-xl" />
+                            <div className="relative bg-brand-muted rounded-[2rem] p-8 border border-brand-border">&gt;
                                 <div className="space-y-5">
-                                    <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#E8E9E4]">
+                                    <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-brand-border">&gt;
                                         <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center text-lg">
                                             ✅
                                         </div>
@@ -545,7 +539,7 @@ export default function ClinicaPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#E8E9E4]">
+                                    <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-brand-border">&gt;
                                         <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center text-lg">
                                             💧
                                         </div>
@@ -558,7 +552,7 @@ export default function ClinicaPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#E8E9E4]">
+                                    <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-brand-border">&gt;
                                         <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center text-lg">
                                             🏆
                                         </div>
@@ -592,7 +586,7 @@ export default function ClinicaPage() {
 
                     <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
                         <div className="text-center p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                            <div className="h-14 w-14 mx-auto rounded-2xl bg-[#899d5e]/20 flex items-center justify-center mb-5">
+                            <div className="h-14 w-14 mx-auto rounded-2xl bg-brand/20 flex items-center justify-center mb-5">&gt;
                                 <MapPinIcon className="h-7 w-7 text-[#a8b87a]" />
                             </div>
                             <h3 className="font-semibold text-white mb-2">Endereço</h3>
@@ -611,7 +605,7 @@ export default function ClinicaPage() {
                             href="mailto:contato@clinicadornelles.com.br"
                             className="text-center p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors group"
                         >
-                            <div className="h-14 w-14 mx-auto rounded-2xl bg-[#899d5e]/20 flex items-center justify-center mb-5 group-hover:bg-[#899d5e]/30 transition-colors">
+                            <div className="h-14 w-14 mx-auto rounded-2xl bg-brand/20 flex items-center justify-center mb-5 group-hover:bg-brand/30 transition-colors">&gt;
                                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#a8b87a]"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
                             </div>
                             <h3 className="font-semibold text-white mb-2">E-mail</h3>
@@ -627,7 +621,7 @@ export default function ClinicaPage() {
                             rel="noopener noreferrer"
                             className="text-center p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors group"
                         >
-                            <div className="h-14 w-14 mx-auto rounded-2xl bg-[#899d5e]/20 flex items-center justify-center mb-5 group-hover:bg-[#899d5e]/30 transition-colors">
+                            <div className="h-14 w-14 mx-auto rounded-2xl bg-brand/20 flex items-center justify-center mb-5 group-hover:bg-brand/30 transition-colors">&gt;
                                 <InstagramIcon className="h-7 w-7 text-[#a8b87a]" />
                             </div>
                             <h3 className="font-semibold text-white mb-2">Instagram</h3>
@@ -638,7 +632,7 @@ export default function ClinicaPage() {
                         </a>
 
                         <div className="text-center p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                            <div className="h-14 w-14 mx-auto rounded-2xl bg-[#899d5e]/20 flex items-center justify-center mb-5">
+                            <div className="h-14 w-14 mx-auto rounded-2xl bg-brand/20 flex items-center justify-center mb-5">&gt;
                                 <ClockIcon className="h-7 w-7 text-[#a8b87a]" />
                             </div>
                             <h3 className="font-semibold text-white mb-2">Horário</h3>
@@ -653,26 +647,26 @@ export default function ClinicaPage() {
             </section>
 
             {/* ─── Trust & Privacy Bar ─── */}
-            <section className="bg-[#FAFBF7] border-y border-[#899d5e]/10">
+            <section className="bg-brand-muted border-y border-brand/10">&gt;
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
                             <div className="flex items-center gap-2.5 text-sm text-[#2D3B2D]/70">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" /><path d="m9 12 2 2 4-4" /></svg>
                                 Em conformidade com a LGPD
                             </div>
                             <div className="flex items-center gap-2.5 text-sm text-[#2D3B2D]/70">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                                 Dados criptografados
                             </div>
                             <div className="flex items-center gap-2.5 text-sm text-[#2D3B2D]/70">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                                 WhatsApp apenas com seu consentimento
                             </div>
                         </div>
                         <Link
                             href="/privacidade"
-                            className="text-sm font-medium text-[#899d5e] hover:text-[#7a8c53] transition-colors underline underline-offset-4"
+                            className="text-sm font-medium text-brand hover:text-brand-hover transition-colors underline underline-offset-4"
                         >
                             Política de Privacidade →
                         </Link>

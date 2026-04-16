@@ -4,6 +4,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
+import { normalizeBrazilianNumber } from '@/lib/utils';
 import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
 
 // Force recompile: 2025-11-25T00:45:00
@@ -169,8 +170,6 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
     // Explicit mapping
     if (updates.fullName !== undefined) dbUpdates.full_name = updates.fullName;
     if (updates.whatsappNumber !== undefined) {
-        // Import normalization utility
-        const { normalizeBrazilianNumber } = require('@/lib/utils');
         dbUpdates.whatsapp_number = normalizeBrazilianNumber(updates.whatsappNumber);
     }
     if (updates.birthDate !== undefined) dbUpdates.birth_date = updates.birthDate;
@@ -336,8 +335,6 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
 
     // Mapear para snake_case também na criação
     const dbInsert: any = {};
-    const { normalizeBrazilianNumber } = require('@/lib/utils');
-
     if (patientData.fullName) dbInsert.full_name = patientData.fullName;
     if (patientData.email) dbInsert.email = patientData.email;
     if (patientData.userId) dbInsert.user_id = patientData.userId;

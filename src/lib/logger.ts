@@ -13,6 +13,28 @@ interface LogContext {
     [key: string]: any;
 }
 
+const SENSITIVE_KEYS = ['password', 'token', 'email', 'phone', 'key', 'secret', 'authorization', 'cookie'];
+
+function redact(data: any): any {
+    if (!data || typeof data !== 'object') return data;
+    
+    if (Array.isArray(data)) {
+        return data.map(redact);
+    }
+
+    const redacted: any = {};
+    for (const [key, value] of Object.entries(data)) {
+        if (SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+            redacted[key] = '[REDACTED]';
+        } else if (typeof value === 'object') {
+            redacted[key] = redact(value);
+        } else {
+            redacted[key] = value;
+        }
+    }
+    return redacted;
+}
+
 class Logger {
     private service: string;
 
@@ -21,12 +43,13 @@ class Logger {
     }
 
     private log(level: LogLevel, message: string, context: LogContext = {}) {
+        const cleanContext = redact(context);
         const logEntry = {
             level,
             timestamp: new Date().toISOString(),
             service: this.service,
             message,
-            ...context,
+            ...cleanContext,
         };
 
         const logString = JSON.stringify(logEntry);
@@ -57,11 +80,14 @@ class Logger {
     }
 
     error(message: string, error?: Error | unknown, context?: LogContext) {
-        const errorContext = error instanceof Error
-            ? { error: error.message, stack: error.stack, ...context }
-            : { error: String(error), ...context };
+        const errorDetails = error instanceof Error
+            ? { 
+                error: error.message, 
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+              }
+            : { error: String(error) };
 
-        this.log('error', message, errorContext);
+        this.log('error', message, { ...errorDetails, ...context });
     }
 
     debug(message: string, context?: LogContext) {
@@ -81,4 +107,5 @@ export const loggers = {
     gamification: createLogger('gamification'),
     protocol: createLogger('protocol'),
     whatsapp: createLogger('whatsapp'),
+    auth: createLogger('auth'),
 };

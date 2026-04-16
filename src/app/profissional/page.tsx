@@ -90,7 +90,7 @@ const StaffLoginForm: FC = () => {
             </div>
             <Button
                 type="submit"
-                className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5"
+                className="w-full h-12 text-base rounded-xl bg-brand hover:bg-brand-hover shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5"
                 disabled={isPending}
             >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Acessar Painel'}
@@ -189,7 +189,7 @@ const StaffRegisterForm: FC = () => {
             </p>
             <Button
                 type="submit"
-                className="w-full h-12 text-base rounded-xl bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 transition-all hover:-translate-y-0.5"
+                className="w-full h-12 text-base rounded-xl bg-brand hover:bg-brand-hover shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5"
                 disabled={isPending}
             >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Solicitar Acesso'}
@@ -247,7 +247,7 @@ function ProfissionalPageContent() {
     if (loading || (user && profile)) {
         return (
             <div className="flex h-screen items-center justify-center bg-background">
-                <Loader2 className="h-8 w-8 animate-spin text-[#899d5e]" />
+                <Loader2 className="h-8 w-8 animate-spin text-brand" />
             </div>
         );
     }
@@ -255,7 +255,7 @@ function ProfissionalPageContent() {
     return (
         <div className="flex min-h-screen bg-background">
             {/* Left Side — Clinic Branding */}
-            <div className="hidden lg:flex lg:w-1/2 bg-[#F9FAF6] relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-[#EBECE8]">
+            <div className="hidden lg:flex lg:w-1/2 bg-brand-light relative flex-col justify-center items-center text-center p-12 overflow-hidden border-r border-brand-border">
                 <div className="relative z-10 flex flex-col items-center">
                     <div className="relative h-72 w-full max-w-[50rem] mb-12">
                         <Image
@@ -276,9 +276,9 @@ function ProfissionalPageContent() {
 
                 <div className="relative z-10 mt-12 grid grid-cols-2 gap-4 w-full max-w-sm">
                     {features.map(({ icon: Icon, label, desc }) => (
-                        <div key={label} className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white/60 border border-[#899d5e]/10 text-left">
-                            <div className="p-2 rounded-xl bg-[#899d5e]/10">
-                                <Icon className="h-4 w-4 text-[#899d5e]" />
+                        <div key={label} className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-white/60 border border-brand/10 text-left">
+                            <div className="p-2 rounded-xl bg-brand/10">
+                                <Icon className="h-4 w-4 text-brand" />
                             </div>
                             <p className="text-sm font-semibold text-foreground">{label}</p>
                             <p className="text-xs text-muted-foreground">{desc}</p>
@@ -287,8 +287,8 @@ function ProfissionalPageContent() {
                 </div>
 
                 {/* Abstract Background Shapes */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-[#899d5e]/10 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-[#899d5e]/5 rounded-full blur-3xl" />
+                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-brand/10 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-brand/5 rounded-full blur-3xl" />
             </div>
 
             {/* Right Side — Auth Forms */}
@@ -296,19 +296,19 @@ function ProfissionalPageContent() {
                 <div className="flex justify-end p-4 lg:p-6">
                     <Link
                         href="/"
-                        className="group flex items-center gap-3 px-4 py-2.5 rounded-full border border-[#899d5e]/20 bg-[#FAFBF7] hover:bg-[#899d5e] hover:border-[#899d5e] transition-all duration-300 hover:shadow-lg hover:shadow-[#899d5e]/20"
+                        className="group flex items-center gap-3 px-4 py-2.5 rounded-full border border-brand/20 bg-brand-muted hover:bg-brand hover:border-brand transition-all duration-300 hover:shadow-lg hover:shadow-brand/20"
                     >
                         <Image
                             src="/logo-clinica.png"
                             alt="Clínica Dornelles"
                             width={28}
                             height={28}
-                            className="rounded-full border border-[#899d5e]/20 group-hover:border-white/40 transition-colors"
+                            className="rounded-full border border-brand/20 group-hover:border-white/40 transition-colors"
                         />
                         <span className="text-sm font-medium text-[#2D3B2D] group-hover:text-white transition-colors">
                             Clínica Dornelles
                         </span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#899d5e]/50 group-hover:text-white/70 group-hover:translate-x-0.5 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand/50 group-hover:text-white/70 group-hover:translate-x-0.5 transition-all">
                             <path d="m9 18 6-6-6-6" />
                         </svg>
                     </Link>
@@ -316,7 +316,7 @@ function ProfissionalPageContent() {
 
                 <div className="flex-1 flex items-center justify-center p-4 lg:p-8 lg:pt-0">
                     <div className="w-full max-w-md space-y-6">
-                        <Card className="border-none shadow-none lg:shadow-2xl lg:shadow-[#899d5e]/5 lg:border bg-white rounded-3xl">
+                        <Card className="border-none shadow-none lg:shadow-2xl lg:shadow-brand/5 lg:border bg-white rounded-3xl">
                             <CardHeader className="text-center lg:text-left space-y-1 pb-2">
                                 <div className="lg:hidden flex justify-center mb-6">
                                     <div className="relative h-48 w-full max-w-[20rem]">
@@ -329,7 +329,7 @@ function ProfissionalPageContent() {
                                         />
                                     </div>
                                 </div>
-                                <CardTitle className="text-2xl font-bold text-[#899d5e]">Acesso para Profissionais</CardTitle>
+                                <CardTitle className="text-2xl font-bold text-brand">Acesso para Profissionais</CardTitle>
                                 <CardDescription>
                                     Entre com sua conta da clínica ou solicite acesso ao administrador.
                                 </CardDescription>
@@ -337,8 +337,8 @@ function ProfissionalPageContent() {
                             <CardContent>
                                 <Tabs defaultValue="login" className="w-full">
                                     <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl bg-muted/30 p-1">
-                                        <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Entrar</TabsTrigger>
-                                        <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#899d5e] data-[state=active]:shadow-sm h-full">Solicitar Acesso</TabsTrigger>
+                                        <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm h-full">Entrar</TabsTrigger>
+                                        <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:shadow-sm h-full">Solicitar Acesso</TabsTrigger>
                                     </TabsList>
                                     <TabsContent value="login" className="mt-0">
                                         <StaffLoginForm />
@@ -353,7 +353,7 @@ function ProfissionalPageContent() {
                         {/* Link para pacientes */}
                         <p className="text-center text-sm text-muted-foreground">
                             É paciente?{' '}
-                            <Link href="/paciente" className="font-medium text-[#899d5e] hover:underline underline-offset-4">
+                            <Link href="/paciente" className="font-medium text-brand hover:underline underline-offset-4">
                                 Acesse sua área aqui
                             </Link>
                         </p>
@@ -368,7 +368,7 @@ export default function ProfissionalPage() {
     return (
         <Suspense fallback={
             <div className="flex h-screen items-center justify-center bg-background">
-                <Loader2 className="h-8 w-8 animate-spin text-[#899d5e]" />
+                <Loader2 className="h-8 w-8 animate-spin text-brand" />
             </div>
         }>
             <ProfissionalPageContent />

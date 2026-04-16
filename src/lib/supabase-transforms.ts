@@ -109,12 +109,12 @@ export function transformVideoFromSupabase(supabaseVideo: any): any {
         category: supabaseVideo.category,
         title: supabaseVideo.title,
         description: supabaseVideo.description,
-        thumbnail_url: supabaseVideo.thumbnail_url,
-        video_url: supabaseVideo.video_url,
-        eligible_plans: supabaseVideo.eligible_plans,
-        is_active: supabaseVideo.is_active,
-        created_at: supabaseVideo.created_at,
-        updated_at: supabaseVideo.updated_at,
+        thumbnailUrl: supabaseVideo.thumbnail_url,
+        videoUrl: supabaseVideo.video_url,
+        plans: supabaseVideo.eligible_plans,
+        isActive: supabaseVideo.is_active,
+        createdAt: supabaseVideo.created_at,
+        updatedAt: supabaseVideo.updated_at,
     };
 }
 

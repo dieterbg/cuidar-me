@@ -21,8 +21,8 @@ export async function handleProtocolGamification(
         calculatePoints,
         getActionType,
         generateConfirmationMessage
-    } = await import('../protocol-response-processor');
-    const { registerQuickAction } = await import('../actions/gamification');
+    } = await import('@/ai/protocol-response-processor');
+    const { registerQuickAction } = await import('@/ai/actions/gamification');
     const { getStreakMultiplier } = await import('@/lib/level-system');
 
     const currentDay = patientProtocol.current_day;
@@ -78,7 +78,7 @@ export async function handleProtocolGamification(
     if (isGamificationCheckin(activeProtocolStep)) {
         const perspective = extractPerspective(activeProtocolStep);
         if (perspective) {
-            const { processNumericResponse } = await import('../protocol-response-processor');
+            const { processNumericResponse } = await import('@/ai/protocol-response-processor');
             let points = calculatePoints(activeProtocolStep.title, messageText, perspective);
 
             // Aplicar multiplicador de streak
@@ -89,7 +89,7 @@ export async function handleProtocolGamification(
             }
 
             if (points > 0 && patient.user_id) {
-                const { awardGamificationPoints } = await import('../actions/gamification');
+                const { awardGamificationPoints } = await import('@/ai/actions/gamification');
                 
                 // 4. Registrar a ação e dar XP (passando direto, bypass de Rate-Limit da Web)
                 const result = await awardGamificationPoints(
@@ -116,7 +116,7 @@ export async function handleProtocolGamification(
                 if (result.success && activeProtocolStep.title.includes('Peso')) {
                     const { isValid, value } = processNumericResponse(messageText);
                     if (isValid && value) {
-                        const { addHealthMetric } = await import('../actions/patients');
+                        const { addHealthMetric } = await import('@/ai/actions/patients');
                         await addHealthMetric(patient.id, { weight: value });
                         console.log(`[PROTOCOL-GAMIFICATION] Weight ${value}kg saved for patient ${patient.id}`);
                     }

@@ -53,7 +53,7 @@ describe('Server Action: Store', () => {
         const result = await purchaseStoreItem('user-1', 'streak_freeze');
 
         expect(result.success).toBe(true);
-        expect(result.newBalance).toBe(300); // 500 - 200
+        expect(result.newBalance).toBe(400); // 500 - 100
         expect(result.message).toContain('sucesso');
     });
 
@@ -89,7 +89,7 @@ describe('Server Action: Store', () => {
         const result = await purchaseStoreItem('user-1', 'streak_freeze');
 
         expect(result.success).toBe(true);
-        expect(result.newBalance).toBe(300);
+        expect(result.newBalance).toBe(400);
     });
 
     // =================================================================

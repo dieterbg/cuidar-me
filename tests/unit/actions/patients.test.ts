@@ -12,6 +12,10 @@ vi.mock('@/lib/supabase-admin', () => ({
     createAdminClient: vi.fn(() => mockContainer.adminSupabase),
 }));
 
+vi.mock('@/lib/supabase-server-utils', () => ({
+    createServiceRoleClient: vi.fn(() => mockContainer.adminSupabase),
+}));
+
 vi.mock('@/lib/supabase-transforms', () => ({
     transformPatientFromSupabase: vi.fn((row: any) => ({
         id: row.id,
@@ -23,6 +27,10 @@ vi.mock('@/lib/supabase-transforms', () => ({
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
     revalidateTag: vi.fn(),
+}));
+
+vi.mock('@/lib/utils', () => ({
+    normalizeBrazilianNumber: vi.fn((val: string) => val),
 }));
 
 import {
@@ -198,14 +206,14 @@ describe('Server Action: Patients', () => {
     // =================================================================
     describe('addHealthMetric', () => {
         it('PAT-10: insere métrica de saúde', async () => {
-            mockFrom('health_metrics', { data: null, error: null });
+            adminMockFrom('health_metrics', { data: null, error: null });
 
             const result = await addHealthMetric('p1', { weight: 80, glucoseLevel: 95 });
             expect(result.success).toBe(true);
         });
 
         it('retorna erro se falha na inserção', async () => {
-            mockFrom('health_metrics', { data: null, error: { message: 'insert error' } });
+            adminMockFrom('health_metrics', { data: null, error: { message: 'insert error' } });
 
             const result = await addHealthMetric('p1', { weight: 80 });
             expect(result.success).toBe(false);

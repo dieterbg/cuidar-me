@@ -310,7 +310,7 @@ export default function ProtocolsPage() {
                     <div className="flex gap-2">
                         <Dialog open={openGenerateDialog} onOpenChange={setOpenGenerateDialog}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" className="border-[#899d5e]/20 text-[#899d5e] hover:bg-[#899d5e]/10 hover:text-[#899d5e]">
+                                <Button variant="outline" className="border-brand/20 text-brand hover:bg-brand/10 hover:text-brand">
                                     <Sparkles className="mr-2 h-4 w-4" />
                                     Gerar com IA
                                 </Button>
@@ -337,7 +337,7 @@ export default function ProtocolsPage() {
                                     <DialogClose asChild>
                                         <Button variant="outline" type="button">Cancelar</Button>
                                     </DialogClose>
-                                    <Button onClick={handleGenerateProtocol} disabled={isGenerating} className="bg-[#899d5e] hover:bg-[#7a8c53]">
+                                    <Button onClick={handleGenerateProtocol} disabled={isGenerating} className="bg-brand hover:bg-brand-hover">
                                         {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         {isGenerating ? 'Gerando...' : 'Gerar Protocolo'}
                                     </Button>
@@ -349,7 +349,7 @@ export default function ProtocolsPage() {
                             if (!isOpen) setGeneratedData(null); // Clear data when closing
                         }}>
                             <DialogTrigger asChild>
-                                <Button className="bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20">
+                                <Button className="bg-brand hover:bg-brand-hover shadow-lg shadow-brand/20">
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     Criar Novo Protocolo
                                 </Button>
@@ -426,8 +426,8 @@ export default function ProtocolsPage() {
 
                 <Tabs defaultValue="clinic" className="w-full mt-6">
                     <TabsList className="bg-muted/30 p-1 rounded-xl h-12">
-                        <TabsTrigger value="clinic" className="rounded-lg h-full data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-medium px-6">Protocolos da Clínica</TabsTrigger>
-                        <TabsTrigger value="gamification" className="rounded-lg h-full data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-medium px-6">Mensagens Automáticas (Gamificação)</TabsTrigger>
+                        <TabsTrigger value="clinic" className="rounded-lg h-full data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-medium px-6">Protocolos da Clínica</TabsTrigger>
+                        <TabsTrigger value="gamification" className="rounded-lg h-full data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md transition-all font-medium px-6">Mensagens Automáticas (Gamificação)</TabsTrigger>
                     </TabsList>
                     <TabsContent value="clinic">
                         {loading && (

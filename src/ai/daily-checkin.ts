@@ -96,9 +96,41 @@ export function getCheckinStepMessage(
 ): string {
     const firstName = patientName.split(' ')[0];
 
-    // Sistema antigo desativado em favor da Gamificação Padronizada A/B/C
-    // Para evitar duplicidade e confusão visual para o paciente.
-    return '';
+    switch (step) {
+        case 'hydration':
+            return `Olá ${firstName}! 💧 Vamos começar seu check-in? Água é fundamental. Como foi sua hidratação hoje?\n\n👍 Sim, tomei bastante\n🤏 Tomei um pouco\n👎 Quase nada`;
+        
+        case 'breakfast':
+            return `Excelente! 🍳 E o Café da manhã? Escolha a opção que melhor descreve sua refeição:\n\nA) Saudável (Frutas, ovos, integral)\nB) Moderado (Pão branco, pouco açúcar)\nC) Não saudável (Processados, muito açúcar)`;
+        
+        case 'lunch':
+            return `Ótimo! 🥗 E no Almoço? Como foi sua escolha?\n\nA) Saudável (Salada, proteína, pouco carboidrato)\nB) Equilibrado\nC) Pesado/Não saudável`;
+        
+        case 'dinner':
+            return `Entendido! 🥣 E o Jantar?\n\nA) Leve e saudável\nB) Moderado\nC) Pesado ou tarde da noite`;
+        
+        case 'snacks':
+            return `Quase lá! 🍎 Você fez *Lanches* saudáveis entre as refeições hoje?
+
+👍 Sim
+👎 Não`;
+        
+        case 'activity':
+            return `Anotado! 🏃 Praticou alguma Atividade física hoje?\n\n👍 Sim\n👎 Não`;
+        
+        case 'wellbeing':
+            return `Como você está se sentindo hoje, ${firstName}? 😊 Escolha um emoji:\n\n1. 😢 Muito mal\n2. 😕 Mal\n3. 😐 Neutro\n4. 😊 Bem\n5. 😄 Muito bem`;
+        
+        case 'weight':
+            return `Dia de Pesagem! ⚖️ Por favor, informe seu peso atual (ex: 85.5).`;
+        
+        case 'complete':
+            const points = calculateCheckinPoints(data);
+            return `Check-in completo! 🎉\n\n${generateCheckinSummary(data, points)}`;
+        
+        default:
+            return '';
+    }
 }
 
 /**
@@ -274,39 +306,36 @@ export function calculateCheckinPoints(data: DailyCheckinState['data']): number 
  */
 export function generateCheckinSummary(
     data: DailyCheckinState['data'],
-    points: number
+    totalPoints: number
 ): string {
-    let summary = '✅ **Check-in completo!**\n\n📊 **RESUMO DO DIA:**\n\n';
+    const items: string[] = [];
 
     // Hidratação
-    if (data.hydration === 'yes') summary += '✅ Hidratação: Excelente!\n';
-    else if (data.hydration === 'almost') summary += '⚡ Hidratação: Quase lá!\n';
-    else if (data.hydration === 'no') summary += '❌ Hidratação: Precisa melhorar\n';
+    if (data.hydration === 'yes') items.push('💧 Hidratação: Excelente');
+    else if (data.hydration === 'almost') items.push('💧 Hidratação: Regular');
+    else if (data.hydration === 'no') items.push('💧 Hidratação: Precisa melhorar');
 
-    // Alimentação
-    const mealScore = [data.breakfast, data.lunch, data.dinner].filter(m => m === 'A').length;
-    if (mealScore === 3) summary += '✅ Alimentação: Perfeita! 🌟\n';
-    else if (mealScore >= 2) summary += '⚡ Alimentação: Muito boa!\n';
-    else summary += '❌ Alimentação: Pode melhorar\n';
+    // Alimentação (Média das refeições)
+    const meals = [data.breakfast, data.lunch, data.dinner].filter(Boolean);
+    if (meals.length > 0) {
+        const isPerfect = meals.every(m => m === 'A');
+        items.push(`🥗 Alimentação: ${isPerfect ? 'Perfeita' : 'Equilibrada'}`);
+    }
 
     // Atividade
     if (data.activity === 'yes') {
-        summary += `✅ Atividade: ${data.activityMinutes || 0} min\n`;
-    } else {
-        summary += '❌ Atividade: Não praticou\n';
+        const mins = data.activityMinutes ? ` (${data.activityMinutes} min)` : '';
+        items.push(`🏃 Atividade: Praticada${mins}`);
     }
-
-    // Bem-estar
-    const wellbeingEmoji = ['😢', '😕', '😐', '😊', '😄'][data.wellbeing ? data.wellbeing - 1 : 2];
-    summary += `${wellbeingEmoji} Bem-estar: ${data.wellbeing || 3}/5\n`;
 
     // Peso
     if (data.weight) {
-        summary += `⚖️ Peso: ${data.weight}kg\n`;
+        items.push(`⚖️ Peso: ${data.weight}kg`);
     }
 
-    summary += `\n🌟 **Total: +${points} pontos**\n\n`;
-    summary += 'Continue assim! 💪';
+    return `Check-in completo! 🎉
 
-    return summary;
+${items.map(item => `- ${item}`).join('\n')}
+
+🏆 Você ganhou +${totalPoints} pontos hoje! Continue assim! 🚀`;
 }

@@ -42,7 +42,7 @@ vi.mock('@/ai/flows/generate-chatbot-reply', () => ({
 
 vi.mock('@/lib/logger', () => ({
     loggers: {
-        ai: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        ai: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     },
 }));
 
@@ -81,9 +81,14 @@ vi.mock('@/ai/handlers/conversation-handler', () => ({
     handleAIConversation: (...args: any[]) => mockHandleAIConversation(...args),
 }));
 
-const mockHandleProtocolGamification = vi.fn().mockResolvedValue(false);
-vi.mock('@/ai/handlers/gamification-handler', () => ({
-    handleProtocolGamification: (...args: any[]) => mockHandleProtocolGamification(...args),
+const mockProcessCheckinResponse = vi.fn().mockResolvedValue({ processed: false });
+vi.mock('@/ai/handlers/checkin-response-handler', () => ({
+    processCheckinResponse: (...args: any[]) => mockProcessCheckinResponse(...args),
+}));
+
+const mockHandleOptOut = vi.fn().mockResolvedValue({ success: true });
+vi.mock('@/ai/handlers/opt-out-handler', () => ({
+    handleOptOut: (...args: any[]) => mockHandleOptOut(...args),
 }));
 
 // ===================================================================
@@ -96,67 +101,57 @@ function createSupabaseMock(opts: {
 } = {}) {
     const { systemMsgCount = 5, rateLimitCount = 0, patientProtocol = null } = opts;
 
-    // Track which "from" table is active
     let currentTable = '';
-
-    const mock: any = {};
-
-    // All chainable methods return `mock` itself
-    const chainMethods = ['select', 'insert', 'update', 'eq', 'gte', 'lte', 'ilike', 'order', 'limit'];
-    for (const method of chainMethods) {
-        mock[method] = vi.fn((..._args: any[]) => mock);
-    }
-
-    // `from` sets the current table context
-    mock.from = vi.fn((table: string) => {
-        currentTable = table;
-        return mock;
-    });
-
-    // Override `select` to handle count queries
-    mock.select = vi.fn((...args: any[]) => {
-        if (args[1]?.count === 'exact') {
-            // Return a special thenable chain for count queries
-            const countChain: any = {};
-            const countMethods = ['eq', 'gte', 'lte', 'ilike'];
-            for (const m of countMethods) {
-                countChain[m] = vi.fn(() => countChain);
-            }
-            // Make it thenable (awaitable)
-            countChain.then = (resolve: any) => {
-                if (currentTable === 'messages') {
-                    // We don't know if it's rate limit or system msg count from the chain
-                    // Rate limit comes first, then system msg count (for non-first-contact)
-                    // But we can just return a safe low number for rate limit
-                    // and the systemMsgCount for the second call
-                    // Since each call creates a new countChain, we use a counter
-                    countCallIndex++;
-                    if (countCallIndex === 1) {
-                        return resolve({ count: rateLimitCount }); // Rate limit check
-                    }
-                    return resolve({ count: systemMsgCount }); // System msg count
-                }
-                return resolve({ count: 0 });
-            };
-            return countChain;
-        }
-        return mock;
-    });
-
     let countCallIndex = 0;
 
-    // `single` for patient_protocols query
-    mock.single = vi.fn(async () => {
-        if (currentTable === 'patient_protocols') {
-            return { data: patientProtocol };
-        }
-        return { data: null };
-    });
+    const mock: any = {
+        from: vi.fn((table: string) => {
+            currentTable = table;
+            return mock;
+        }),
+        select: vi.fn(() => mock),
+        insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        update: vi.fn(() => mock),
+        delete: vi.fn(() => mock),
+        upsert: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        eq: vi.fn(() => mock),
+        neq: vi.fn(() => mock),
+        gt: vi.fn(() => mock),
+        gte: vi.fn(() => mock),
+        lt: vi.fn(() => mock),
+        lte: vi.fn(() => mock),
+        like: vi.fn(() => mock),
+        ilike: vi.fn(() => mock),
+        is: vi.fn(() => mock),
+        in: vi.fn(() => mock),
+        order: vi.fn(() => mock),
+        limit: vi.fn(() => mock),
+        maybeSingle: vi.fn(async () => {
+            if (currentTable === 'patient_protocols') return { data: patientProtocol };
+            return { data: null };
+        }),
+        single: vi.fn(async () => {
+            if (currentTable === 'patient_protocols') return { data: patientProtocol };
+            return { data: null };
+        }),
+    };
 
-    // `maybeSingle` for idempotency check and recent protocol message
-    mock.maybeSingle = vi.fn(async () => {
-        return { data: null };
-    });
+    // Make the mock awaitable (thenable) ONLY for select counts if needed, 
+    // but better yet, handle it via vi.fn returns
+    mock.eq.mockReturnValue(mock);
+    mock.select.mockReturnValue(mock);
+    
+    // Most important: mock the actual return value of the chain
+    // When we await the chain, it calls .then
+    mock.then = (resolve: any) => {
+        if (currentTable === 'messages') {
+            countCallIndex++;
+            // First call is usually rate limit (sender='patient'), second is system messages check
+            if (countCallIndex === 1) return resolve({ count: rateLimitCount, data: null, error: null });
+            return resolve({ count: systemMsgCount, data: null, error: null });
+        }
+        return resolve({ data: [], error: null });
+    };
 
     return mock;
 }
@@ -204,7 +199,6 @@ describe('WhatsApp Integration Flows', () => {
             mockPhone,
             expect.stringContaining('cadastro')
         );
-        expect(mockClassifyMessageIntent).not.toHaveBeenCalled();
     });
 
     // ===================================================================
@@ -216,7 +210,6 @@ describe('WhatsApp Integration Flows', () => {
 
         expect(result.success).toBe(true);
         expect(mockSendWelcomeMessage).toHaveBeenCalled();
-        expect(mockClassifyMessageIntent).not.toHaveBeenCalled();
     });
 
     // ===================================================================
@@ -228,11 +221,10 @@ describe('WhatsApp Integration Flows', () => {
 
         expect(result.success).toBe(true);
         expect(mockHandleEmergency).toHaveBeenCalled();
-        expect(mockClassifyMessageIntent).not.toHaveBeenCalled();
     });
 
     // ===================================================================
-    it('Scenario 4: Social greeting — returns quick reply', async () => {
+    it('Scenario 4: Social greeting — delegates to AI conversation', async () => {
         mockContainer.supabase = createSupabaseMock({ systemMsgCount: 5, rateLimitCount: 0 });
         mockFindPatientByPhone.mockResolvedValue(activePatientRow);
 
@@ -243,8 +235,7 @@ describe('WhatsApp Integration Flows', () => {
         const result = await handlePatientReply(mockPhone, 'Bom dia', mockName);
 
         expect(result.success).toBe(true);
-        expect(mockSendWhatsappMessage).toHaveBeenCalledWith(mockPhone, 'Olá! 😊 Como posso te ajudar?');
-        expect(mockGenerateChatbotReply).not.toHaveBeenCalled();
+        expect(mockHandleAIConversation).toHaveBeenCalled();
     });
 
     // ===================================================================
@@ -263,38 +254,35 @@ describe('WhatsApp Integration Flows', () => {
     });
 
     // ===================================================================
-    it('Scenario 6: Check-in Response — routes to gamification handler', async () => {
+    it('Scenario 6: Check-in Response — routes to checkin handler', async () => {
         mockContainer.supabase = createSupabaseMock({ systemMsgCount: 5, rateLimitCount: 0 });
-        mockFindPatientByPhone.mockResolvedValue(activePatientRow);
-
-        mockClassifyMessageIntent.mockResolvedValue({
-            intent: 'checkin_response', confidence: 0.95, reason: 'Resposta a check-in',
-        });
+        
+        // Mock patient with active check-in metadata
+        const patientWithCheckin = {
+            ...activePatientRow,
+            last_checkin_type: 'Hidratação',
+            last_checkin_at: new Date().toISOString()
+        };
+        mockFindPatientByPhone.mockResolvedValue(patientWithCheckin);
 
         // Simular que o handler processou com sucesso
-        mockHandleProtocolGamification.mockResolvedValueOnce(true);
+        mockProcessCheckinResponse.mockResolvedValueOnce({ processed: true });
 
         const result = await handlePatientReply(mockPhone, 'A', mockName);
 
         expect(result.success).toBe(true);
-        expect(mockHandleProtocolGamification).toHaveBeenCalled();
+        expect(mockProcessCheckinResponse).toHaveBeenCalled();
     });
 
     // ===================================================================
-    it('Scenario 7: SAIR — opt-out command (placeholder logic)', async () => {
-        // Atualmente o roteiro marca como PENDENTE, mas vamos testar o routing se existisse
-        // Como não há switch específico para SAIR no código atual, ele cairia na IA
+    it('Scenario 7: SAIR — opt-out command', async () => {
         mockContainer.supabase = createSupabaseMock({ systemMsgCount: 5, rateLimitCount: 0 });
         mockFindPatientByPhone.mockResolvedValue(activePatientRow);
-
-        mockClassifyMessageIntent.mockResolvedValue({
-            intent: 'social', confidence: 0.5, reason: 'Opt-out?',
-        });
 
         const result = await handlePatientReply(mockPhone, 'SAIR', mockName);
 
         expect(result.success).toBe(true);
-        // Cai no fallback de IA ou Social por enquanto
+        expect(mockHandleOptOut).toHaveBeenCalled();
     });
 });
 

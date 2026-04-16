@@ -34,3 +34,17 @@ export function normalizeBrazilianNumber(phoneNumber: string): string {
     // 4. Fallback for other lengths
     return phoneNumber.startsWith('whatsapp:') ? phoneNumber : `whatsapp:+${digits || phoneNumber}`;
 }
+
+/**
+ * Masks a phone number for secure display (e.g., +55 11 9***-8888)
+ */
+export function maskPhone(phone: string): string {
+    if (!phone) return '';
+    const clean = phone.replace(/\D/g, '');
+    if (clean.length < 10) return phone;
+    
+    // Mask middle digits
+    const prefix = clean.slice(0, 4);
+    const suffix = clean.slice(-4);
+    return `+${prefix} ****-${suffix}`;
+}

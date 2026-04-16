@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processMessageQueue } from '@/ai/handle-patient-reply';
+import { loggers } from '@/lib/logger';
+
+const logger = loggers.cron;
 
 /**
  * API Route para processar fila de mensagens agendadas
@@ -24,14 +27,17 @@ async function handleCronRequest(request: NextRequest) {
         const cronSecret = process.env.CRON_SECRET;
 
         if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-            console.error('[QUEUE API] Unauthorized request');
+            logger.error('Unauthorized cron request attempt', { 
+                ip: request.ip, 
+                ua: request.headers.get('user-agent') 
+            });
             return NextResponse.json(
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
         }
 
-        console.log('[QUEUE API] Processing message queue...');
+        logger.info('Processing message queue via API');
 
         // Processar fila de mensagens
         const result = await processMessageQueue();
@@ -43,14 +49,14 @@ async function handleCronRequest(request: NextRequest) {
             const missedResult = await processMissedCheckins();
             if (missedResult.success) {
                 missedCheckinsProcessed = missedResult.processed;
-                console.log(`[QUEUE API] Processed ${missedCheckinsProcessed} missed check-ins`);
+                logger.info('Processed missed check-ins', { count: missedCheckinsProcessed });
             }
         } catch (missedError) {
-            console.warn('[QUEUE API] Failed to process missed check-ins (non-blocking):', missedError);
+            logger.warn('Failed to process missed check-ins (non-blocking)', { error: missedError });
         }
 
         if (result.success) {
-            console.log(`[QUEUE API] Processed ${result.processed} messages`);
+            logger.info('Queue processing completed', { processed: result.processed, missedCheckinsProcessed });
             return NextResponse.json({
                 success: true,
                 processed: result.processed,
@@ -58,7 +64,7 @@ async function handleCronRequest(request: NextRequest) {
                 timestamp: new Date().toISOString()
             });
         } else {
-            console.error('[QUEUE API] Failed:', result.error);
+            logger.error('Queue processing failed', { error: result.error });
             return NextResponse.json(
                 {
                     success: false,
@@ -69,7 +75,7 @@ async function handleCronRequest(request: NextRequest) {
         }
 
     } catch (error: any) {
-        console.error('[QUEUE API] Error:', error);
+        logger.error('Unexpected error in queue API', { error: error.message });
         return NextResponse.json(
             {
                 success: false,

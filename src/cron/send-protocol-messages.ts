@@ -13,6 +13,9 @@ import {
     getGamificationSteps
 } from '@/lib/data';
 import { toZonedTime } from 'date-fns-tz';
+import { loggers } from '@/lib/logger';
+
+const logger = loggers.cron;
 
 /**
  * Constrói um Date para um horário específico em BRT (America/Sao_Paulo).
@@ -130,7 +133,10 @@ async function bulkScheduleAllDays(
     }
 
     if (messagesToInsert.length === 0) {
-        console.log(`[SCHEDULER] ⚠️ Nenhuma mensagem para agendar (dias ${currentDay}-${durationDays})`);
+        logger.warn('Nenhuma mensagem para agendar', { 
+            patientId, 
+            days: `${currentDay}-${durationDays}` 
+        });
         return 0;
     }
 
@@ -140,7 +146,7 @@ async function bulkScheduleAllDays(
         const batch = messagesToInsert.slice(i, i + 100);
         const { error } = await supabase.from('scheduled_messages').insert(batch);
         if (error) {
-            console.error(`[SCHEDULER] ❌ Batch insert falhou no offset ${i}:`, error);
+            logger.error('Batch insert falhou', error, { offset: i, patientId });
             break;
         }
         totalInserted += batch.length;
@@ -151,9 +157,13 @@ async function bulkScheduleAllDays(
     const firstDate = messagesToInsert[0]?.send_at;
     const lastDate = messagesToInsert[messagesToInsert.length - 1]?.send_at;
 
-    console.log(`[SCHEDULER] 📦 BULK: ${totalInserted} mensagens agendadas para ${daysWithMessages.size} dias`);
-    console.log(`[SCHEDULER]   📅 Primeira: ${firstDate}`);
-    console.log(`[SCHEDULER]   📅 Última: ${lastDate}`);
+    logger.info('BULK: mensagens agendadas', {
+        totalInserted,
+        daysCount: daysWithMessages.size,
+        firstDate,
+        lastDate,
+        patientId
+    });
 
     return totalInserted;
 }
@@ -175,8 +185,10 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
     const supabase = createServiceRoleClient();
     const today = new Date();
 
-    console.log(`[SCHEDULER] Starting protocol message scheduling (bulk mode)...`);
-    console.log(`[SCHEDULER] Date: ${today.toLocaleDateString('pt-BR')}`);
+
+    logger.info('Starting protocol message scheduling (bulk mode)', { 
+        today: today.toLocaleDateString('pt-BR') 
+    });
 
     try {
         const { data: activeProtocols, error: fetchError } = await supabase
@@ -198,18 +210,18 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
             .is('completed_at', null);
 
         if (fetchError) {
-            console.error('[SCHEDULER] Error fetching active protocols:', fetchError);
+            logger.error('Error fetching active protocols', fetchError);
             return { success: false, messagesScheduled: 0, protocolsCompleted: 0, error: fetchError.message };
         }
 
         const protocolsToProcess = activeProtocols || [];
 
         if (protocolsToProcess.length === 0) {
-            console.log(`[SCHEDULER] No active protocols to process`);
+            logger.info('No active protocols to process');
             return { success: true, messagesScheduled: 0, protocolsCompleted: 0 };
         }
 
-        console.log(`[SCHEDULER] Processing ${protocolsToProcess.length} active protocols`);
+        logger.info('Processing active protocols', { count: protocolsToProcess.length });
 
         let messagesScheduled = 0;
         let protocolsCompleted = 0;
@@ -220,11 +232,17 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
             const durationDays = patientProtocol.protocol.duration_days;
             const isFastTrack = FAST_TRACK_PROTOCOL_IDS.includes(protocolId);
 
-            console.log(`[SCHEDULER] 👤 ID: ${patientProtocol.patient.id} dia ${currentDay}/${durationDays} do ${patientProtocol.protocol.name}${isFastTrack ? ' [FAST-TRACK]' : ''}`);
+            logger.info('Processing protocol for patient', {
+                patientId: patientProtocol.patient.id,
+                currentDay,
+                durationDays,
+                protocolName: patientProtocol.protocol.name,
+                isFastTrack
+            });
 
             // ── Verificar se completou o protocolo ──
             if (currentDay > durationDays) {
-                console.log(`[SCHEDULER] ✓ ID ${patientProtocol.patient.id} completou o protocolo!`);
+                logger.info('Protocol completed', { patientId: patientProtocol.patient.id });
 
                 await supabase
                     .from('patient_protocols')
@@ -267,10 +285,14 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
                                 { id: 'protocol_complete', earnedAt: new Date().toISOString() }
                             ]
                         }).eq('id', patientProtocol.patient.id);
-                        console.log(`[SCHEDULER] 🏅 +300 pts + badge protocol_complete`);
+                        logger.info('Points and badge granted', { 
+                            patientId: patientProtocol.patient.id, 
+                            points: 300, 
+                            badge: 'protocol_complete' 
+                        });
                     }
                 } catch (badgeErr) {
-                    console.error('[SCHEDULER] Erro ao conceder badge:', badgeErr);
+                    logger.error('Erro ao conceder badge', badgeErr, { patientId: patientProtocol.patient.id });
                 }
 
                 messagesScheduled++;
@@ -287,7 +309,10 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
                 .eq('source', 'protocol');
 
             if (pendingCount && pendingCount > 0) {
-                console.log(`[SCHEDULER] ⏭ Já existem ${pendingCount} mensagens pendentes para ID ${patientProtocol.patient.id}. Bulk já ativo.`);
+                logger.info('Pending messages exist, skipping bulk scheduling', { 
+                    patientId: patientProtocol.patient.id, 
+                    pendingCount 
+                });
                 continue;
             }
 
@@ -297,8 +322,10 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
                 const scheduled = await scheduleSingleDay(supabase, patientProtocol, today);
                 messagesScheduled += scheduled;
             } else {
-                // Produção: BULK — agendar TODOS os dias restantes de uma vez
-                console.log(`[SCHEDULER] 📦 Iniciando agendamento BULK para ${patientProtocol.patient.full_name} (dias ${currentDay}-${durationDays})...`);
+                logger.info('Starting bulk scheduling', { 
+                    patientId: patientProtocol.patient.id, 
+                    days: `${currentDay}-${durationDays}` 
+                });
                 const scheduled = await bulkScheduleAllDays(supabase, patientProtocol);
                 messagesScheduled += scheduled;
 
@@ -313,14 +340,15 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
             }
         }
 
-        console.log(`[SCHEDULER] ✅ Agendamento concluído!`);
-        console.log(`[SCHEDULER] 📊 Mensagens agendadas: ${messagesScheduled}`);
-        console.log(`[SCHEDULER] 🎉 Protocolos completados: ${protocolsCompleted}`);
+        logger.info('Protocol scheduling completed', {
+            messagesScheduled,
+            protocolsCompleted
+        });
 
         return { success: true, messagesScheduled, protocolsCompleted };
 
     } catch (error: any) {
-        console.error('[SCHEDULER] ❌ Erro:', error);
+        logger.error('Critical scheduler error', error);
         return { success: false, messagesScheduled: 0, protocolsCompleted: 0, error: error.message };
     }
 }

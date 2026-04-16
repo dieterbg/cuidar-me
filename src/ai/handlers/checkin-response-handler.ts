@@ -26,14 +26,18 @@ export async function processCheckinResponse(
     console.log(`[DEBUG-CHECKIN] patient.user_id: "${patient.user_id}"`);
     console.log(`[DEBUG-CHECKIN] whatsappNumber: "${whatsappNumber}"`);
 
+    // ── VALIDAÇÃO DE TAMANHO ──────────────────────────
+    // Se a mensagem for muito longa, provavelmente é conversacional → IA
+    const words = messageText.trim().split(/\s+/);
+    if (words.length > 3) {
+        console.log(`[DEBUG-CHECKIN] ⏩ Message too long (${words.length} words), passing to AI.`);
+        return { processed: false };
+    }
+
     const category = getCategory(checkinType);
     const perspective = getPerspective(checkinType);
 
-    console.log(`[DEBUG-CHECKIN] category: "${category}"`);
-    console.log(`[DEBUG-CHECKIN] perspective: "${perspective}"`);
-
     if (!category || !perspective) {
-        console.log(`[DEBUG-CHECKIN] ❌ ABORT: Unknown category or perspective for type="${checkinType}"`);
         return { processed: false };
     }
 
@@ -41,68 +45,60 @@ export async function processCheckinResponse(
     let points = 0;
     let weightValue: number | null = null;
 
-    console.log(`[DEBUG-CHECKIN] parseLetter result: "${letter}"`);
-
     // ── PESO: aceita apenas número ──────────────────────
     if (category === 'weight') {
         const num = extractNumber(messageText);
-        console.log(`[DEBUG-CHECKIN] extractNumber result: ${num}`);
         if (num && num >= 30 && num <= 300) {
             points = 50;
             weightValue = num;
-            console.log(`[DEBUG-CHECKIN] ✅ Valid weight: ${num}kg → ${points} pts`);
         } else {
-            console.log(`[DEBUG-CHECKIN] ❌ Invalid weight number. Asking to retry.`);
-            await sendWhatsappMessage(whatsappNumber, 'Por favor, informe seu peso em kg (ex: 85).');
+            const retryMsg = 'Por favor, informe seu peso em kg (ex: 85).';
+            await sendWhatsappMessage(whatsappNumber, retryMsg);
             await supabase.from('messages').insert({
-                patient_id: patient.id, sender: 'system',
-                text: 'Por favor, informe seu peso em kg (ex: 85).',
+                patient_id: patient.id, sender: 'system', text: retryMsg,
             });
-            return { processed: true }; // Consome mas não pontua — mantém pending
+            return { processed: true };
         }
     }
 
     // ── TODOS OS OUTROS: aceita apenas A, B ou C ────────
     if (category === 'abc' || category === 'yesno') {
         if (!letter) {
-            const options = category === 'yesno' ? 'A ou B' : 'A, B ou C';
-            console.log(`[DEBUG-CHECKIN] ❌ No valid letter. Asking to retry with: ${options}`);
-            await sendWhatsappMessage(whatsappNumber, `Responda apenas com a letra: ${options}`);
-            await supabase.from('messages').insert({
-                patient_id: patient.id, sender: 'system',
-                text: `Responda apenas com a letra: ${options}`,
-            });
-            return { processed: true }; // Consome mas não pontua — mantém pending
+            // Se for apenas um caractere isolado e não for A/B/C, provavelmente é erro de digitação
+            if (words.length === 1 && messageText.trim().length === 1) {
+                const options = category === 'yesno' ? 'A ou B' : 'A, B ou C';
+                const retryMsg = `Responda apenas com a letra: ${options}`;
+                await sendWhatsappMessage(whatsappNumber, retryMsg);
+                await supabase.from('messages').insert({
+                    patient_id: patient.id, sender: 'system', text: retryMsg,
+                });
+                return { processed: true };
+            }
+            
+            // Para qualquer outra coisa (interação humana), deixa a IA responder
+            console.log(`[DEBUG-CHECKIN] ⏩ Message "${messageText}" not a strict letter, passing to AI.`);
+            return { processed: false };
         }
 
         const key = checkinKey(checkinType);
         if (letter === 'A') points = POINTS[key].a;
         else if (letter === 'B') points = POINTS[key].b;
         else if (letter === 'C') points = POINTS[key].c;
-        console.log(`[DEBUG-CHECKIN] ✅ Letter "${letter}" → key="${key}" → ${points} pts`);
     }
 
     // ── PONTUAR ─────────────────────────────────────────
     const uid = patient.userId || patient.user_id;
-    console.log(`[DEBUG-CHECKIN] ========== SCORING ==========`);
-    console.log(`[DEBUG-CHECKIN] points: ${points}`);
-    console.log(`[DEBUG-CHECKIN] uid resolved: "${uid}"`);
-    console.log(`[DEBUG-CHECKIN] Will attempt scoring: ${!!(points > 0 && uid)}`);
 
     if (points > 0 && uid) {
-        console.log(`[DEBUG-CHECKIN] Calling awardGamificationPoints(uid="${uid}", perspective="${perspective}", points=${points})`);
         const { awardGamificationPoints } = await import('../actions/gamification');
         const result = await awardGamificationPoints(
             uid, perspective, points, supabase
         );
 
-        console.log(`[DEBUG-CHECKIN] awardGamificationPoints result: success=${result.success}, pointsEarned=${result.pointsEarned}, message="${result.message}"`);
-
         if (result.success) {
             if (weightValue) {
                 const { addHealthMetric } = await import('../actions/patients');
                 await addHealthMetric(patient.id, { weight: weightValue });
-                console.log(`[DEBUG-CHECKIN] Weight ${weightValue}kg saved to health metrics`);
             }
 
             const emoji = EMOJI[perspective];
@@ -111,12 +107,10 @@ export async function processCheckinResponse(
             await supabase.from('messages').insert({
                 patient_id: patient.id, sender: 'system', text: msg,
             });
-            console.log(`[DEBUG-CHECKIN] ✅ SUCCESS: +${result.pointsEarned}pts (${perspective}). Message sent.`);
             return { processed: true };
         }
 
-        // Rate limit → informa e consome
-        console.log(`[DEBUG-CHECKIN] ⚠️ awardGamificationPoints failed. message="${result.message}"`);
+        // Rate limit ou outro erro → informa e consome
         if (result.message) {
             await sendWhatsappMessage(whatsappNumber, result.message);
             await supabase.from('messages').insert({
@@ -126,9 +120,8 @@ export async function processCheckinResponse(
         return { processed: true };
     }
 
-    // B em yesno = 0 pontos mas registra
+    // B em yesno = 0 pontos mas registra e encerra pendência
     if ((category === 'yesno') && letter === 'B') {
-        console.log(`[DEBUG-CHECKIN] yesno letter=B → 0 pts but registering`);
         const msg = '📝 Registrado! Planejar faz toda diferença. 💪';
         await sendWhatsappMessage(whatsappNumber, msg);
         await supabase.from('messages').insert({
@@ -140,16 +133,25 @@ export async function processCheckinResponse(
         return { processed: true };
     }
 
-    console.log(`[DEBUG-CHECKIN] ❌ FALL-THROUGH: points=${points}, uid="${uid}", category="${category}", letter="${letter}". Returning processed=false`);
     return { processed: false };
 }
 
-// ── PARSER: apenas A, B ou C ────────────────────────────
+// ── PARSER: Flexível para A, B ou C ────────────────────
 function parseLetter(text: string): 'A' | 'B' | 'C' | null {
     const t = text.trim().toUpperCase();
-    if (t === 'A' || t === 'A)' || t === 'A.') return 'A';
-    if (t === 'B' || t === 'B)' || t === 'B.') return 'B';
-    if (t === 'C' || t === 'C)' || t === 'C.') return 'C';
+    
+    // 1. Casidade estrita: "A", "A.", "A)"
+    if (/^[A][).]?$/.test(t)) return 'A';
+    if (/^[B][).]?$/.test(t)) return 'B';
+    if (/^[C][).]?$/.test(t)) return 'C';
+    
+    // 2. Variações comuns: "Opção A", "Letra B", "Resposta C"
+    // Busca A, B ou C precedida por palavras comuns ou no início
+    const flexibleMatch = t.match(/(?:OPÇÃO|LETRA|RESPOSTA|^)\s*([A-C])(?:\s|$|[).])/i);
+    if (flexibleMatch) {
+        return flexibleMatch[1].toUpperCase() as 'A' | 'B' | 'C';
+    }
+
     return null;
 }
 

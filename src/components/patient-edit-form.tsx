@@ -311,7 +311,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
               <FormItem>
                 <FormLabel>Nome Completo</FormLabel>
                 <FormControl>
-                  <Input placeholder="Nome completo" {...field} className="rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
+                  <Input placeholder="Nome completo" {...field} className="rounded-xl border-input/60 focus:border-brand focus:ring-brand/20" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -328,7 +328,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                 <FormItem>
                   <FormLabel>WhatsApp (DDD + Número)</FormLabel>
                   <FormControl>
-                    <Input placeholder="11999998888" {...field} value={field.value ?? ''} className="rounded-xl border-input/60 focus:border-[#899d5e] focus:ring-[#899d5e]/20" />
+                    <Input placeholder="11999998888" {...field} value={field.value ?? ''} className="rounded-xl border-input/60 focus:border-brand focus:ring-brand/20" />
                   </FormControl>
                   <FormDescription>
                     O sistema adicionará o código do Brasil (+55) automaticamente.
@@ -345,7 +345,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                   <FormLabel>Plano</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className="rounded-xl border-input/60 focus:ring-[#899d5e]/20">
+                      <SelectTrigger className="rounded-xl border-input/60 focus:ring-brand/20">
                         <SelectValue placeholder="Selecione um plano" />
                       </SelectTrigger>
                     </FormControl>
@@ -367,7 +367,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                   <FormLabel>Status do Cadastro</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger className="rounded-xl border-input/60 focus:ring-[#899d5e]/20">
+                      <SelectTrigger className="rounded-xl border-input/60 focus:ring-brand/20">
                         <SelectValue placeholder="Selecione um status" />
                       </SelectTrigger>
                     </FormControl>
@@ -403,7 +403,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                         disabled={selectedPlan === 'freemium'}
                       >
                         <FormControl>
-                          <SelectTrigger className="rounded-xl border-input/60 focus:ring-[#899d5e]/20">
+                          <SelectTrigger className="rounded-xl border-input/60 focus:ring-brand/20">
                             <SelectValue placeholder={selectedPlan === 'freemium' ? "N/A (Freemium)" : "Selecione um protocolo"} />
                           </SelectTrigger>
                         </FormControl>
@@ -676,10 +676,10 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
 
             {/* WhatsApp Consent (Sempre visível no portal para garantir trigger) */}
             <div className="space-y-4 pt-4 border-t border-border/50">
-              <div className="rounded-2xl bg-[#899d5e]/5 border border-[#899d5e]/15 p-5 space-y-4">
+              <div className="rounded-2xl bg-brand/5 border border-brand/15 p-5 space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-[#899d5e]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <MessageSquare className="h-5 w-5 text-[#899d5e]" />
+                  <div className="h-10 w-10 rounded-xl bg-brand/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <MessageSquare className="h-5 w-5 text-brand" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-[#2D3B2D]">Comunicação via WhatsApp</h3>
@@ -699,7 +699,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                         <Checkbox
                           checked={field.value ?? false}
                           onCheckedChange={field.onChange}
-                          className="mt-0.5 data-[state=checked]:bg-[#899d5e] data-[state=checked]:border-[#899d5e]"
+                          className="mt-0.5 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
                         />
                       </FormControl>
                       <div className="leading-none">
@@ -711,7 +711,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                           <a
                             href="/privacidade"
                             target="_blank"
-                            className="text-[#899d5e] underline hover:text-[#7a8c53]"
+                            className="text-brand underline hover:text-brand-hover"
                           >
                             Política de Privacidade
                           </a>.
@@ -727,7 +727,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
 
 
         <div className="flex flex-col sm:flex-row gap-2 pt-4">
-          <Button type="submit" disabled={isSaving || isDeleting} className="w-full bg-[#899d5e] hover:bg-[#7a8c53] shadow-lg shadow-[#899d5e]/20 rounded-xl">
+          <Button type="submit" disabled={isSaving || isDeleting} className="w-full bg-brand hover:bg-brand-hover shadow-lg shadow-brand/20 rounded-xl">
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSaving ? 'Salvando...' : 'Salvar Alterações'}
           </Button>

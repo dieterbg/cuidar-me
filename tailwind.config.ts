@@ -13,6 +13,13 @@ export default {
         sans: ['Inter', 'sans-serif'],
       },
       colors: {
+        brand: {
+          DEFAULT: '#899d5e',
+          hover: '#7a8c53',
+          light: '#F9FAF6',
+          border: '#EBECE8',
+          muted: '#FAFBF7',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

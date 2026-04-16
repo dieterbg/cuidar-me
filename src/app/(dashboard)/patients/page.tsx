@@ -402,7 +402,7 @@ export default function PatientsListPage() {
           <Button 
             onClick={handleGenerateInvite} 
             disabled={isGeneratingInvite}
-            className="bg-[#899d5e] hover:bg-[#7a8c53] font-semibold rounded-xl px-6"
+            className="bg-brand hover:bg-brand-hover font-semibold rounded-xl px-6"
           >
             {isGeneratingInvite ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
             Gerar Convite
@@ -436,19 +436,19 @@ export default function PatientsListPage() {
       <Tabs defaultValue="attention" className="w-full space-y-6" onValueChange={setActiveTab}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/50 p-2 rounded-2xl border border-border/50 backdrop-blur-sm">
           <TabsList className="bg-transparent p-0 h-auto gap-2 flex-wrap justify-start">
-            <TabsTrigger value="attention" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
+            <TabsTrigger value="attention" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
               Atenção
-              {attentionCount > 0 && <Badge className="ml-2 bg-white text-[#899d5e] border-none h-5 px-1.5 shadow-sm">{attentionCount}</Badge>}
+              {attentionCount > 0 && <Badge className="ml-2 bg-white text-brand border-none h-5 px-1.5 shadow-sm">{attentionCount}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="pending" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
+            <TabsTrigger value="pending" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
               Pendentes
               {pendingCount > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-white/20 text-white">{pendingCount}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="inactive" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
+            <TabsTrigger value="inactive" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
               Inativos
               {inactiveCount > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5">{inactiveCount}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="all" className="data-[state=active]:bg-[#899d5e] data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">Todos</TabsTrigger>
+            <TabsTrigger value="all" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">Todos</TabsTrigger>
           </TabsList>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -505,7 +505,7 @@ export default function PatientsListPage() {
         <DialogContent className="sm:max-w-md rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <QrCode className="h-6 w-6 text-[#899d5e]" />
+              <QrCode className="h-6 w-6 text-brand" />
               Convite Pré-Aprovado
             </DialogTitle>
             <DialogDescription>

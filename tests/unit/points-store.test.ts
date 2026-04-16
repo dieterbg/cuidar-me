@@ -15,7 +15,7 @@ describe('Points Store', () => {
         expect(item).toBeDefined();
         expect(item!.id).toBe('streak_freeze');
         expect(item!.name).toContain('Proteção');
-        expect(item!.cost).toBe(200);
+        expect(item!.cost).toBe(100);
         expect(item!.category).toBe('streak');
         expect(item!.type).toBe('instant');
     });
@@ -40,7 +40,7 @@ describe('Points Store', () => {
             expect(item.description).toBeTruthy();
             expect(item.cost).toBeGreaterThan(0);
             expect(item.icon).toBeTruthy();
-            expect(['streak', 'content', 'consultation', 'discount', 'exclusive']).toContain(item.category);
+            expect(['streak', 'content', 'consultation', 'discount', 'physical', 'upgrade']).toContain(item.category);
             expect(['instant', 'redeemable']).toContain(item.type);
         }
     });

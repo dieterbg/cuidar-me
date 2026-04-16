@@ -39,7 +39,7 @@ export default function WelcomePage() {
       icon: Trophy,
       title: "Gamificação Real",
       description: "Engaje pacientes com desafios de Alimentação, Movimento e Bem-estar. Transforme a jornada de saúde em uma experiência viciante.",
-      color: "bg-[#899d5e]/20 text-[#899d5e]",
+      color: "bg-brand/20 text-brand",
       link: "/education"
     },
     {
@@ -52,17 +52,17 @@ export default function WelcomePage() {
   ];
 
   return (
-    <div className="flex-1 p-8 bg-[#F9FAF6] min-h-screen">
+    <div className="flex-1 p-8 bg-brand-light min-h-screen">
       <div className="max-w-6xl mx-auto space-y-12">
 
         {/* Hero Section */}
         <div className="text-center space-y-6 py-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#899d5e]/10 text-[#899d5e] font-medium text-sm mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/10 text-brand font-medium text-sm mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <Sparkles className="h-4 w-4" />
             <span>A Revolução no Acompanhamento de Endocrinologia</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-foreground max-w-4xl mx-auto leading-tight">
-            Escale seu cuidado sem perder a <span className="text-[#899d5e]">empatia</span>.
+            Escale seu cuidado sem perder a <span className="text-brand">empatia</span>.
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Bem-vindo(a), <span className="font-semibold text-foreground">{profile?.display_name}</span>.
@@ -70,7 +70,7 @@ export default function WelcomePage() {
           </p>
           <div className="flex justify-center gap-4 pt-4">
             <Link href="/overview">
-              <Button size="lg" className="h-14 px-8 rounded-full text-lg bg-[#899d5e] hover:bg-[#7a8c53] shadow-xl shadow-[#899d5e]/20 transition-all hover:-translate-y-1">
+              <Button size="lg" className="h-14 px-8 rounded-full text-lg bg-brand hover:bg-brand-hover shadow-xl shadow-brand/20 transition-all hover:-translate-y-1">
                 Acessar Dashboard
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
@@ -87,13 +87,13 @@ export default function WelcomePage() {
                   <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110", feature.color)}>
                     <feature.icon className="h-7 w-7" />
                   </div>
-                  <h3 className="text-2xl font-bold mb-3 text-foreground group-hover:text-[#899d5e] transition-colors">
+                  <h3 className="text-2xl font-bold mb-3 text-foreground group-hover:text-brand transition-colors">
                     {feature.title}
                   </h3>
                   <p className="text-muted-foreground text-lg leading-relaxed mb-6 flex-1">
                     {feature.description}
                   </p>
-                  <div className="flex items-center text-[#899d5e] font-semibold group-hover:translate-x-2 transition-transform">
+                  <div className="flex items-center text-brand font-semibold group-hover:translate-x-2 transition-transform">
                     Explorar <ArrowRight className="ml-2 h-4 w-4" />
                   </div>
                 </CardContent>

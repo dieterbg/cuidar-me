@@ -12,6 +12,9 @@ import { scheduleReminder } from '@/ai/actions/messages';
 import { z } from 'zod';
 import type { Patient } from '@/lib/types';
 import { GenerateChatbotReplyInputSchema, GenerateChatbotReplyOutputSchema } from '@/lib/types';
+import { loggers } from '@/lib/logger';
+
+const logger = loggers.ai;
 
 
 export async function generateChatbotReply(input: z.infer<typeof GenerateChatbotReplyInputSchema>): Promise<z.infer<typeof GenerateChatbotReplyOutputSchema>> {
@@ -117,7 +120,7 @@ function getOverloadFallbackResponse(input: z.infer<typeof GenerateChatbotReplyI
   const message = input.patientMessage.toLowerCase();
 
   // Local logic for common phrases to avoid dead silence during API outages
-  let standbyReply = "Oi! Notifiquei a equipe sobre sua mensagem e em breve daremos atenção total a você. Como posso ajudar com a plataforma enquanto isso?";
+  let standbyReply = "Oi! Notifiquei a equipe sobre sua mensagem, mas nosso sistema de IA está momentaneamente indisponível. Em breve daremos atenção total a você. Como posso ajudar com a plataforma enquanto isso?";
 
   if (message.includes("olá") || message.includes("oi") || message.includes("bom dia") || message.includes("boatarde") || message.includes("boa noite")) {
     standbyReply = `Olá ${input.patient.name}! Sou a Deia. Nossos sistemas de inteligência estão em manutenção rápida, mas já avisei a Dra. Bruna que você chamou. Em breve ela ou a equipe te respondem por aqui! 😊`;
@@ -132,8 +135,8 @@ function getOverloadFallbackResponse(input: z.infer<typeof GenerateChatbotReplyI
       reason: "API Quota/Error Standby",
       triggerMessage: input.patientMessage,
       aiSummary: `FALHA TÉCNICA (Gemini 429/404). O sistema entrou em modo de espera local. Erro: ${error.message}`,
-      aiSuggestedReply: "A API do Gemini está fora do ar ou sem saldo. Responda manualmente.",
-      priority: input.patient.subscription.priority,
+      aiSuggestedReply: "A API do Gemini está fora do ar ou está momentaneamente indisponível. Responda manualmente.",
+      priority: input.patient.subscription?.priority || 'standard',
       createdAt: new Date(),
     }
   });
@@ -149,7 +152,10 @@ const generateChatbotReplyFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      console.log(`[generateChatbotReplyFlow] Processing msg (len: ${input.patientMessage.length}, patient: ${input.patient.id})`);
+      logger.info('Processing chatbot reply request', { 
+        patientId: input.patient.id,
+        messageLength: input.patientMessage.length 
+      });
 
       // Using Gemini 2.0 Flash directly for speed and reliability
       const response = await ai.generate({
@@ -208,15 +214,15 @@ Retorne no formato JSON rigoroso:
         }
       });
 
-      console.log('[generateChatbotReplyFlow] AI Generation success (Gemini 2.0 Flash)');
+      logger.info('AI Generation success (Gemini 2.0 Flash)', { patientId: input.patient.id });
       return response.output!;
 
     } catch (error: any) {
-      console.error('[generateChatbotReplyFlow] Primary Model Error:', error);
+      logger.error('Primary Model Error', error, { patientId: input.patient.id });
 
       // Simple fallback to 1.5 Flash 002 if 2.0 has any transient issue
       try {
-        console.log('[generateChatbotReplyFlow] Attempting fallback to 1.5 Flash 002...');
+        logger.warn('Attempting fallback to 1.5 Flash 002', { patientId: input.patient.id });
         const fallbackResponse = await ai.generate({
           model: 'googleai/gemini-1.5-flash-002',
           prompt: `Message: ${input.patientMessage}. As Deia (Secretary), should I reply or escalate for medical help? Return JSON only with decision and chatbotReply.`,
@@ -224,7 +230,7 @@ Retorne no formato JSON rigoroso:
         });
         return fallbackResponse.output!;
       } catch (fallbackError: any) {
-        console.error('[generateChatbotReplyFlow] All models failed:', fallbackError);
+        logger.error('All models failed', fallbackError, { patientId: input.patient.id });
         return getOverloadFallbackResponse(input, error);
       }
     }

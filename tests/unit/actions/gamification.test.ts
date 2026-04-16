@@ -20,6 +20,11 @@ vi.mock('@/lib/level-system', () => ({
         return 1;
     }),
     getLevelName: vi.fn((lvl: number) => `Nível ${lvl}`),
+    getStreakMultiplier: vi.fn((streak: number) => {
+        if (streak >= 7) return 1.5;
+        if (streak >= 3) return 1.2;
+        return 1.0;
+    }),
 }));
 
 // Mock dynamic import of badges
@@ -49,7 +54,7 @@ describe('Server Action: Gamification', () => {
                         disciplina: { current: 0, goal: 5, isComplete: false },
                     },
                 },
-                streak: { currentStreak: 3, longestStreak: 5, lastActivityDate: null, streakFreezes: 2, freezesUsedThisMonth: 0 },
+                streak: { currentStreak: 0, longestStreak: 5, lastActivityDate: null, streakFreezes: 2, freezesUsedThisMonth: 0 },
             },
             ...overrides,
         };
@@ -140,5 +145,21 @@ describe('Server Action: Gamification', () => {
 
         expect(result.success).toBe(false);
         expect(result.pointsEarned).toBe(0);
+    });
+
+    // =================================================================
+    // GAM-07: bônus de streak (🔥 Multiplicador)
+    // =================================================================
+    it('GAM-07: bônus de streak (multiplicador) funciona', async () => {
+        const patient = makePatient();
+        patient.gamification.streak.currentStreak = 3; // 1.2x multiplier according to our mock
+
+        mockFrom('patients', { data: patient, error: null });
+
+        const result = await registerQuickAction('user-1', 'hydration');
+
+        expect(result.success).toBe(true);
+        expect(result.pointsEarned).toBe(12); // 10 * 1.2 = 12
+        expect(result.message).toContain('streak');
     });
 });

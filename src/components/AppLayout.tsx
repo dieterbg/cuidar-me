@@ -91,7 +91,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         <SidebarContent className="px-4 space-y-6">
           {/* Profile Card - Replicating the Patient Portal Style */}
-          <div className="bg-[#F9FAF6] rounded-3xl p-4 border border-[#EBECE8] shadow-sm mx-2 mt-2">
+          <div className="bg-brand-light rounded-3xl p-4 border border-brand-border shadow-sm mx-2 mt-2">
             <div className="flex items-center gap-3 mb-3">
               <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
                 {/* <AvatarImage src={profile?.photo_url ?? undefined} alt={profile?.display_name ?? 'Usuário'} /> */}
@@ -135,12 +135,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     className={cn(
                       "h-12 px-4 rounded-xl transition-all duration-300 font-medium text-base group relative overflow-hidden",
                       isActive
-                        ? "bg-[#899d5e] text-white hover:bg-[#7a8c53] shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-                        : "text-muted-foreground hover:text-foreground hover:bg-[#F4F5F0]"
+                        ? "bg-brand text-white hover:bg-brand-hover shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        : "text-muted-foreground hover:text-foreground hover:bg-brand-muted"
                     )}
                   >
                     <Link href={item.href} className="flex items-center w-full">
-                      <item.icon className={cn("mr-3 h-5 w-5", isActive ? "text-white" : "text-muted-foreground group-hover:text-[#899d5e]")} />
+                      <item.icon className={cn("mr-3 h-5 w-5", isActive ? "text-white" : "text-muted-foreground group-hover:text-brand")} />
                       <span>{item.label}</span>
                       {isActive && <Sparkles className="ml-auto h-4 w-4 text-white/70 animate-pulse" />}
                     </Link>
@@ -157,19 +157,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     className={cn(
                       "h-12 px-4 rounded-xl transition-all duration-300 font-medium text-base group mt-4",
                       pathname.startsWith('/admin')
-                        ? "bg-[#899d5e] text-white hover:bg-[#7a8c53] shadow-md"
-                        : "text-muted-foreground hover:text-foreground hover:bg-[#F4F5F0]"
+                        ? "bg-brand text-white hover:bg-brand-hover shadow-md"
+                        : "text-muted-foreground hover:text-foreground hover:bg-brand-muted"
                     )}
                   >
-                    <UserCog className={cn("mr-3 h-5 w-5", pathname.startsWith('/admin') ? "text-white" : "text-muted-foreground group-hover:text-[#899d5e]")} />
+                    <UserCog className={cn("mr-3 h-5 w-5", pathname.startsWith('/admin') ? "text-white" : "text-muted-foreground group-hover:text-brand")} />
                     <span>Admin</span>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 ml-2 rounded-xl border-[#EBECE8] shadow-lg">
-                  <DropdownMenuLabel className="text-[#899d5e]">Administração</DropdownMenuLabel>
+                <DropdownMenuContent className="w-56 ml-2 rounded-xl border-brand-border shadow-lg">
+                  <DropdownMenuLabel className="text-brand">Administração</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {adminMenuItems.map(item => (
-                    <DropdownMenuItem key={item.href} asChild className="rounded-lg focus:bg-[#F4F5F0] cursor-pointer">
+                    <DropdownMenuItem key={item.href} asChild className="rounded-lg focus:bg-brand-muted cursor-pointer">
                       <Link href={item.href}>
                         <item.icon className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span>{item.label}</span>
@@ -192,9 +192,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <span className="font-medium">Sair</span>
           </Button>
 
-          <div className="px-4 py-2 border-t border-dashed border-[#EBECE8] mt-2 group/version">
+          <div className="px-4 py-2 border-t border-dashed border-brand-border mt-2 group/version">
             <div className="flex flex-col gap-1 opacity-40 group-hover/version:opacity-100 transition-opacity duration-300">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-[#899d5e]">Build v1.5.2</span>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-brand">Build v1.5.2</span>
               <span className="text-[9px] text-muted-foreground leading-tight">
                 Update: 04/03 - 19:33<br />
                 Cleanup + Onboarding Fix
@@ -203,7 +203,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="bg-[#F9FAF6]/50">
+      <SidebarInset className="bg-brand-light/50">
         <div className="flex items-center justify-between p-4 border-b md:hidden bg-white">
           <div className="flex items-center gap-2">
             <CuidarMeLogo />

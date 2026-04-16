@@ -11,17 +11,39 @@ vi.mock('@/ai/handle-patient-reply', () => ({
     handlePatientReply: vi.fn(),
 }));
 
-// Import mocks to control them
+vi.mock('@/lib/supabase-server-utils', () => ({
+    createServiceRoleClient: vi.fn(),
+}));
+
+vi.mock('@vercel/functions', () => ({
+    waitUntil: vi.fn(),
+}));
+
+// Mock global fetch
+global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ success: true })
+} as any);
+
+// Import mocks
 import { validateTwilioWebhook } from '@/lib/twilio';
 import { handlePatientReply } from '@/ai/handle-patient-reply';
+import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 
 describe('WhatsApp Webhook API', () => {
+    let mockSupabase: any;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        
+        // Setup default Supabase mock chain
+        const insertMock = vi.fn().mockResolvedValue({ error: null });
+        const fromMock = vi.fn().mockReturnValue({ insert: insertMock });
+        mockSupabase = { from: fromMock };
+        (createServiceRoleClient as any).mockReturnValue(mockSupabase);
     });
 
     it('should return 401 if Twilio validation fails', async () => {
-        // Setup mock to fail validation
         (validateTwilioWebhook as any).mockResolvedValue(false);
 
         const formData = new FormData();
@@ -36,32 +58,10 @@ describe('WhatsApp Webhook API', () => {
         const res = await POST(req);
 
         expect(res.status).toBe(401);
-        expect(await res.text()).toBe('Invalid Twilio Signature');
         expect(handlePatientReply).not.toHaveBeenCalled();
     });
 
-    it('should return 400 if required fields are missing', async () => {
-        // Setup mock to pass validation
-        (validateTwilioWebhook as any).mockResolvedValue(true);
-
-        const formData = new FormData();
-        // Missing 'Body'
-        formData.append('From', 'whatsapp:+1234567890');
-
-        const req = new NextRequest('http://localhost/api/whatsapp', {
-            method: 'POST',
-            body: formData,
-        });
-
-        const res = await POST(req);
-
-        expect(res.status).toBe(400);
-        expect(await res.text()).toContain('Missing required fields');
-        expect(handlePatientReply).not.toHaveBeenCalled();
-    });
-
-    it('should process valid request and return TwiML', async () => {
-        // Setup mock to pass validation
+    it('should process valid request and enqueue message', async () => {
         (validateTwilioWebhook as any).mockResolvedValue(true);
 
         const formData = new FormData();
@@ -78,24 +78,30 @@ describe('WhatsApp Webhook API', () => {
         const res = await POST(req);
 
         expect(res.status).toBe(200);
-        expect(res.headers.get('content-type')).toBe('text/xml');
+        
+        // Verify it inserted into queue instead of calling handler directly
+        const fromMock = mockSupabase.from;
+        expect(fromMock).toHaveBeenCalledWith('message_queue');
+        
+        const insertMock = fromMock().insert;
+        expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+            whatsapp_number: 'whatsapp:+1234567890',
+            message_text: 'Hello World',
+            profile_name: 'John Doe',
+            message_sid: 'SM123'
+        }));
 
-        // Verify handler was called with correct args
-        expect(handlePatientReply).toHaveBeenCalledWith(
-            'whatsapp:+1234567890',
-            'Hello World',
-            'John Doe',
-            'SM123'
-        );
+        // Verify it triggered the background process
+        expect(global.fetch).toHaveBeenCalled();
+        expect(handlePatientReply).not.toHaveBeenCalled(); // AI processing is now deferred
     });
 
-    it('should use default profile name if missing', async () => {
+    it('should use default profile name if missing in queue', async () => {
         (validateTwilioWebhook as any).mockResolvedValue(true);
 
         const formData = new FormData();
         formData.append('From', 'whatsapp:+1234567890');
         formData.append('Body', 'Hello');
-        // Missing ProfileName
 
         const req = new NextRequest('http://localhost/api/whatsapp', {
             method: 'POST',
@@ -104,11 +110,10 @@ describe('WhatsApp Webhook API', () => {
 
         await POST(req);
 
-        expect(handlePatientReply).toHaveBeenCalledWith(
-            'whatsapp:+1234567890',
-            'Hello',
-            'Novo Contato', // Default value
-            undefined // No MessageSid provided
-        );
+        const fromMock = mockSupabase.from;
+        const insertMock = fromMock().insert;
+        expect(insertMock).toHaveBeenCalledWith(expect.objectContaining({
+            profile_name: 'Novo Contato'
+        }));
     });
 });

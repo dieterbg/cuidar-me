@@ -30,10 +30,16 @@ vi.mock('@/ai/protocol-response-processor', () => ({
     calculatePoints: vi.fn().mockReturnValue(10),
     getActionType: vi.fn().mockReturnValue('hydration'),
     generateConfirmationMessage: vi.fn().mockReturnValue('Ganhou 10 pontos!'),
+    processNumericResponse: vi.fn().mockReturnValue({ isValid: false }),
 }));
 
 vi.mock('@/ai/actions/gamification', () => ({
     registerQuickAction: vi.fn().mockResolvedValue({ success: true }),
+    awardGamificationPoints: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+vi.mock('@/lib/level-system', () => ({
+    getStreakMultiplier: vi.fn().mockReturnValue(1),
 }));
 
 describe('GamificationHandler', () => {
@@ -59,7 +65,7 @@ describe('GamificationHandler', () => {
         return chain;
     };
 
-    const mockPatient = { id: '123', user_id: 'u1', whatsapp_number: '5511999999999' };
+    const mockPatient = { id: '123', user_id: 'u1', whatsapp_number: '5511999999999', gamification: { streak: { currentStreak: 5 } } };
     const mockProtocol = { protocol: { id: 'p1' }, current_day: 1 };
 
     beforeEach(() => {
@@ -79,7 +85,7 @@ describe('GamificationHandler', () => {
 
         expect(result).toBe(true);
         const { sendWhatsappMessage } = await import('@/lib/twilio');
-        expect(sendWhatsappMessage).toHaveBeenCalledWith('5511999999999', 'Ganhou 10 pontos!');
+        expect(sendWhatsappMessage).toHaveBeenCalledWith('5511999999999', expect.stringContaining('10 pontos'));
         expect(mockSupabase.from).toHaveBeenCalledWith('messages');
     });
 

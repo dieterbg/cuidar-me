@@ -104,14 +104,25 @@ export function processYesNoResponse(response: string): {
         '👎', '❌', '✖️', 'pulei'
     ];
 
-    const isPositive = positiveWords.some(word => normalized.includes(word));
-    const isNegative = negativeWords.some(word => normalized.includes(word));
+    const isPositive = positiveWords.some(word => {
+        if (word.length === 1 && !/[\u{1F300}-\u{1F9FF}]/u.test(word)) {
+            return new RegExp(`(^|[^a-z])${word}([^a-z]|$)`, 'i').test(normalized);
+        }
+        return normalized.includes(word);
+    });
+
+    const isNegative = negativeWords.some(word => {
+        if (word.length === 1 && !/[\u{1F300}-\u{1F9FF}]/u.test(word)) {
+            return new RegExp(`(^|[^a-z])${word}([^a-z]|$)`, 'i').test(normalized);
+        }
+        return normalized.includes(word);
+    });
 
     if (isPositive) return { isValid: true, isPositive: true };
     if (isNegative) return { isValid: true, isPositive: false };
 
     // Se a mensagem for longa o suficiente e não negativa, assume positivo (contexto educativo)
-    if (normalized.length > 5 && !isNegative) {
+    if (normalized.length > 3 && !isNegative) {
         return { isValid: true, isPositive: true };
     }
 

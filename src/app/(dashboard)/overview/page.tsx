@@ -420,7 +420,7 @@ export default function ClinicDashboardPage() {
         <Button 
           onClick={handleGenerateInvite} 
           disabled={isGeneratingInvite}
-          className="bg-white text-[#899d5e] hover:bg-[#899d5e] hover:text-white border-2 border-[#899d5e]/20 hover:border-[#899d5e] font-bold rounded-2xl px-6 h-12 shadow-sm transition-all flex items-center gap-2 group"
+          className="bg-white text-brand hover:bg-brand hover:text-white border-2 border-brand/20 hover:border-brand font-bold rounded-2xl px-6 h-12 shadow-sm transition-all flex items-center gap-2 group"
         >
           {isGeneratingInvite ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -433,7 +433,7 @@ export default function ClinicDashboardPage() {
         <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
           <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-[#899d5e]">
+              <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-brand">
                 <QrCode className="h-6 w-6" />
                 QR Code da Clínica
               </DialogTitle>
@@ -443,7 +443,7 @@ export default function ClinicDashboardPage() {
             </DialogHeader>
             
             <div className="flex flex-col items-center justify-center p-6 space-y-6">
-              <div className="bg-white p-6 rounded-3xl shadow-xl shadow-[#899d5e]/10 border border-[#899d5e]/10">
+              <div className="bg-white p-6 rounded-3xl shadow-xl shadow-brand/10 border border-brand/10">
                 <QRCodeSVG 
                   value={inviteLink} 
                   size={220}

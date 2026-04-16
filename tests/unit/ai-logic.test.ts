@@ -1,14 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { z } from 'zod';
 
+const { mockClassifyPrompt, mockChatbotPrompt, mockGenerate } = vi.hoisted(() => ({
+    mockClassifyPrompt: vi.fn().mockResolvedValue({ output: {} }),
+    mockChatbotPrompt: vi.fn().mockResolvedValue({ output: {} }),
+    mockGenerate: vi.fn().mockResolvedValue({ output: {} }),
+}));
+
 vi.mock('@/ai/genkit', () => ({
     ai: {
-        definePrompt: vi.fn(() => vi.fn().mockResolvedValue({ output: {} })),
+        definePrompt: vi.fn((config) => {
+            if (config.name === 'classifyMessageIntent') return mockClassifyPrompt;
+            return mockChatbotPrompt;
+        }),
         defineFlow: vi.fn((config, fn) => {
             return (input: any) => fn(input);
         }),
+        defineTool: vi.fn((config, fn) => {
+            return { ...config, run: fn };
+        }),
+        generate: vi.fn((args) => mockGenerate(args)),
     },
 }));
+
+export { mockClassifyPrompt, mockChatbotPrompt, mockGenerate };
 
 import { ai } from '@/ai/genkit';
 import {
@@ -18,20 +33,19 @@ import {
 } from '@/ai/message-intent-classifier';
 import { generateChatbotReply } from '@/ai/flows/generate-chatbot-reply';
 
-let mockPrompt: any;
+// Removendo variáveis instáveis
 
 describe('AI Logic: Intent Classifier', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // O definePrompt retorna a função que a gente chama
-        // @ts-ignore
-        mockPrompt = (ai.definePrompt as any).mock.results[0]?.value || vi.fn();
+        mockClassifyPrompt.mockReset();
+        mockClassifyPrompt.mockResolvedValue({ output: {} });
     });
 
 
 
     it('INT-01: classifica mensagem como emergência quando IA retorna emergency', async () => {
-        mockPrompt.mockResolvedValueOnce({ output: { intent: 'emergency', confidence: 0.95, reason: 'dor mencionada' } });
+        mockClassifyPrompt.mockResolvedValueOnce({ output: { intent: 'emergency', confidence: 0.95, reason: 'dor mencionada' } });
 
         const result = await classifyMessageIntent('estou com muita dor', { hasActiveCheckin: false });
 
@@ -40,7 +54,7 @@ describe('AI Logic: Intent Classifier', () => {
     });
 
     it('INT-02: classifica mensagem como social', async () => {
-        mockPrompt.mockResolvedValueOnce({ output: { intent: 'social', confidence: 0.99, reason: 'saudação' } });
+        mockClassifyPrompt.mockResolvedValueOnce({ output: { intent: 'social', confidence: 0.99, reason: 'saudação' } });
 
         const result = await classifyMessageIntent('bom dia', { hasActiveCheckin: false });
 
@@ -48,7 +62,7 @@ describe('AI Logic: Intent Classifier', () => {
     });
 
     it('INT-04: classifica como checkin_response se tem checkin ativo', async () => {
-        mockPrompt.mockResolvedValueOnce({ output: { intent: 'checkin_response', confidence: 0.9, reason: 'resposta a' } });
+        mockClassifyPrompt.mockResolvedValueOnce({ output: { intent: 'checkin_response', confidence: 0.9, reason: 'resposta a' } });
 
         const result = await classifyMessageIntent('A', { hasActiveCheckin: true, checkinTitle: 'Almoço' });
 
@@ -56,7 +70,7 @@ describe('AI Logic: Intent Classifier', () => {
     });
 
     it('INT-06: fallback para question em caso de erro da IA', async () => {
-        mockPrompt.mockRejectedValueOnce(new Error('AI failed'));
+        mockClassifyPrompt.mockRejectedValueOnce(new Error('AI failed'));
 
         const result = await classifyMessageIntent('qualquer coisa', { hasActiveCheckin: false });
 
@@ -78,14 +92,14 @@ describe('AI Logic: Intent Classifier', () => {
 describe('AI Logic: Chatbot Reply', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // @ts-ignore
-        mockPrompt = (ai.definePrompt as any).mock.results[0]?.value || vi.fn();
+        mockGenerate.mockReset();
+        mockGenerate.mockResolvedValue({ output: {} });
     });
 
 
     it('CBR-01: chatbot responde com decisao "reply"', async () => {
-        // Mock do output da flow (definida com defineFlow que apenas executa a fn)
-        mockPrompt.mockResolvedValueOnce({
+        // Mock do output da ai.generate
+        mockGenerate.mockResolvedValueOnce({
             output: {
                 decision: 'reply',
                 chatbotReply: 'Sim, você pode beber água.',
@@ -95,7 +109,7 @@ describe('AI Logic: Chatbot Reply', () => {
 
         const result = await generateChatbotReply({
             patientMessage: 'Posso beber água?',
-            patient: { id: 'p1', fullName: 'Maria' } as any
+            patient: { id: 'p1', fullName: 'Maria', subscription: { priority: 'standard' } } as any
         });
 
         expect(result.decision).toBe('reply');
@@ -103,7 +117,7 @@ describe('AI Logic: Chatbot Reply', () => {
     });
 
     it('CBR-02: chatbot escala para humano em emergências', async () => {
-        mockPrompt.mockResolvedValueOnce({
+        mockGenerate.mockResolvedValueOnce({
             output: {
                 decision: 'escalate',
                 reason: 'sintoma grave detectado'
@@ -112,14 +126,14 @@ describe('AI Logic: Chatbot Reply', () => {
 
         const result = await generateChatbotReply({
             patientMessage: 'Sinto pontadas no peito',
-            patient: { id: 'p1' } as any
+            patient: { id: 'p1', subscription: { priority: 'urgent' } } as any
         });
 
         expect(result.decision).toBe('escalate');
     });
 
     it('CBR-03: chatbot extrai métricas de saúde', async () => {
-        mockPrompt.mockResolvedValueOnce({
+        mockGenerate.mockResolvedValueOnce({
             output: {
                 decision: 'reply',
                 chatbotReply: 'Peso registrado!',
@@ -129,18 +143,18 @@ describe('AI Logic: Chatbot Reply', () => {
 
         const result = await generateChatbotReply({
             patientMessage: 'Meu peso hoje é 85.5kg',
-            patient: { id: 'p1' } as any
+            patient: { id: 'p1', subscription: { priority: 'standard' } } as any
         });
 
         expect(result.extractedData?.weight).toBe(85.5);
     });
 
     it('fallback para escalate se a flow falhar', async () => {
-        mockPrompt.mockRejectedValueOnce(new Error('Flow failed'));
+        mockGenerate.mockRejectedValue(new Error('Flow failed'));
 
         const result = await generateChatbotReply({
             patientMessage: 'ajuda',
-            patient: { id: 'p1' } as any
+            patient: { id: 'p1', subscription: { priority: 'standard' } } as any
         });
 
         expect(result.decision).toBe('escalate');

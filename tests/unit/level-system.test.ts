@@ -159,13 +159,13 @@ describe('Sistema de 20 Níveis', () => {
         });
 
         it('deve ser consistente em fronteiras de nível', () => {
-            // Fronteira 99 → 100 (Nível 1 → 2)
-            expect(calculateLevel(99)).toBe(1);
-            expect(calculateLevel(100)).toBe(2);
+            // Fronteira 299 → 300 (Nível 1 → 2)
+            expect(calculateLevel(299)).toBe(1);
+            expect(calculateLevel(300)).toBe(2);
 
-            // Fronteira 499 → 500 (Nível 5 → 6)
-            expect(calculateLevel(499)).toBe(5);
-            expect(calculateLevel(500)).toBe(6);
+            // Fronteira 3999 → 4000 (Nível 5 → 6)
+            expect(calculateLevel(3999)).toBe(5);
+            expect(calculateLevel(4000)).toBe(6);
         });
     });
 });

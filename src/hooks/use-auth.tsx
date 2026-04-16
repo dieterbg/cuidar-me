@@ -4,6 +4,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import type { User, Session } from '@supabase/supabase-js';
+import { loggers } from '@/lib/logger';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
 
@@ -84,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        loggers.auth.error('Error fetching profile', error, { userId });
         setProfile(null);
       } else if (data) {
         setProfile({
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      loggers.auth.error('Unexpected error in fetchProfile', error, { userId });
       setProfile(null);
     } finally {
       setLoading(false);
@@ -119,9 +120,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       description: "Entrando..."
     });
 
-    // Força um recarregamento para garantir que o estado da sessão seja atualizado corretamente
-    // e o redirecionamento ocorra sem falhas.
-    window.location.reload();
+    // O useEffect no AuthProvider detectará a mudança da sessão 
+    // e buscará o perfil automaticamente, disparando os redirecionamentos.
   };
 
   const signUp = async (
@@ -148,7 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // 2. Consume Invite if present
     const pendingInvite = typeof window !== 'undefined' ? sessionStorage.getItem('pendingInvite') : null;
     if (pendingInvite && authData.user) {
-      console.log('useAuth: Found pending invite, consuming...', pendingInvite);
+      loggers.auth.info('Found pending invite, consuming...', { inviteToken: pendingInvite, userId: authData.user.id });
       try {
         const response = await fetch('/api/onboarding/consume-invite', {
           method: 'POST',
@@ -157,13 +157,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         
         if (response.ok) {
-          console.log('useAuth: Invite consumed successfully');
+          loggers.auth.info('Invite consumed successfully', { userId: authData.user.id });
           sessionStorage.removeItem('pendingInvite');
         } else {
-          console.error('useAuth: Failed to consume invite');
+          loggers.auth.error('Failed to consume invite', new Error('Response not OK'), { userId: authData.user.id });
         }
       } catch (err) {
-        console.error('useAuth: Error consuming invite:', err);
+        loggers.auth.error('Error consuming invite', err, { userId: authData.user.id });
       }
     }
 
@@ -184,17 +184,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       description: "Bem-vindo ao Cuidar.me!",
     });
 
-    // Redirecionar usando window.location para garantir que funciona
-    // Enviamos para /dashboard que é o nosso roteador inteligente de roles
+    // Redirecionar para o dashboard que é o nosso roteador inteligente de roles
     setTimeout(() => {
-      window.location.href = '/dashboard';
+      router.replace('/dashboard');
     }, 800);
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('Sign out error:', error);
+      loggers.auth.error('Sign out error', error, { userId: user?.id });
       toast({
         variant: 'destructive',
         title: 'Erro ao Sair',
@@ -214,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (error) {
-      console.error('Google sign in error:', error);
+      loggers.auth.error('Google sign in error', error);
       toast({
         variant: 'destructive',
         title: 'Erro ao entrar com Google',

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateTwilioWebhook } from '@/lib/twilio';
 import { handlePatientReply } from '@/ai/handle-patient-reply';
 import twilio from 'twilio';
+import { loggers } from '@/lib/logger';
 
 // This is the endpoint that Twilio will call when a message is received.
 export async function POST(request: NextRequest) {
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const isTwilioRequest = await validateTwilioWebhook(request, body);
 
     if (!isTwilioRequest) {
-      console.warn("[Twilio Webhook] Received a request that failed Twilio validation.");
+      loggers.whatsapp.warn("Received a request that failed Twilio validation.", { from, messageSid });
       return new NextResponse('Invalid Twilio Signature', { status: 401 });
     }
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient();
 
     // 1. O(1) Decoupled Architecture: Insert into queue immediately
-    console.log(`[Twilio Webhook] Queueing message from ${from}`);
+    loggers.whatsapp.info(`Queueing message`, { from, messageSid, textLength: messageText?.length });
     const { error: queueError } = await supabase
       .from('message_queue')
       .insert({
@@ -45,9 +46,9 @@ export async function POST(request: NextRequest) {
     if (queueError) {
       // If it's a unique constraint violation on message_sid, it means Twilio is retrying an already queued message.
       if (queueError.code === '23505') {
-        console.log(`[Twilio Webhook] Duplicate webhook detected for SID ${messageSid}. Ignoring.`);
+        loggers.whatsapp.info(`Duplicate webhook detected. Ignoring.`, { messageSid });
       } else {
-        console.error("[Twilio Webhook] Failed to enqueue message:", queueError);
+        loggers.whatsapp.error("Failed to enqueue message", queueError, { from, messageSid });
         // Important: still return 200 to Twilio to stop retries, even if queue fails (though this is rare).
       }
     } else {
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${expectedToken}` }
       }).catch(err => {
-        console.error("[Twilio Webhook] Failed to trigger background processor:", err);
+        loggers.whatsapp.error("Failed to trigger background processor", err, { processUrl });
       });
 
       // ⚠️ NÃO disparar /api/cron/unified aqui.
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("[Error processing Twilio webhook]", error);
+    loggers.whatsapp.error("Error processing Twilio webhook", error);
     return new NextResponse('Webhook Error', { status: 500 });
   }
 }
