@@ -20,8 +20,10 @@ interface ScheduledMessagesPanelProps {
 type FilterMode = 'all' | 'pending' | 'sent' | 'today' | 'week';
 
 export function ScheduledMessagesPanel({ messages: initialMessages, currentDay, durationDays }: ScheduledMessagesPanelProps) {
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
     const [filter, setFilter] = useState<FilterMode>('week');
-    const [expandedDay, setExpandedDay] = useState<number | null>(currentDay || null);
+    // Expand today's group by default
+    const [expandedDateKey, setExpandedDateKey] = useState<string | null>(todayKey);
     // Local copy so optimistic updates work without page reload
     const [messages, setMessages] = useState<ScheduledMessage[]>(initialMessages);
 
@@ -41,20 +43,26 @@ export function ScheduledMessagesPanel({ messages: initialMessages, currentDay, 
         return { pending, sent, failed, total: messages.length, thisWeek, todayCount };
     }, [messages]);
 
-    // Group by protocol day
-    const groupedByDay = useMemo(() => {
-        const groups = new Map<number, ScheduledMessage[]>();
+    // Group by send_at calendar date (local timezone) — so rescheduling moves messages between groups
+    const groupedByDate = useMemo(() => {
+        const groups = new Map<string, ScheduledMessage[]>();
         for (const msg of messages) {
-            const day = (msg as any).metadata?.protocolDay || 0;
-            if (!groups.has(day)) groups.set(day, []);
-            groups.get(day)!.push(msg);
+            const dateKey = format(new Date(msg.sendAt), 'yyyy-MM-dd');
+            if (!groups.has(dateKey)) groups.set(dateKey, []);
+            groups.get(dateKey)!.push(msg);
         }
-        return Array.from(groups.entries()).sort((a, b) => a[0] - b[0]);
+        // Sort by date ascending, then sort messages within each group by time
+        return Array.from(groups.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([dateKey, msgs]) => [
+                dateKey,
+                [...msgs].sort((a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime()),
+            ] as [string, ScheduledMessage[]]);
     }, [messages]);
 
-    // Filtered groups
+    // Apply filter within each date group
     const filteredGroups = useMemo(() => {
-        return groupedByDay.map(([day, msgs]) => {
+        return groupedByDate.map(([dateKey, msgs]) => {
             let filtered = msgs;
             const now = new Date();
             const weekFromNow = new Date(now);
@@ -77,9 +85,9 @@ export function ScheduledMessagesPanel({ messages: initialMessages, currentDay, 
                     });
                     break;
             }
-            return [day, filtered] as [number, ScheduledMessage[]];
+            return [dateKey, filtered] as [string, ScheduledMessage[]];
         }).filter(([, msgs]) => msgs.length > 0);
-    }, [groupedByDay, filter]);
+    }, [groupedByDate, filter]);
 
     const filterButtons: { mode: FilterMode; label: string; count?: number }[] = [
         { mode: 'today', label: 'Hoje', count: stats.todayCount || undefined },
@@ -89,9 +97,12 @@ export function ScheduledMessagesPanel({ messages: initialMessages, currentDay, 
         { mode: 'all', label: 'Todas' },
     ];
 
-    // Called by MessageRow after successful reschedule
+    // Called by MessageRow after successful reschedule — moves message to new date group
     const handleRescheduled = (msgId: string, newSendAt: string) => {
         setMessages(prev => prev.map(m => m.id === msgId ? { ...m, sendAt: newSendAt } : m));
+        // Auto-expand the new date's group
+        const newDateKey = format(new Date(newSendAt), 'yyyy-MM-dd');
+        setExpandedDateKey(newDateKey);
     };
 
     if (messages.length === 0) {
@@ -157,7 +168,7 @@ export function ScheduledMessagesPanel({ messages: initialMessages, currentDay, 
                 ))}
             </div>
 
-            {/* Message List grouped by day */}
+            {/* Message list grouped by calendar date */}
             <div className="space-y-2">
                 {filteredGroups.length === 0 ? (
                     <Card>
@@ -166,21 +177,16 @@ export function ScheduledMessagesPanel({ messages: initialMessages, currentDay, 
                         </CardContent>
                     </Card>
                 ) : (
-                    filteredGroups.map(([day, msgs]) => {
-                        const isTodayGroup = msgs.some(m => isToday(new Date(m.sendAt)));
-                        return (
-                            <DayGroup
-                                key={day}
-                                day={day}
-                                messages={msgs}
-                                isCurrentDay={day === currentDay}
-                                isTodayGroup={isTodayGroup}
-                                isExpanded={expandedDay === day}
-                                onToggle={() => setExpandedDay(expandedDay === day ? null : day)}
-                                onRescheduled={handleRescheduled}
-                            />
-                        );
-                    })
+                    filteredGroups.map(([dateKey, msgs]) => (
+                        <DateGroup
+                            key={dateKey}
+                            dateKey={dateKey}
+                            messages={msgs}
+                            isExpanded={expandedDateKey === dateKey}
+                            onToggle={() => setExpandedDateKey(expandedDateKey === dateKey ? null : dateKey)}
+                            onRescheduled={handleRescheduled}
+                        />
+                    ))
                 )}
             </div>
         </div>
@@ -201,30 +207,37 @@ function StatCard({ label, value, icon, color }: { label: string; value: number;
     );
 }
 
-function DayGroup({ day, messages, isCurrentDay, isTodayGroup, isExpanded, onToggle, onRescheduled }: {
-    day: number;
+function DateGroup({ dateKey, messages, isExpanded, onToggle, onRescheduled }: {
+    dateKey: string;
     messages: ScheduledMessage[];
-    isCurrentDay: boolean;
-    isTodayGroup: boolean;
     isExpanded: boolean;
     onToggle: () => void;
     onRescheduled: (msgId: string, newSendAt: string) => void;
 }) {
+    const date = new Date(dateKey + 'T12:00:00'); // noon to avoid timezone shift
     const allSent = messages.every(m => m.status === 'sent');
     const hasPending = messages.some(m => m.status === 'pending');
-    const sendDate = messages[0]?.sendAt ? new Date(messages[0].sendAt) : null;
+    const isDateToday = isToday(date);
 
-    const dateLabel = sendDate
-        ? isToday(sendDate) ? 'Hoje'
-        : isTomorrow(sendDate) ? 'Amanhã'
-        : format(sendDate, "dd/MM (EEEE)", { locale: ptBR })
-        : '';
+    const dateLabel = isDateToday ? 'Hoje'
+        : isTomorrow(date) ? 'Amanhã'
+        : format(date, "dd/MM (EEEE)", { locale: ptBR });
+
+    // Collect unique protocol days in this date group (for display)
+    const protocolDays = [...new Set(
+        messages.map(m => (m as any).metadata?.protocolDay).filter(Boolean)
+    )].sort((a, b) => a - b);
+
+    const dayRangeLabel = protocolDays.length > 0
+        ? protocolDays.length === 1
+            ? `Dia ${protocolDays[0]}`
+            : `Dias ${protocolDays[0]}–${protocolDays[protocolDays.length - 1]}`
+        : null;
 
     return (
         <Card className={cn(
             "transition-all",
-            isTodayGroup && "ring-2 ring-primary shadow-sm",
-            isCurrentDay && !isTodayGroup && "ring-1 ring-primary/30",
+            isDateToday && "ring-2 ring-primary shadow-sm",
             allSent && "opacity-50"
         )}>
             <button
@@ -232,33 +245,31 @@ function DayGroup({ day, messages, isCurrentDay, isTodayGroup, isExpanded, onTog
                 className="w-full text-left p-3 sm:p-4 flex items-center justify-between hover:bg-muted/50 rounded-lg transition-colors"
             >
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    {/* Day-of-month avatar */}
                     <div className={cn(
                         "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                        isTodayGroup ? "bg-primary text-primary-foreground"
+                        isDateToday ? "bg-primary text-primary-foreground"
                         : allSent ? "bg-green-100 text-green-700"
                         : hasPending ? "bg-amber-100 text-amber-700"
                         : "bg-muted text-muted-foreground"
                     )}>
-                        {day}
+                        {date.getDate()}
                     </div>
+
                     <div className="flex flex-col">
-                        <span className="font-medium text-sm">Dia {day}</span>
-                        {dateLabel && (
-                            <span className="text-xs text-muted-foreground">{dateLabel}</span>
+                        <span className="font-medium text-sm">{dateLabel}</span>
+                        {dayRangeLabel && (
+                            <span className="text-xs text-muted-foreground">{dayRangeLabel}</span>
                         )}
                     </div>
+
                     <div className="flex items-center gap-1.5">
                         <Badge variant="outline" className="text-xs">
                             {messages.length} msg{messages.length > 1 ? 's' : ''}
                         </Badge>
-                        {isTodayGroup && (
+                        {isDateToday && (
                             <Badge className="text-xs bg-primary text-primary-foreground">
                                 Hoje
-                            </Badge>
-                        )}
-                        {isCurrentDay && !isTodayGroup && (
-                            <Badge variant="secondary" className="text-xs">
-                                Dia atual
                             </Badge>
                         )}
                     </div>
@@ -292,6 +303,7 @@ function MessageRow({ message, onRescheduled }: {
     const meta = (message as any).metadata || {};
     const title = meta.messageTitle || meta.checkinTitle || '';
     const isGamification = !!meta.isGamification;
+    const protocolDay = meta.protocolDay as number | undefined;
     const sendAt = new Date(message.sendAt);
     const isSent = message.status === 'sent';
     const isFailed = message.errorInfo?.startsWith('FAILED');
@@ -304,7 +316,6 @@ function MessageRow({ message, onRescheduled }: {
     const [isPending, startTransition] = useTransition();
 
     const openEdit = () => {
-        // Default: now + 11 min rounded to next minute
         const defaultTime = new Date(Date.now() + 11 * 60 * 1000);
         defaultTime.setSeconds(0, 0);
         setInputValue(toLocalDateTimeValue(defaultTime));
@@ -332,7 +343,6 @@ function MessageRow({ message, onRescheduled }: {
         });
     };
 
-    // Min datetime-local value: now + 10 min
     const minDateTimeLocal = toLocalDateTimeValue(new Date(Date.now() + 10 * 60 * 1000));
 
     return (
@@ -358,6 +368,9 @@ function MessageRow({ message, onRescheduled }: {
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono font-medium text-xs bg-muted px-1.5 py-0.5 rounded">{timeStr}</span>
+                    {protocolDay && (
+                        <span className="text-[10px] text-muted-foreground font-medium">Dia {protocolDay}</span>
+                    )}
                     {title && <span className="text-muted-foreground text-xs truncate max-w-[200px]">{title}</span>}
                     {isGamification && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-600">
@@ -377,7 +390,6 @@ function MessageRow({ message, onRescheduled }: {
                     <p className="text-xs text-red-500 mt-1">{message.errorInfo}</p>
                 )}
 
-                {/* Inline reschedule form */}
                 {editing && (
                     <div className="mt-2 p-2 bg-background border rounded-lg space-y-2">
                         <p className="text-xs font-medium text-foreground">Reagendar para:</p>
@@ -415,7 +427,6 @@ function MessageRow({ message, onRescheduled }: {
                 )}
             </div>
 
-            {/* Edit button — only for pending messages */}
             {!isSent && !editing && (
                 <button
                     onClick={openEdit}
