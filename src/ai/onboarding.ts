@@ -1,4 +1,4 @@
-import { OnboardingState, OnboardingStep } from '@/types/onboarding';
+export type { OnboardingState, OnboardingStep } from '@/types/onboarding';
 
 /**
  * Retorna a mensagem para o passo atual do onboarding
