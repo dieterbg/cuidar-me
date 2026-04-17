@@ -110,6 +110,15 @@ const StatusIndicator = ({ patient }: { patient: Patient }) => {
     );
   }
 
+  if (patient.status === 'inactive_cancellation') {
+    return (
+      <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 gap-1">
+        <Trash2 className="h-3 w-3" />
+        Inativo (cancelamento)
+      </Badge>
+    );
+  }
+
   if (patient.subscription.plan && patient.subscription.plan !== 'freemium') {
     const level = patient.riskLevel;
     if (!level || !riskLevelConfig[level]) return <Badge variant="secondary">Monitorado</Badge>;
@@ -191,6 +200,8 @@ export default function PatientsListPage() {
         if (activeTab === 'attention') return patient.needsAttention && patient.status !== 'pending';
         if (activeTab === 'pending') return patient.status === 'pending';
         if (activeTab === 'inactive') {
+          if (patient.status === 'inactive_cancellation') return true;
+
           const threeDaysAgo = subDays(new Date(), 3);
           const sevenDaysAgo = subDays(new Date(), 7);
           // Excluir pacientes recém-enrolled em protocolo (start_date nos últimos 7 dias
@@ -278,6 +289,7 @@ export default function PatientsListPage() {
     const threeDaysAgo = subDays(new Date(), 3);
     const sevenDaysAgo = subDays(new Date(), 7);
     return patients.filter(p => {
+      if (p.status === 'inactive_cancellation') return true;
       const protocolStart = p.protocol?.startDate ? new Date(p.protocol.startDate as string) : null;
       const isRecentlyEnrolled = protocolStart && protocolStart > sevenDaysAgo;
       if (isRecentlyEnrolled) return false;

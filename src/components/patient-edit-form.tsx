@@ -36,7 +36,7 @@ const createFormSchema = (isAdmin: boolean) => z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
   whatsappNumber: z.string().min(10, { message: "O número de WhatsApp é obrigatório e deve ter pelo menos 10 dígitos." }).optional().nullable(),
   plan: z.enum(['freemium', 'premium', 'vip']),
-  status: z.enum(['active', 'pending']),
+  status: z.enum(['active', 'pending', 'inactive_cancellation']),
   height: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
     z.number().positive('Altura deve ser um número positivo.').optional().nullable()
@@ -354,6 +354,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                     <SelectContent>
                       <SelectItem value="pending">Pendente</SelectItem>
                       <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="inactive_cancellation">Inativo (cancelamento)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>

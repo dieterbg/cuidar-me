@@ -150,7 +150,7 @@ export interface Patient {
     lastMessage: string;
     lastMessageTimestamp: Date | string;
     riskLevel?: 'low' | 'medium' | 'high';
-    status?: 'active' | 'pending';
+    status?: 'active' | 'pending' | 'inactive' | 'inactive_cancellation';
     birthDate?: Date | string | null;
     gender?: 'masculino' | 'feminino' | 'outro' | null;
     height?: number | null; // in cm
