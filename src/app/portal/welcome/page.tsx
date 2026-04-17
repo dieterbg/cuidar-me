@@ -334,19 +334,21 @@ export default function WelcomePage() {
             <CardContent className="space-y-6 relative z-10 flex-1 flex flex-col justify-center">
               <div>
                 <h3 className="text-3xl font-black text-foreground mb-3 leading-tight">
-                  {isProfileComplete ? "Continue sua Jornada de Saúde" : "Ative seu Acompanhamento"}
+                  {!isProfileComplete ? "Ative seu Acompanhamento" : isFreemium ? "Explore Conteúdos de Saúde" : "Continue sua Jornada de Saúde"}
                 </h3>
                 <p className="text-muted-foreground text-base max-w-sm">
-                  {isProfileComplete
-                    ? "Cada check-in respondido te aproxima do próximo nível. Consistência transforma hábitos em resultados."
-                    : "Preencha seus dados de saúde para que a equipe personalize seu protocolo e comece seu acompanhamento via WhatsApp."}
+                  {!isProfileComplete
+                    ? "Preencha seus dados de saúde para que a equipe personalize seu protocolo e comece seu acompanhamento via WhatsApp."
+                    : isFreemium
+                    ? "Acesse nossos artigos e dicas exclusivas aprovadas por médicos para conquistar seus objetivos de saúde."
+                    : "Cada check-in respondido te aproxima do próximo nível. Consistência transforma hábitos em resultados."}
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="rounded-xl px-8 shadow-primary/25 shadow-lg hover:scale-105 transition-transform font-bold">
-                  <Link href={isProfileComplete ? "/portal/journey" : "/portal/profile"}>
-                    {isProfileComplete ? "Ver Minha Jornada" : "Completar Agora"} <ArrowRight className="ml-2 w-4 h-4" />
+                  <Link href={!isProfileComplete ? "/portal/profile" : isFreemium ? "/portal/education" : "/portal/journey"}>
+                    {!isProfileComplete ? "Completar Agora" : isFreemium ? "Acessar Educação" : "Ver Minha Jornada"} <ArrowRight className="ml-2 w-4 h-4" />
                   </Link>
                 </Button>
               </div>

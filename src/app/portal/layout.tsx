@@ -273,10 +273,18 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const isProfileComplete = !!patient?.height;
 
-  // Proteção de rotas para usuários "incompletos" (deve ficar ANTES dos early returns para evitar erro #310)
+  // Proteção de rotas para usuários "incompletos" e planos restritos (deve ficar ANTES dos early returns para evitar erro #310)
   useEffect(() => {
-    if (!isStatusLoading && patient && !isProfileComplete) {
-      if (pathname.startsWith('/portal/community') || pathname.startsWith('/portal/education')) {
+    if (!isStatusLoading && patient) {
+      const isFreemium = patient.subscription?.plan === 'freemium';
+
+      // Bloqueia rotas de comunidade/educação para quem não completou perfil
+      if (!isProfileComplete && (pathname.startsWith('/portal/community') || pathname.startsWith('/portal/education'))) {
+        router.replace('/portal/welcome');
+      }
+
+      // Bloqueia rotas Premium/VIP (gamificação/protocolos) para Freemium
+      if (isFreemium && (pathname.startsWith('/portal/journey') || pathname.startsWith('/portal/store'))) {
         router.replace('/portal/welcome');
       }
     }
@@ -360,8 +368,21 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   ];
 
   const menuItems = allMenuItems.filter(item => {
+    const isFreemium = patient?.subscription?.plan === 'freemium';
+
+    // Premium/VIP exclusive items (Gamification & Protocols)
+    if (isFreemium && ['/portal/journey', '/portal/store'].includes(item.href)) {
+      return false;
+    }
+
     // Core items always visible
-    if (['/portal/welcome', '/portal/profile', '/portal/journey', '/portal/store', '/portal/how-it-works'].includes(item.href)) return true;
+    if (['/portal/welcome', '/portal/profile', '/portal/how-it-works'].includes(item.href)) return true;
+
+    // Premium users can see these if complete. Freemiums can also see these once complete.
+    if (['/portal/journey', '/portal/store'].includes(item.href)) {
+      // If we reach here, it's not Freemium. Still, check if profile is complete.
+      return isProfileComplete; 
+    }
 
     // Hide Community/Education if profile incomplete
     if (['/portal/community', '/portal/education'].includes(item.href)) {
