@@ -60,9 +60,11 @@ export async function POST(request: NextRequest) {
             .eq('patient_id', patientId)
             .maybeSingle();
 
-        // 2. Verificar se foi INICIADO recentemente (trava de segurança de 5 minutos)
-        if (existingOnboarding) {
-            // Se foi criado nos últimos 5 minutos, não reinicia (evita duplicidade por cliques rápidos ou bugs de UI)
+        // 2. Verificar se foi INICIADO recentemente (trava de segurança de 10 segundos)
+        const isAdmin = !isValidCron; // Se não é cron, é um usuário (admin/equipe)
+
+        if (existingOnboarding && !isAdmin) {
+            // Travas para solicitações automáticas (cron/etc)
             const createdAt = new Date(existingOnboarding.created_at).getTime();
             const now = new Date().getTime();
             const tenSeconds = 10 * 1000;
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
                 console.log(`[POST /api/onboarding/initiate] Onboarding initiated too recently for ${patientId}. Skipping.`);
                 return NextResponse.json({
                     success: false,
-                    error: 'Onboarding já enviado recentemente. Aguarde 10 segundos antes de tentar novamente.',
+                    error: 'Onboarding já enviado recentemente. Aguarde 10 segundos.',
                     skipped: true
                 });
             }

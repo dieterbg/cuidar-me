@@ -35,8 +35,9 @@ import { Textarea } from './ui/textarea';
 const createFormSchema = (isAdmin: boolean) => z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
   whatsappNumber: z.string().min(10, { message: "O número de WhatsApp é obrigatório e deve ter pelo menos 10 dígitos." }).optional().nullable(),
+  gender: z.enum(['masculino', 'feminino', 'outro']),
+  status: z.enum(['active', 'pending', 'inactive', 'inactive_cancellation']),
   plan: z.enum(['freemium', 'premium', 'vip']),
-  status: z.enum(['active', 'pending', 'inactive_cancellation']),
   height: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
     z.number().positive('Altura deve ser um número positivo.').optional().nullable()
@@ -46,7 +47,6 @@ const createFormSchema = (isAdmin: boolean) => z.object({
     z.number().positive('Peso deve ser um número positivo.').optional().nullable()
   ),
   birthDate: z.string().optional().nullable(),
-  gender: z.enum(['masculino', 'feminino', 'outro', '']).optional().nullable(),
   healthConditions: z.string().optional().nullable(),
   allergies: z.string().optional().nullable(),
   goal: z.enum(['lose_weight', 'gain_muscle', 'maintain', '']).optional().nullable(),
@@ -88,8 +88,8 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
   const [isDeleting, startDeletingTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
-  const [availableProtocols, setAvailableProtocols] = useTransition(); // Using transition for fetching if needed, or just state
   const [protocols, setProtocols] = useState<any[]>([]);
+  const [currentStatus, setCurrentStatus] = useState(patient.status);
 
   useEffect(() => {
     async function fetchProtocols() {
@@ -115,7 +115,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
       height: patient.height || undefined,
       initialWeight: patient.initialWeight || undefined,
       birthDate: patient.birthDate ? format(parseISO(patient.birthDate as string), 'yyyy-MM-dd') : undefined,
-      gender: patient.gender || undefined,
+      gender: patient.gender || 'outro',
       healthConditions: patient.healthConditions || undefined,
       allergies: patient.allergies || undefined,
       medications: patient.medications || undefined,
@@ -156,9 +156,13 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
           throw new Error(updateResult.error || 'Erro desconhecido ao atualizar paciente.');
         }
 
-        // Trigger WhatsApp onboarding if status is being changed to 'active' from 'pending'
-        // This covers both Admin activation and Patient profile completion if we want
-        const isActivating = isAdminContext && patient.status !== 'active' && values.status === 'active';
+        const isAdminContext = context === 'admin' || context === 'equipe_saude';
+        // Se o status anterior não era ativo e o novo é ativo, dispara o onboarding
+        const isActivating = isAdminContext && currentStatus !== 'active' && values.status === 'active';
+
+        if (updateResult.success) {
+          setCurrentStatus(values.status);
+        }
 
         console.log('[PatientEditForm] onSubmit State:', {
           context,
@@ -352,9 +356,10 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="pending">Pendente (Início)</SelectItem>
                       <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="inactive_cancellation">Inativo (cancelamento)</SelectItem>
+                      <SelectItem value="inactive">Inativo (Pausa)</SelectItem>
+                      <SelectItem value="inactive_cancellation">Inativo (Cancelamento via WhatsApp)</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>

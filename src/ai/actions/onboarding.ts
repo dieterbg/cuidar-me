@@ -111,7 +111,7 @@ export async function handleOnboardingReply(
                 // Caso especial: Paciente escolheu cancelar o início
                 await supabase
                     .from('patients')
-                    .update({ status: 'inactive_cancellation' })
+                    .update({ status: 'inactive' })
                     .eq('id', patientId);
 
                 await supabase
