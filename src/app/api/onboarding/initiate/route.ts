@@ -60,17 +60,8 @@ export async function POST(request: NextRequest) {
             .eq('patient_id', patientId)
             .maybeSingle();
 
-        // 2. Verificar se já tem onboarding CONCLUÍDO ou se foi INICIADO recentemente (trava de segurança)
+        // 2. Verificar se foi INICIADO recentemente (trava de segurança de 5 minutos)
         if (existingOnboarding) {
-            if (existingOnboarding.completed_at) {
-                console.log(`[POST /api/onboarding/initiate] Onboarding already completed for ${patientId}. Skipping.`);
-                return NextResponse.json({
-                    success: true,
-                    message: 'Onboarding already completed',
-                    skipped: true
-                });
-            }
-
             // Se foi criado nos últimos 5 minutos, não reinicia (evita duplicidade por cliques rápidos ou bugs de UI)
             const createdAt = new Date(existingOnboarding.created_at).getTime();
             const now = new Date().getTime();
@@ -86,12 +77,12 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Apagar qualquer estado de onboarding anterior (PENDENTE) para este paciente
+        // Apagar qualquer estado de onboarding anterior para este paciente
+        // Isso permite re-onboarding de pacientes que cancelaram anteriormente ou foram resetados.
         const { error: deleteError } = await supabase
             .from('onboarding_states')
             .delete()
-            .eq('patient_id', patientId)
-            .is('completed_at', null);
+            .eq('patient_id', patientId);
 
         if (deleteError) {
             console.error('[POST /api/onboarding/initiate] Error resetting onboarding state:', deleteError);
