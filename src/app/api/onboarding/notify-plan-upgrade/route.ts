@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getCurrentUser } from '@/lib/supabase-server-utils';
 import { sendWhatsappMessage } from '@/lib/twilio';
+import { scheduleProtocolMessages } from '@/cron/send-protocol-messages';
 
 /**
  * POST /api/onboarding/notify-plan-upgrade
@@ -19,7 +20,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { patientId, newPlan, protocolName } = await request.json();
+        let { patientId, newPlan, protocolName } = await request.json();
+        
+        // Evitar "protocolo Protocolo..."
+        if (protocolName) {
+            protocolName = protocolName.replace(/^Protocolo\s+/i, '').trim();
+        }
 
         if (!patientId || !newPlan || !protocolName) {
             return NextResponse.json(
@@ -110,6 +116,14 @@ export async function POST(request: NextRequest) {
         if (onbErr) {
             // Não é crítico — loga mas não falha o request
             console.warn('[notify-plan-upgrade] Aviso ao atualizar onboarding_states:', onbErr.message);
+        }
+
+        // AGENDAMENTO AUTOMÁTICO: dispara o scheduler imediatamente para que as mensagens
+        // apareçam no painel sem precisar de F5 ou esperar o cron de 5min.
+        try {
+            await scheduleProtocolMessages();
+        } catch (schedErr) {
+            console.error('[notify-plan-upgrade] Falha ao disparar agendamento automático:', schedErr);
         }
 
         return NextResponse.json({ success: true, message: 'Notificação enviada com sucesso' });

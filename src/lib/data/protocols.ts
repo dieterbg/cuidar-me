@@ -142,26 +142,4 @@ export const protocols: Protocol[] = [
             { day: 90, title: 'PARABÉNS, ATLETA!', message: 'Você não apenas atingiu seus objetivos, mas transformou seu corpo e mente. Você é a prova de que disciplina, ciência e apoio levam a resultados extraordinários. Celebre sua conquista!' },
         ]
     },
-    {
-        id: '2412145d-c346-4012-9040-65e9d43073a3', // Sincronizado com o ID do Banco
-        name: 'Protocolo Teste (Rápido)',
-        description: 'Protocolo de teste intensivo (15/15 min) baseado na ABESO 2026 para validar o cron automático.',
-        durationDays: 2,
-        eligiblePlans: ['premium', 'vip'],
-        messages: [
-            // --- DIA 1: TESTE INTENSIVO (6 MENSAGENS INTERCALADAS - 15 MIN) ---
-            { day: 1, title: 'Check-in Semanal de Peso', message: 'Registro de peso em jejum. Consistência é a chave. (Vale **+50 pts**)\n\nResponda com o número exato (ex: 85.5).' },
-            { day: 1, title: 'Check-in de Planejamento', message: 'Planejamento Semanal\nVocê já planejou suas atividades e refeições para os próximos dias? (Vale **+30 pts**)\n\nA) Sim, tudo planejado! (+30 pts)\nB) Ainda não parei para isso (+0 pts)' },
-            { day: 1, title: 'Check-in de Hidratação', message: 'Status de hidratação intra-dia. 💧 (Vale até **+15 pts**)\n\nA) Bati a meta de água! (+15 pts)\nB) Fiquei abaixo do ideal (+10 pts)\nC) Hidratação insuficiente (+5 pts)' },
-            { day: 1, title: 'Dica de Nutrição (ABESO 2026)', message: 'Dica rápida: Incluir proteína no café da manhã reduz a fome ao longo do dia e preserva massa magra durante o tratamento.' },
-            { day: 1, title: 'Check-in de Almoço', message: '🥗 (Vale até **+20 pts**)\n\nA) Almoço otimizado - no plano! (+20 pts)\nB) Adaptações aceitas (+15 pts)\nC) Fora do protocolo (+10 pts)' },
-            { day: 1, title: 'Check-in de Atividade Física', message: 'Foco na performance! Intensidade ou recuperação ativa? 💪 (Vale **+40 pts**)\n\nA) Sim, missão cumprida! (+40 pts)\nB) Descanso estratégico (+0 pts)' },
-            { day: 1, title: 'Reflexão sobre Hábitos', message: 'Qual foi o hábito mais positivo que você praticou hoje? Reconhecer conquistas sustenta o progresso a longo prazo.' },
-
-            // --- DIA 2: VALIDAÇÃO DO ACORDAR AUTOMÁTICO (ABESO 2026) ---
-            { day: 2, title: 'Check-in de Sono e Recuperação', message: 'A ABESO 2026 destaca o sono como pilar metabólico Classe I. Como foi seu descanso?\n\nA) Sono profundo (+10 pts)\nB) Acordei algumas vezes (+5 pts)\nC) Noite difícil (+0 pts)' },
-            { day: 2, title: 'Prevenção de Sarcopenia', message: 'Lembrete importante: A atividade de força é essencial para manter o metabolismo ativo enquanto o corpo emagrece. Já planejou seu treino de hoje? 🏋️‍♂️' },
-            { day: 2, title: 'Check-in de Medicação/Suplementos', message: 'Seguiu sua prescrição médica hoje?\n\nA) Sim, tudo certo! (+10 pts)\nB) Esqueci/Tive dúvidas (+0 pts)' },
-        ]
-    }
 ];

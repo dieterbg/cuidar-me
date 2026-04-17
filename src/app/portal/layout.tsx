@@ -369,22 +369,23 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const menuItems = allMenuItems.filter(item => {
     const isFreemium = patient?.subscription?.plan === 'freemium';
+    const isPremiumOrVip = patient?.subscription?.plan === 'premium' || patient?.subscription?.plan === 'vip';
 
-    // Premium/VIP exclusive items (Gamification & Protocols)
-    if (isFreemium && ['/portal/journey', '/portal/store'].includes(item.href)) {
-      return false;
+    // Premium/VIP users always see paid content/features
+    if (isPremiumOrVip && ['/portal/journey', '/portal/store', '/portal/community', '/portal/education'].includes(item.href)) {
+      return true;
     }
 
     // Core items always visible
     if (['/portal/welcome', '/portal/profile', '/portal/how-it-works'].includes(item.href)) return true;
 
-    // Premium users can see these if complete. Freemiums can also see these once complete.
-    if (['/portal/journey', '/portal/store'].includes(item.href)) {
-      // If we reach here, it's not Freemium. Still, check if profile is complete.
-      return isProfileComplete; 
+    // Premium/VIP logic above handled them. For others (Freemium):
+    // Hide Journey and Store for Freemium
+    if (isFreemium && ['/portal/journey', '/portal/store'].includes(item.href)) {
+      return false;
     }
 
-    // Hide Community/Education if profile incomplete
+    // Hide Community/Education if profile incomplete (for everyone else, though Premium is already handled)
     if (['/portal/community', '/portal/education'].includes(item.href)) {
       return isProfileComplete;
     }
