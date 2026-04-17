@@ -20,7 +20,7 @@ export function transformPatientFromSupabase(supabasePatient: any): Patient {
 
         // Status e atenção
         needsAttention: supabasePatient.needs_attention || false,
-        status: supabasePatient.status || 'active',
+        status: supabasePatient.status || 'pending',
         riskLevel: supabasePatient.risk_level,
 
         // Subscription

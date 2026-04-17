@@ -438,15 +438,36 @@ export default function PatientsListPage() {
           <TabsList className="bg-transparent p-0 h-auto gap-2 flex-wrap justify-start">
             <TabsTrigger value="attention" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
               Atenção
-              {attentionCount > 0 && <Badge className="ml-2 bg-white text-brand border-none h-5 px-1.5 shadow-sm">{attentionCount}</Badge>}
+              {attentionCount > 0 && (
+                <Badge className={cn(
+                  "ml-2 h-5 px-1.5 border-none shadow-sm transition-colors tabular-nums",
+                  activeTab === 'attention' ? "bg-white text-brand" : "bg-destructive text-destructive-foreground"
+                )}>
+                  {attentionCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="pending" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
               Pendentes
-              {pendingCount > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5 bg-white/20 text-white">{pendingCount}</Badge>}
+              {pendingCount > 0 && (
+                <Badge className={cn(
+                  "ml-2 h-5 px-1.5 border-none shadow-sm transition-colors tabular-nums",
+                  activeTab === 'pending' ? "bg-white text-brand" : "bg-brand text-white"
+                )}>
+                  {pendingCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="inactive" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
               Inativos
-              {inactiveCount > 0 && <Badge variant="secondary" className="ml-2 h-5 px-1.5">{inactiveCount}</Badge>}
+              {inactiveCount > 0 && (
+                <Badge className={cn(
+                  "ml-2 h-5 px-1.5 border-none shadow-sm transition-colors tabular-nums",
+                  activeTab === 'inactive' ? "bg-white text-brand" : "bg-slate-500 text-white"
+                )}>
+                  {inactiveCount}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="all" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">Todos</TabsTrigger>
           </TabsList>

@@ -499,22 +499,24 @@ export default function PatientProfilePage() {
                                     <ClipboardList className="mr-2 h-4 w-4" />
                                     Prontuário
                                 </TabsTrigger>
-                                <TabsTrigger value="scheduled" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                                    <Calendar className="mr-2 h-4 w-4" />
-                                    Agendadas
-                                    {(() => {
-                                        const todayCount = scheduledMessages.filter(m => {
-                                            const d = new Date(m.sendAt);
-                                            const now = new Date();
-                                            return m.status === 'pending' && d.toDateString() === now.toDateString();
-                                        }).length;
-                                        return todayCount > 0 ? (
-                                            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 min-w-[20px] justify-center">
-                                                {todayCount}
-                                            </Badge>
-                                        ) : null;
-                                    })()}
-                                </TabsTrigger>
+                                {isPremiumOrVip && (
+                                    <TabsTrigger value="scheduled" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                                        <Calendar className="mr-2 h-4 w-4" />
+                                        Agendadas
+                                        {(() => {
+                                            const todayCount = scheduledMessages.filter(m => {
+                                                const d = new Date(m.sendAt);
+                                                const now = new Date();
+                                                return m.status === 'pending' && d.toDateString() === now.toDateString();
+                                            }).length;
+                                            return todayCount > 0 ? (
+                                                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 min-w-[20px] justify-center">
+                                                    {todayCount}
+                                                </Badge>
+                                            ) : null;
+                                        })()}
+                                    </TabsTrigger>
+                                )}
                                 {showAnalysisPanel && (
                                     <TabsTrigger value="analysis" className="rounded-lg px-4 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm text-amber-600 data-[state=active]:text-amber-700">
                                         <ShieldAlert className="mr-2 h-4 w-4" />
@@ -537,13 +539,15 @@ export default function PatientProfilePage() {
                                 <PatientProfileSummary patient={patient} />
                             </TabsContent>
 
-                            <TabsContent value="scheduled" className="mt-0 pb-12">
-                                <ScheduledMessagesPanel
-                                    messages={scheduledMessages}
-                                    currentDay={patient?.protocol?.currentDay}
-                                    durationDays={activeProtocol?.durationDays}
-                                />
-                            </TabsContent>
+                                {isPremiumOrVip && (
+                                    <TabsContent value="scheduled" className="mt-0 pb-12">
+                                        <ScheduledMessagesPanel
+                                            messages={scheduledMessages}
+                                            currentDay={patient?.protocol?.currentDay}
+                                            durationDays={activeProtocol?.durationDays}
+                                        />
+                                    </TabsContent>
+                                )}
 
                             <TabsContent value="analysis" className="mt-0 pb-12">
                                 <PatientAnalysisPanel patientId={patientId} />
