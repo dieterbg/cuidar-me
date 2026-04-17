@@ -15,9 +15,8 @@ describe('Onboarding', () => {
     // ONB-01/02: getNextStep
     // =================================================================
     describe('getNextStep', () => {
-        it('ONB-01: avança welcome → preferences → complete', () => {
-            expect(getNextStep('welcome', 'freemium', {})).toBe('preferences');
-            expect(getNextStep('preferences', 'freemium', {})).toBe('complete');
+        it('ONB-01: avança welcome → complete', () => {
+            expect(getNextStep('welcome', 'freemium', {})).toBe('complete');
         });
 
         it('ONB-02: retorna complete para step inválido ou último', () => {
@@ -27,8 +26,8 @@ describe('Onboarding', () => {
         });
 
         it('funciona com todos os planos', () => {
-            expect(getNextStep('welcome', 'premium', {})).toBe('preferences');
-            expect(getNextStep('welcome', 'vip', {})).toBe('preferences');
+            expect(getNextStep('welcome', 'premium', {})).toBe('complete');
+            expect(getNextStep('welcome', 'vip', {})).toBe('complete');
         });
     });
 
@@ -49,26 +48,11 @@ describe('Onboarding', () => {
             expect(getStepMessage('welcome', 'vip', {}, 'A')).toContain('⭐');
         });
 
-        it('ONB-04: gera mensagem de preferences com opções A/B/C', () => {
-            const msg = getStepMessage('preferences', 'freemium', {});
-            expect(msg).toContain('A)');
-            expect(msg).toContain('B)');
-            expect(msg).toContain('C)');
-            expect(msg).toContain('Manhã');
-            expect(msg).toContain('Tarde');
-            expect(msg).toContain('Noite');
-        });
 
-        it('ONB-05: gera mensagem complete com horário escolhido', () => {
-            const msg = getStepMessage('complete', 'freemium', { preferredTime: 'morning' });
-            expect(msg).toContain('8h');
+        it('ONB-05: gera mensagem complete', () => {
+            const msg = getStepMessage('complete', 'freemium', {});
             expect(msg).toContain('🌅');
-
-            const msgAfternoon = getStepMessage('complete', 'premium', { preferredTime: 'afternoon' });
-            expect(msgAfternoon).toContain('14h');
-
-            const msgNight = getStepMessage('complete', 'vip', { preferredTime: 'night' });
-            expect(msgNight).toContain('20h');
+            expect(msg).toContain('cadastro está completo');
         });
 
         it('complete mostra texto diferente por plano', () => {
@@ -89,9 +73,9 @@ describe('Onboarding', () => {
             expect(processStepResponse('welcome', 'começar', {}).error).toBeUndefined();
         });
 
-        it('ONB-07: welcome — aceita "ajustar" e retorna link', () => {
-            const result = processStepResponse('welcome', 'ajustar', {});
-            expect(result.error).toContain('portal/profile');
+        it('ONB-07: welcome — aceita "não" e retorna erro especial', () => {
+            const result = processStepResponse('welcome', 'não', {});
+            expect(result.error).toBe('CANCEL_ONBOARDING');
         });
 
         it('ONB-08: welcome — rejeita resposta inválida', () => {
@@ -99,28 +83,6 @@ describe('Onboarding', () => {
             expect(result.error).toContain('Sim');
         });
 
-        it('ONB-09: preferences — mapeia A→morning, B→afternoon, C→night', () => {
-            const a = processStepResponse('preferences', 'A', {});
-            expect(a.data.preferredTime).toBe('morning');
-            expect(a.error).toBeUndefined();
-
-            const b = processStepResponse('preferences', 'B', {});
-            expect(b.data.preferredTime).toBe('afternoon');
-
-            const c = processStepResponse('preferences', 'C', {});
-            expect(c.data.preferredTime).toBe('night');
-        });
-
-        it('ONB-10: preferences — aceita "manhã", "tarde", "noite"', () => {
-            expect(processStepResponse('preferences', 'manhã', {}).data.preferredTime).toBe('morning');
-            expect(processStepResponse('preferences', 'tarde', {}).data.preferredTime).toBe('afternoon');
-            expect(processStepResponse('preferences', 'noite', {}).data.preferredTime).toBe('night');
-        });
-
-        it('ONB-11: preferences — rejeita resposta inválida', () => {
-            const result = processStepResponse('preferences', 'xyz', {});
-            expect(result.error).toContain('Manhã');
-        });
 
         it('complete — aceita qualquer resposta', () => {
             const result = processStepResponse('complete', 'qualquer coisa', {});

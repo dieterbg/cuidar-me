@@ -84,7 +84,7 @@ describe('Supabase Transforms', () => {
             expect(result.fullName).toBe('João');
             expect(result.avatar).toBe('');
             expect(result.needsAttention).toBe(false);
-            expect(result.status).toBe('active');
+            expect(result.status).toBe('pending');
             expect(result.subscription.plan).toBe('freemium');
             expect(result.subscription.priority).toBe(1);
             expect(result.gamification.totalPoints).toBe(0);
