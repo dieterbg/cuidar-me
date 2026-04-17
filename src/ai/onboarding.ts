@@ -1,4 +1,4 @@
-export type OnboardingStep = 'welcome' | 'preferences' | 'complete';
+export type OnboardingStep = 'welcome' | 'complete';
 export type OnboardingState = {
     patient_id: string;
     step: OnboardingStep;
@@ -30,20 +30,9 @@ Bem-vindo ao Cuidar.me! Você está no plano ${planName} ${planEmoji}.
 
 Vamos começar? Responda "Sim" para iniciar ou "Ajustar" para gerenciar seu cadastro.`;
 
-        case 'preferences':
-            return `Ótimo! Em qual período do dia você prefere receber suas dicas de saúde?
-
-A) Manhã (8h)
-B) Tarde (14h)
-C) Noite (20h)
-
-Responda A, B ou C`;
 
         case 'complete':
-            const timeEmoji = data.preferredTime === 'morning' ? '🌅' :
-                data.preferredTime === 'afternoon' ? '🌞' : '🌙';
-            const timeText = data.preferredTime === 'morning' ? '8h' :
-                data.preferredTime === 'afternoon' ? '14h' : '20h';
+            const timeText = 'pela manhã';
 
             if (plan === 'freemium') {
                 return `Pronto! 🌅 Seu cadastro está completo.
@@ -56,9 +45,9 @@ Bem-vindo ao Cuidar.me! 🚀`;
             }
 
             const planText = plan === 'vip' ? 'VIP' : 'Premium';
-            return `Perfeito! ${timeEmoji}
+            return `Perfeito! 🚀
 
-Seu acompanhamento ${planText} está ativo. Você receberá notificações às ${timeText}.
+Seu acompanhamento ${planText} está ativo. Você receberá notificações diárias para te guiar na sua jornada.
 
 Vamos juntos! 💪`;
 
@@ -90,24 +79,6 @@ export function processStepResponse(
                 }
                 break;
 
-            case 'preferences':
-                const isA = normalizedResponse === 'a' || normalizedResponse.startsWith('a)') || normalizedResponse.includes('manhã') || normalizedResponse.includes('manha');
-                const isB = normalizedResponse === 'b' || normalizedResponse.startsWith('b)') || normalizedResponse.includes('tarde');
-                const isC = normalizedResponse === 'c' || normalizedResponse.startsWith('c)') || normalizedResponse.includes('noite');
-
-                if (isA) {
-                    data.preferredTime = 'morning';
-                } else if (isB) {
-                    data.preferredTime = 'afternoon';
-                } else if (isC) {
-                    data.preferredTime = 'night';
-                } else {
-                    return { 
-                        data, 
-                        error: 'Opção inválida. Escolha A (Manhã), B (Tarde) ou C (Noite).' 
-                    };
-                }
-                break;
         }
 
         return { data };
@@ -124,6 +95,5 @@ export function getNextStep(
     plan: 'freemium' | 'premium' | 'vip' = 'freemium',
     data: OnboardingState['data'] = {}
 ): OnboardingStep {
-    if (currentStep === 'welcome') return 'preferences';
     return 'complete';
 }

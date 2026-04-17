@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview Gerencia o onboarding MÍNIMO conversacional via WhatsApp
- * Apenas 3 passos: boas-vindas, preferências, confirmação
+ * Apenas 2 passos: boas-vindas e confirmação
  */
 
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
