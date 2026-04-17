@@ -147,8 +147,9 @@ export async function POST(request: NextRequest) {
 
         const { sendWhatsappMessage } = await import('@/lib/twilio');
 
-        // Suporte para Template (Content API)
-        const contentSid = process.env.TWILIO_WELCOME_TEMPLATE_SID;
+        // Suporte para Template (Content API) - DESATIVADO para usar o texto corrigido do código
+        // const contentSid = process.env.TWILIO_WELCOME_TEMPLATE_SID;
+        const contentSid = undefined;
         const planEmoji = patient.plan === 'vip' ? '⭐' : patient.plan === 'premium' ? '💎' : '🌱';
         const planName = patient.plan === 'vip' ? 'VIP' : patient.plan === 'premium' ? 'Premium' : 'Freemium';
 
