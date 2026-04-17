@@ -120,6 +120,7 @@ export default function WelcomePage() {
 
   const firstName = patient?.fullName?.split(' ')[0] || 'Visitante';
   const isPending = patient?.status === 'pending';
+  const isInactive = patient?.status === 'inactive' || patient?.status === 'inactive_cancellation';
   const isProfileComplete = !!patient?.height;
   const isFreemium = patient?.subscription?.plan === 'freemium';
   const levelInfo = patient ? getLevelInfo(patient.gamification.totalPoints) : null;
@@ -246,6 +247,39 @@ export default function WelcomePage() {
               <Progress value={(waterCount / WATER_GOAL) * 100} className="h-1.5" />
             </CardContent>
           </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ETAPA 1.5: Conta Inativa ou Pausada
+  if (isInactive) {
+    return (
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen">
+        <div className="max-w-2xl mx-auto space-y-8 pt-16">
+          <div className="text-center space-y-4">
+            <div className="mx-auto w-20 h-20 bg-slate-100 dark:bg-slate-900/40 rounded-full flex items-center justify-center">
+              <Clock className="w-10 h-10 text-slate-600 dark:text-slate-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {patient?.status === 'inactive' ? 'Seu acompanhamento está em pausa' : 'Acesso Limitado'}
+            </h1>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              {patient?.status === 'inactive' 
+                ? "Notamos que seu acompanhamento foi pausado temporariamente. Seus dados e evolução continuam salvos."
+                : "Seu acompanhamento está inativo no momento."}
+            </p>
+            <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10">
+              <p className="text-sm font-medium text-foreground">
+                Para reativar seu plano ou tirar dúvidas, entre em contato com a nossa equipe via WhatsApp.
+              </p>
+              <Button asChild className="mt-4 rounded-xl">
+                <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer">
+                  Falar com Suporte
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     );

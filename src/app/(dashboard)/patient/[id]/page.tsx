@@ -377,6 +377,16 @@ export default function PatientProfilePage() {
                                 </Badge>
                             )}
                             {patient.status === 'pending' && <Badge variant="destructive">Cadastro Pendente</Badge>}
+                            {patient.status === 'inactive' && (
+                                <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1">
+                                    <StopCircle className="h-3 w-3" /> Inativo (Pausa)
+                                </Badge>
+                            )}
+                            {patient.status === 'inactive_cancellation' && (
+                                <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 gap-1">
+                                    <Trash2 className="h-3 w-3" /> Inativo (Cancelado)
+                                </Badge>
+                            )}
                         </div>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">ID: <code className="bg-muted px-1 py-0.5 rounded text-xs">{patient.id.slice(0, 8)}</code></span>
