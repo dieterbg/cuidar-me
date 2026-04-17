@@ -382,7 +382,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                   name="protocolId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Protocolo Ativo</FormLabel>
+                      <FormLabel>Protocolo Ativo {(selectedPlan === 'premium' || selectedPlan === 'vip') && <span className="text-red-600">*</span>}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value || ""}
