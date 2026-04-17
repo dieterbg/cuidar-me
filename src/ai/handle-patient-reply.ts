@@ -459,7 +459,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
             chunk.map((msg: any) => _processSingleMessage(msg, supabase, patientMap, now, templateConfig))
         );
         for (const r of results) {
-            if (r === 'sent') processed++;
+            if (r === 'sent' || r === 'orphaned') processed++;
             else if (r === 'skipped' || r === 'failed') skipped++;
         }
     }
@@ -482,8 +482,25 @@ async function _processSingleMessage(
     patientMap: Map<string, any>,
     now: Date,
     templateConfig: { usingNewTemplates: boolean; sidPesagem?: string; sidCheckin?: string; sidRegistro?: string }
-): Promise<'sent' | 'skipped' | 'failed'> {
+): Promise<'sent' | 'skipped' | 'failed' | 'orphaned'> {
     const { usingNewTemplates, sidPesagem, sidCheckin, sidRegistro } = templateConfig;
+
+    const patientRow = patientMap.get(msg.patient_id);
+
+    // IDENTITY GUARD: Se o paciente não existe ou não tem protocolo ativo, cancela a mensagem para não travar a fila
+    if (!patientRow) {
+        logger.warn('Identidade órfã detectada na fila. Cancelando mensagem.', { 
+            messageId: msg.id, 
+            patientId: msg.patient_id 
+        });
+        await supabase.from('scheduled_messages')
+            .update({ 
+                status: 'sent', // Marcamos como sent (processed) para tirar da fila de pendentes
+                error_info: 'Orphaned: Patient not found or inactive' 
+            })
+            .eq('id', msg.id);
+        return 'orphaned';
+    }
 
     // Resolver template e variáveis
     let contentSid: string | undefined;
@@ -494,8 +511,7 @@ async function _processSingleMessage(
         const title = metadata.checkinTitle || metadata.messageTitle || metadata.title || '';
         const isGamification = !!metadata.isGamification;
         const protocolDay = metadata.protocolDay || 1;
-
-        const patientRow = patientMap.get(msg.patient_id);
+        // patientRow já foi obtido pelo Identity Guard acima
         const patientName = patientRow?.full_name?.split(' ')[0] || 'lá';
         const activeProto = patientRow?.patient_protocols?.[0];
         const protocolName = activeProto?.protocols?.name || 'Cuidar.me';

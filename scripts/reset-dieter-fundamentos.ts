@@ -16,7 +16,7 @@ config({ path: '.env.local' });
 import { createClient } from '@supabase/supabase-js';
 import { scheduleProtocolMessages } from '../src/cron/send-protocol-messages';
 
-const DIETER_ID = '47651920-53c9-49e7-b883-bf28eaf70dd2';
+const DIETER_WHATSAPP = 'whatsapp:+5551998770099';
 const FUNDAMENTOS_ID = '613a4a63-ed4b-4cbf-9c64-49fe98074032';
 
 async function main() {
@@ -24,6 +24,20 @@ async function main() {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
+    // Dynamic ID lookup
+    const { data: patient, error: findErr } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('whatsapp_number', DIETER_WHATSAPP)
+        .single();
+
+    if (findErr || !patient) {
+        console.error(`❌ ERRO: Paciente ${DIETER_WHATSAPP} não encontrado.`);
+        process.exit(1);
+    }
+
+    const DIETER_ID = patient.id;
 
     console.log('\n🔄 RESET DO DIETER — Protocolo Fundamentos do dia 1\n');
 

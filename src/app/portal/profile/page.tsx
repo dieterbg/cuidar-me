@@ -99,7 +99,7 @@ export default function PortalProfilePage() {
 
         const wasAlreadyActive = patient.status === 'active';
 
-        if (isComplete && !wasAlreadyActive) {
+        if (isComplete) {
           // Award profile completion gamification points (+50 pts — disciplina)
           try {
             await awardGamificationPoints(user!.id, 'disciplina', 50);
