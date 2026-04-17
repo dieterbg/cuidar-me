@@ -427,17 +427,30 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
         <div className="px-4 py-2">
           <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 mb-6">
-            <div className="flex items-center gap-3 mb-3">
-              <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border-2 border-background shadow-sm shrink-0">
                 <AvatarImage src={patient?.avatar} />
                 <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                   {(patient?.fullName || user?.user_metadata?.full_name || user?.email || 'P').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="overflow-hidden">
+              <div className="overflow-hidden flex flex-col justify-center">
                 <p className="text-sm font-bold truncate">
-                  {(patient?.fullName || user?.user_metadata?.full_name || 'Paciente').split(' ')[0]}
+                  {(patient?.fullName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Paciente').split(' ')[0]}
                 </p>
+                {patient && (
+                  <div className="text-[10px] text-muted-foreground tracking-wide font-semibold mt-0.5 flex flex-col gap-0.5">
+                    <span className="uppercase text-primary/80">
+                      {patient.subscription?.plan === 'freemium' ? '🌱 Semente' :
+                       patient.subscription?.plan === 'vip' ? '👑 Concierge' : '💎 Premium'}
+                    </span>
+                    {patient.protocol?.isActive && patient.protocol.protocolId && (
+                      <span className="truncate capitalize" title={patient.protocol.protocolId}>
+                        O.{patient.protocol.protocolId.replace(/_/g, ' ')}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
