@@ -271,6 +271,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     }
   };
 
+  const isProfileComplete = !!patient?.height;
+
+  // Proteção de rotas para usuários "incompletos" (deve ficar ANTES dos early returns para evitar erro #310)
+  useEffect(() => {
+    if (!isStatusLoading && patient && !isProfileComplete) {
+      if (pathname.startsWith('/portal/community') || pathname.startsWith('/portal/education')) {
+        router.replace('/portal/welcome');
+      }
+    }
+  }, [pathname, isStatusLoading, patient, isProfileComplete, router]);
+
   // Se estiver redirecionando ou carregando, não renderize nada que dependa de 'patient'
   if (authLoading || isStatusLoading || isCreatingPatient || (profile && profile.role !== 'paciente')) {
     return <div className="flex h-screen items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
@@ -347,17 +358,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     { href: '/portal/community', label: 'Comunidade', icon: Users },
     { href: '/portal/education', label: 'Educação', icon: BookOpen },
   ];
-
-  const isProfileComplete = !!patient?.height;
-
-  // Proteção de rotas para usuários "incompletos"
-  useEffect(() => {
-    if (!isStatusLoading && patient && !isProfileComplete) {
-      if (pathname.startsWith('/portal/community') || pathname.startsWith('/portal/education')) {
-        router.replace('/portal/welcome');
-      }
-    }
-  }, [pathname, isStatusLoading, patient, isProfileComplete, router]);
 
   const menuItems = allMenuItems.filter(item => {
     // Core items always visible
