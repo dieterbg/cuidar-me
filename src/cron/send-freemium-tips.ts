@@ -56,9 +56,28 @@ export async function sendFreemiumTips() {
         const tipIndex = dayOfMonth % FREEMIUM_TIPS.length;
         const baseTip = FREEMIUM_TIPS[tipIndex];
 
+        // Criar a data inicial (meia noite) no fuso de SP para verificar se já mandou hoje
+        const startOfToday = new Date(brazilTime);
+        startOfToday.setHours(0, 0, 0, 0);
+
         // 4. Processar envios
         const results = await batchProcess(patients, async (patient: any) => {
             if (!patient.whatsapp_number) return { success: false };
+
+            // Evitar duplicidade: verificar se já mandou a dica ('freemium_tip') HOJE para esse paciente
+            const { data: alreadySent } = await supabase
+                .from('messages')
+                .select('id')
+                .eq('patient_id', patient.id)
+                .eq('sender', 'system')
+                .eq('metadata->>type', 'freemium_tip')
+                .gte('created_at', startOfToday.toISOString())
+                .limit(1);
+
+            if (alreadySent && alreadySent.length > 0) {
+                // Já mandou hoje, pula silenciosamente!
+                return { success: true, skipped: true };
+            }
 
             const firstName = patient.full_name.split(' ')[0];
             const personalizedTip = `Bom dia, ${firstName}! ${baseTip}\n\n💡 _Quer suporte 24h e check-in diário? Conheça o Plano Premium!_`;
@@ -78,7 +97,7 @@ export async function sendFreemiumTips() {
             return { success: false };
         }, { batchSize: 5, continueOnError: true });
 
-        const processed = results.filter(r => !(r instanceof Error) && r.success).length;
+        const processed = results.filter(r => !(r instanceof Error) && r.success && !r.skipped).length;
         logger.info(`[FreemiumTips] Finalizado. Enviados: ${processed}`);
 
         return { processed, error: null };
