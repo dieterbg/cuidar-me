@@ -40,11 +40,13 @@ const createFormSchema = (isAdmin: boolean) => z.object({
   plan: z.enum(['freemium', 'premium', 'vip']),
   height: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
-    z.number().positive('Altura deve ser um número positivo.').optional().nullable()
+    z.number({ required_error: "Altura é obrigatória", invalid_type_error: "Altura é obrigatória" })
+     .positive('Altura deve ser um número positivo.')
   ),
   initialWeight: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
-    z.number().positive('Peso deve ser um número positivo.').optional().nullable()
+    z.number({ required_error: "Peso inicial é obrigatório", invalid_type_error: "Peso inicial é obrigatório" })
+     .positive('Peso deve ser um número positivo.')
   ),
   birthDate: z.string().optional().nullable(),
   healthConditions: z.string().optional().nullable(),
@@ -433,7 +435,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                   name="birthDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data de Nascimento</FormLabel>
+                      <FormLabel>Data de Nascimento <span className="text-red-600">*</span></FormLabel>
                       <FormControl>
                         <Input type="date" {...field} value={field.value ?? ''} />
                       </FormControl>
@@ -446,7 +448,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                   name="gender"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Gênero</FormLabel>
+                      <FormLabel>Gênero <span className="text-red-600">*</span></FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
                         <FormControl>
                           <SelectTrigger>
@@ -474,7 +476,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                     name="height"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Altura (cm)</FormLabel>
+                        <FormLabel>Altura (cm) <span className="text-red-600">*</span></FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -493,7 +495,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                     name="initialWeight"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Peso Inicial (kg)</FormLabel>
+                        <FormLabel>Peso Inicial (kg) <span className="text-red-600">*</span></FormLabel>
                         <FormControl>
                           <Input
                             type="number"

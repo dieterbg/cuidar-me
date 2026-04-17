@@ -37,7 +37,7 @@ Vamos começar? Responda "Sim" para iniciar ou "Não" para cancelar seu cadastro
             if (plan === 'freemium') {
                 return `Pronto! 🌅 Seu cadastro está completo.
 
-Você receberá suas dicas às ${timeText}. ☀️
+Você receberá suas dicas ${timeText}. ☀️
 
 💎 _Dica: Faça um Upgrade para o Premium e tenha acesso total!_
 
