@@ -267,28 +267,7 @@ export default function WelcomePage() {
           </div>
         </div>
 
-        {/* PENDING REGISTRATION ALERT */}
-        {!isProfileComplete && (
-          <Card className="bg-amber-50/50 dark:bg-amber-900/10 border-amber-200/50 overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
-            <CardContent className="p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-100 dark:bg-amber-900/40 rounded-2xl shadow-inner">
-                  <Sparkles className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-amber-900 dark:text-amber-100">Falta pouco para personalizar seu protocolo</h3>
-                  <p className="text-sm text-amber-700/80 dark:text-amber-300/80">
-                    Preencha seus dados de saúde para que a equipe médica ajuste seu acompanhamento ao seu perfil.
-                  </p>
-                </div>
-              </div>
-              <Button asChild variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-100 hover:text-amber-800 shrink-0">
-                <Link href="/portal/profile">Preencher Agora</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {/* PENDING REGISTRATION ALERT REMOVIDO PARA EVITAR DUPLICIDADE COM O FOCO DO DIA */}
 
         {/* GAMIFICATION STATUS (FOR PREMIUM/VIP) */}
         {!isFreemium && levelInfo && (
@@ -370,12 +349,6 @@ export default function WelcomePage() {
                     {isProfileComplete ? "Ver Minha Jornada" : "Completar Agora"} <ArrowRight className="ml-2 w-4 h-4" />
                   </Link>
                 </Button>
-
-                {isFreemium && (
-                  <Button asChild variant="outline" size="lg" className="rounded-xl px-8 border-primary/20 text-primary hover:bg-primary/5 font-bold">
-                    <Link href="/portal/plans">Ver Planos Premium</Link>
-                  </Button>
-                )}
               </div>
             </CardContent>
             {isProfileComplete && !isFreemium && (
@@ -441,7 +414,7 @@ export default function WelcomePage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-card shadow-sm border-border/40 hover:bg-accent/5 transition-colors group cursor-pointer" onClick={() => router.push('/portal/community')}>
+          <Card className={cn("bg-card shadow-sm border-border/40 hover:bg-accent/5 transition-colors group cursor-pointer", !isFreemium ? "lg:col-span-2" : "")} onClick={() => router.push('/portal/community')}>
             <CardHeader className="pb-2">
               <Users className="h-6 w-6 text-primary mb-2 group-hover:scale-110 transition-transform" />
               <CardTitle className="text-base font-bold">Comunidade</CardTitle>
@@ -452,7 +425,7 @@ export default function WelcomePage() {
           </Card>
 
           {/* QUOTE CARD (Wide) */}
-          <Card className="md:col-span-3 lg:col-span-2 bg-secondary/5 border-secondary/10 flex items-center justify-center p-8 relative overflow-hidden">
+          <Card className={cn("bg-secondary/5 border-secondary/10 flex items-center justify-center p-8 relative overflow-hidden", isFreemium ? "md:col-span-1 lg:col-span-3" : "md:col-span-full lg:col-span-full")}>
             <div className="absolute -left-4 -top-4 opacity-5">
               <Quote className="w-24 h-24 text-secondary rotate-180" />
             </div>
