@@ -350,6 +350,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const isProfileComplete = !!patient?.height;
 
+  // Proteção de rotas para usuários "incompletos"
+  useEffect(() => {
+    if (!isStatusLoading && patient && !isProfileComplete) {
+      if (pathname.startsWith('/portal/community') || pathname.startsWith('/portal/education')) {
+        router.replace('/portal/welcome');
+      }
+    }
+  }, [pathname, isStatusLoading, patient, isProfileComplete, router]);
+
   const menuItems = allMenuItems.filter(item => {
     // Core items always visible
     if (['/portal/welcome', '/portal/profile', '/portal/journey', '/portal/store', '/portal/how-it-works'].includes(item.href)) return true;
