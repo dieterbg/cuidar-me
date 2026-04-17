@@ -2,6 +2,9 @@
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { sendWhatsappMessage } from '@/lib/twilio';
+import { loggers } from '@/lib/logger';
+
+const log = loggers.ai;
 
 /**
  * Processa a solicitação de opt-out (SAIR) do paciente
@@ -41,6 +44,18 @@ export async function handleOptOut(
             patient_id: patient.id,
             sender: 'me',
             text: goodbyeMsg,
+        });
+
+        // 5. Business event + audit (LGPD: opt-out é evento importante)
+        await log.business({ eventType: 'opt_out', patientId: patient.id });
+        await log.audit({
+            actorId: patient.userId ?? null,
+            actorRole: 'patient',
+            action: 'opt_out',
+            resourceType: 'patient',
+            resourceId: patient.id,
+            patientId: patient.id,
+            metadata: { method: 'whatsapp_keyword' },
         });
 
         return { success: true };

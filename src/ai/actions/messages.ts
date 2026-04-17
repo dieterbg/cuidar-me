@@ -3,6 +3,26 @@
 import { createClient } from '@/lib/supabase-server';
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { sendWhatsappMessage as sendWhatsappMessageTwilio } from '@/lib/twilio';
+import { loggers } from '@/lib/logger';
+
+const log = loggers.admin;
+
+/** Resolve actor (logged-in user) once per action — for audit logs. */
+async function getActor(): Promise<{ actorId: string | null; actorRole: string }> {
+    try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { actorId: null, actorRole: 'system' };
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle();
+        return { actorId: user.id, actorRole: (profile?.role as string) || 'system' };
+    } catch {
+        return { actorId: null, actorRole: 'system' };
+    }
+}
 
 export async function addMessage(
     patientId: string,
@@ -49,6 +69,18 @@ export async function addMessageAndSendWhatsapp(
 
         // 2. Salvar no banco
         await addMessage(patientId, { sender: 'me', text });
+
+        // 3. Audit — manual send by staff
+        const { actorId, actorRole } = await getActor();
+        await log.audit({
+            actorId,
+            actorRole,
+            action: 'send_whatsapp_manual',
+            resourceType: 'patient',
+            resourceId: patientId,
+            patientId,
+            metadata: { twilioSid: sent, textLength: text.length },
+        });
 
         return { success: true };
     } catch (error: any) {
@@ -206,6 +238,16 @@ export async function resolvePatientAttention(
         // Don't fail the whole operation if just the request update fails
     }
 
+    // Audit — resolving attention touches the clinical record
+    await log.audit({
+        actorId: user.id,
+        actorRole: 'staff',
+        action: 'resolve_attention',
+        resourceType: 'patient',
+        resourceId: patientId,
+        patientId,
+    });
+
     return { success: true };
 }
 
@@ -245,6 +287,13 @@ export async function rescheduleMessage(
         return { success: false, error: 'O horário deve ser pelo menos 10 minutos no futuro.' };
     }
 
+    // Fetch the target message first (need patient_id for audit)
+    const { data: existing } = await supabase
+        .from('scheduled_messages')
+        .select('patient_id, send_at, status')
+        .eq('id', messageId)
+        .maybeSingle();
+
     const { error } = await supabase
         .from('scheduled_messages')
         .update({ send_at: sendAt })
@@ -255,6 +304,17 @@ export async function rescheduleMessage(
         console.error('Error rescheduling message:', error);
         return { success: false, error: error.message };
     }
+
+    const { actorId, actorRole } = await getActor();
+    await log.audit({
+        actorId,
+        actorRole,
+        action: 'reschedule_message',
+        resourceType: 'scheduled_message',
+        resourceId: messageId,
+        patientId: existing?.patient_id ?? undefined,
+        metadata: { previousSendAt: existing?.send_at, newSendAt: sendAt },
+    });
 
     return { success: true };
 }
@@ -286,6 +346,18 @@ export async function deleteMessages(patientId: string): Promise<{ success: bool
         console.error('Error clearing patient last message:', updateError);
         // We don't return false because the primary action (deleting messages) succeeded
     }
+
+    // Audit — mass deletion of patient messages is a high-impact operation
+    const { actorId, actorRole } = await getActor();
+    await log.audit({
+        actorId,
+        actorRole,
+        action: 'delete_all_messages',
+        resourceType: 'patient',
+        resourceId: patientId,
+        patientId,
+        metadata: { severity: 'high' },
+    });
 
     return { success: true };
 }

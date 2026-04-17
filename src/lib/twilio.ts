@@ -44,10 +44,18 @@ export async function sendWhatsappMessage(
         return null;
     }
 
+    // Optional: register a status callback so Twilio reports delivery events
+    // (delivered / read / failed / 63049 / 63016) back to our webhook.
+    const publicBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL;
+    const statusCallback = publicBaseUrl
+        ? (publicBaseUrl.startsWith('http') ? publicBaseUrl : `https://${publicBaseUrl}`) + '/api/whatsapp/status'
+        : undefined;
+
     try {
         const messageParams: any = {
             from: fromNumber,
-            to: normalizedTo
+            to: normalizedTo,
+            ...(statusCallback ? { statusCallback } : {}),
         };
 
         // 1. Enviar via Template se houver ContentSid
