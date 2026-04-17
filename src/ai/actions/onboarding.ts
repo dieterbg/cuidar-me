@@ -107,7 +107,31 @@ export async function handleOnboardingReply(
         );
 
         if (processError) {
-            // Enviar mensagem de erro
+            if (processError === 'CANCEL_ONBOARDING') {
+                // Caso especial: Paciente escolheu cancelar o início
+                await supabase
+                    .from('patients')
+                    .update({ status: 'inactive' })
+                    .eq('id', patientId);
+
+                await supabase
+                    .from('onboarding_states')
+                    .update({ completed_at: new Date().toISOString() })
+                    .eq('id', onboardingState.id);
+
+                const cancelMessage = 'Entendido. Seu cadastro foi marcado como inativo. Caso mude de ideia, entre em contato com a clínica. 👋';
+                await sendWhatsappMessage(whatsappNumber, cancelMessage);
+
+                await supabase.from('messages').insert({
+                    patient_id: patientId,
+                    sender: 'system',
+                    text: cancelMessage,
+                });
+
+                return { success: true, completed: true };
+            }
+
+            // Enviar mensagem de erro padrão
             const errorMessage = `❌ ${processError}\n\nTente novamente:`;
             await sendWhatsappMessage(whatsappNumber, errorMessage);
 

@@ -28,7 +28,7 @@ export function getStepMessage(
 
 Bem-vindo ao Cuidar.me! Você está no plano ${planName} ${planEmoji}.
 
-Vamos começar? Responda "Sim" para iniciar ou "Ajustar" para gerenciar seu cadastro.`;
+Vamos começar? Responda "Sim" para iniciar ou "Não" para cancelar seu cadastro.`;
 
 
         case 'complete':
@@ -70,12 +70,12 @@ export function processStepResponse(
     try {
         switch (step) {
             case 'welcome':
-                if (normalizedResponse.includes('ajustar')) {
-                    return { data, error: 'Você pode ajustar seu perfil em: https://clinicadornelles.com.br/portal/profile' };
+                if (normalizedResponse.includes('não') || normalizedResponse === 'nao' || normalizedResponse === 'n') {
+                    return { data, error: 'CANCEL_ONBOARDING' };
                 }
-                const positiveWords = ['sim', 'vamos', 'ok', 'pode', 'bora', 'começar'];
+                const positiveWords = ['sim', 'vamos', 'ok', 'pode', 'bora', 'começar', 's'];
                 if (!positiveWords.some(word => normalizedResponse.includes(word))) {
-                    return { data, error: 'Por favor, responda "Sim" para começar.' };
+                    return { data, error: 'Por favor, responda "Sim" para começar ou "Não" para cancelar.' };
                 }
                 break;
 
