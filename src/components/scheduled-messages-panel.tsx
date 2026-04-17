@@ -316,8 +316,14 @@ function MessageRow({ message, onRescheduled }: {
     const [isPending, startTransition] = useTransition();
 
     const openEdit = () => {
-        const defaultTime = new Date(Date.now() + 11 * 60 * 1000);
+        // Use the current scheduled time if it's in the future, 
+        // otherwise default to now + 11 minutes
+        const now = new Date();
+        const initialDate = sendAt > now ? sendAt : new Date(now.getTime() + 11 * 60 * 1000);
+        
+        const defaultTime = new Date(initialDate);
         defaultTime.setSeconds(0, 0);
+        
         setInputValue(toLocalDateTimeValue(defaultTime));
         setError('');
         setEditing(true);

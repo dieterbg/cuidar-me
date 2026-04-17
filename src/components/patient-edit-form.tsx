@@ -141,19 +141,35 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
     startSavingTransition(async () => {
       try {
 
-        // Protocol management logic
-        if (values.plan === 'freemium') {
-          if (patient.protocol) {
-            await unassignProtocolFromPatient(patient.id);
-          }
-        } else if (values.protocolId) {
-          // Assign or update protocol (weightGoal is now on patient record, but we sync it if needed)
-          await assignProtocolToPatient(patient.id, values.protocolId, values.weightGoal || null);
-        }
-
+        // 1. Update patient profile, plan and status first
         const updateResult = await updatePatient(patient.id, values as Partial<Patient>);
         if (!updateResult.success) {
           throw new Error(updateResult.error || 'Erro desconhecido ao atualizar paciente.');
+        }
+
+        // 2. Protocol management logic (now that the plan is updated in DB)
+        if (values.plan === 'freemium') {
+          if (patient.protocol) {
+            const result = await unassignProtocolFromPatient(patient.id);
+            if (!result.success) {
+              toast({
+                variant: 'destructive',
+                title: 'Erro ao desvincular protocolo',
+                description: result.error,
+              });
+            }
+          }
+        } else if (values.protocolId) {
+          // Assign or update protocol
+          const result = await assignProtocolToPatient(patient.id, values.protocolId, values.weightGoal || null);
+          if (!result.success) {
+            toast({
+              variant: 'destructive',
+              title: 'Erro ao vincular protocolo',
+              description: result.error,
+            });
+            // We don't throw here to avoid blocking the whole save if patient update already succeeded
+          }
         }
 
         const isAdminContext = context === 'admin';

@@ -191,6 +191,12 @@ export async function assignProtocolToPatient(
         .eq('patient_id', patientId)
         .eq('is_active', true);
 
+    // Determinar data de início: Sempre amanhã para evitar spam de mensagens retroativas (weigh-in, check-in) no dia da ativação
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const startDateFormatted = tomorrow.toISOString().split('T')[0];
+
     // Criar novo protocolo ativo
     const { error } = await supabase
         .from('patient_protocols')
@@ -198,7 +204,7 @@ export async function assignProtocolToPatient(
             patient_id: patientId,
             protocol_id: protocolId,
             weight_goal_kg: weightGoal,
-            start_date: new Date().toISOString().split('T')[0],
+            start_date: startDateFormatted,
             current_day: 1,
             is_active: true,
         });
