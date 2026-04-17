@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { Search, ShieldCheck, AlertTriangle, Database, Star, Check, FilePenLine, Trash2, EyeOff, MessageCircleWarning, Clock, Loader2, Filter, QrCode, Copy } from 'lucide-react';
+import { Search, ShieldCheck, AlertTriangle, Database, Star, Check, FilePenLine, Trash2, StopCircle, EyeOff, MessageCircleWarning, Clock, Loader2, Filter, QrCode, Copy } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import type { Patient, PatientPlan } from '@/lib/types';
 import { Button } from '@/components/ui/button';

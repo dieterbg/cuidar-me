@@ -28,6 +28,7 @@ import {
   Target,
   HeartPulse,
   HelpCircle,
+  Clock,
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { getLevelInfo, getLevelName } from '@/lib/level-system';

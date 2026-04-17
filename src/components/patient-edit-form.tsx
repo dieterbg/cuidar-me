@@ -156,7 +156,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
           throw new Error(updateResult.error || 'Erro desconhecido ao atualizar paciente.');
         }
 
-        const isAdminContext = context === 'admin' || context === 'equipe_saude';
+        const isAdminContext = context === 'admin';
         // Se o status anterior não era ativo e o novo é ativo, dispara o onboarding
         const isActivating = isAdminContext && currentStatus !== 'active' && values.status === 'active';
 
