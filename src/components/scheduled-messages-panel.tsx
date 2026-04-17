@@ -316,10 +316,10 @@ function MessageRow({ message, onRescheduled }: {
     const [isPending, startTransition] = useTransition();
 
     const openEdit = () => {
-        // Use the current scheduled time if it's in the future, 
+        // Use the current scheduled time if it's in the future (getTime() for safety)
         // otherwise default to now + 11 minutes
         const now = new Date();
-        const initialDate = sendAt > now ? sendAt : new Date(now.getTime() + 11 * 60 * 1000);
+        const initialDate = sendAt.getTime() > now.getTime() ? sendAt : new Date(now.getTime() + 11 * 60 * 1000);
         
         const defaultTime = new Date(initialDate);
         defaultTime.setSeconds(0, 0);
@@ -398,7 +398,12 @@ function MessageRow({ message, onRescheduled }: {
 
                 {editing && (
                     <div className="mt-2 p-2 bg-background border rounded-lg space-y-2">
-                        <p className="text-xs font-medium text-foreground">Reagendar para:</p>
+                        <div className="flex justify-between items-center">
+                            <p className="text-xs font-medium text-foreground">Reagendar para:</p>
+                            <span className="text-[10px] text-muted-foreground">
+                                Atual: {format(sendAt, "dd/MM 'às' HH:mm")}
+                            </span>
+                        </div>
                         <input
                             type="datetime-local"
                             value={inputValue}
