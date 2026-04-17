@@ -65,13 +65,13 @@ export async function POST(request: NextRequest) {
             // Se foi criado nos últimos 5 minutos, não reinicia (evita duplicidade por cliques rápidos ou bugs de UI)
             const createdAt = new Date(existingOnboarding.created_at).getTime();
             const now = new Date().getTime();
-            const fiveMinutes = 5 * 60 * 1000;
+            const tenSeconds = 10 * 1000;
 
-            if (now - createdAt < fiveMinutes) {
-                console.log(`[POST /api/onboarding/initiate] Onboarding already initiated recently for ${patientId}. Skipping duplicate.`);
+            if (now - createdAt < tenSeconds) {
+                console.log(`[POST /api/onboarding/initiate] Onboarding initiated too recently for ${patientId}. Skipping.`);
                 return NextResponse.json({
-                    success: true,
-                    message: 'Onboarding already initiated recently',
+                    success: false,
+                    error: 'Onboarding já enviado recentemente. Aguarde 10 segundos antes de tentar novamente.',
                     skipped: true
                 });
             }
