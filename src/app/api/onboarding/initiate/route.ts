@@ -56,24 +56,34 @@ export async function POST(request: NextRequest) {
 
         const { data: existingOnboarding, error: onboardingError } = await supabase
             .from('onboarding_states')
-            .select('id, completed_at')
+            .select('id, completed_at, created_at')
             .eq('patient_id', patientId)
-            .maybeSingle(); // Use maybeSingle to avoid 406 errors if none exists
+            .maybeSingle();
 
-        if (onboardingError) {
+        // 2. Verificar se já tem onboarding CONCLUÍDO ou se foi INICIADO recentemente (trava de segurança)
+        if (existingOnboarding) {
+            if (existingOnboarding.completed_at) {
+                console.log(`[POST /api/onboarding/initiate] Onboarding already completed for ${patientId}. Skipping.`);
+                return NextResponse.json({
+                    success: true,
+                    message: 'Onboarding already completed',
+                    skipped: true
+                });
+            }
 
-        }
+            // Se foi criado nos últimos 5 minutos, não reinicia (evita duplicidade por cliques rápidos ou bugs de UI)
+            const createdAt = new Date(existingOnboarding.created_at).getTime();
+            const now = new Date().getTime();
+            const fiveMinutes = 5 * 60 * 1000;
 
-
-
-        // 2. Verificar se já tem onboarding CONCLUÍDO
-        if (existingOnboarding?.completed_at) {
-            console.log(`[POST /api/onboarding/initiate] Onboarding already completed for ${patientId}. Skipping.`);
-            return NextResponse.json({
-                success: true,
-                message: 'Onboarding already completed',
-                skipped: true
-            });
+            if (now - createdAt < fiveMinutes) {
+                console.log(`[POST /api/onboarding/initiate] Onboarding already initiated recently for ${patientId}. Skipping duplicate.`);
+                return NextResponse.json({
+                    success: true,
+                    message: 'Onboarding already initiated recently',
+                    skipped: true
+                });
+            }
         }
 
         // Apagar qualquer estado de onboarding anterior (PENDENTE) para este paciente

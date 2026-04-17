@@ -244,26 +244,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
           }
         }
 
-        // If patient context and profile is now complete AND consent given, initiate WhatsApp onboarding
-        if (isPatientContext) {
-          const isComplete = !!(
-            values.birthDate &&
-            values.gender &&
-            values.goal
-          );
-
-          if (isComplete && values.whatsappConsent) {
-            // Call API to initiate onboarding (fire and forget - don't block UI)
-            console.log('[PatientEditForm] Patient profile complete, triggering onboarding...');
-            fetch('/api/onboarding/initiate', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ patientId: patient.id }),
-            }).catch(err => console.error('Failed to initiate onboarding (patient):', err));
-          }
-        }
-
-        // Parent component will handle success notification and redirect
+        // A página pai gerencia o gatilho de onboarding após o salvamento bem-sucedido.
         onSave();
       } catch (error: any) {
         toast({
