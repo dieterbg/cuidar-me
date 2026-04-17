@@ -50,10 +50,6 @@ const createFormSchema = (isAdmin: boolean) => z.object({
   healthConditions: z.string().optional().nullable(),
   allergies: z.string().optional().nullable(),
   goal: z.enum(['lose_weight', 'gain_muscle', 'maintain', '']).optional().nullable(),
-  targetWeight: z.preprocess(
-    (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
-    z.number().positive().optional().nullable()
-  ),
   waist: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
     z.number().positive().optional().nullable()
@@ -585,29 +581,6 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="targetWeight"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Meta de Peso (kg)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="Ex: 70.0"
-                            step="0.1"
-                            {...field}
-                            value={field.value ?? ''}
-                            onChange={e => field.onChange(e.target.value === '' ? null : e.target.valueAsNumber)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="waist"
