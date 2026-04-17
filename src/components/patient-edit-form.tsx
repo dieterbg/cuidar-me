@@ -158,7 +158,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
 
         // Trigger WhatsApp onboarding if status is being changed to 'active' from 'pending'
         // This covers both Admin activation and Patient profile completion if we want
-        const isActivating = isAdminContext && patient.status === 'pending' && values.status === 'active';
+        const isActivating = isAdminContext && patient.status !== 'active' && values.status === 'active';
 
         console.log('[PatientEditForm] onSubmit State:', {
           context,
