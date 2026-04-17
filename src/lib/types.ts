@@ -158,6 +158,9 @@ export interface Patient {
     weightGoal?: number | null; // target weight in kg
     healthConditions?: string | null;
     allergies?: string | null;
+    medications?: string | null;
+    goal?: 'lose_weight' | 'gain_muscle' | 'maintain' | '' | null;
+    waist?: number | null;
     communityUsername?: string;
     plan?: PatientPlan; // Legacy for patient edit form
 }

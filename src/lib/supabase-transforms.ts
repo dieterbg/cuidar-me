@@ -67,6 +67,9 @@ export function transformPatientFromSupabase(supabasePatient: any): Patient {
         weightGoal: supabasePatient.weight_goal_kg,
         healthConditions: supabasePatient.health_conditions,
         allergies: supabasePatient.allergies,
+        medications: supabasePatient.medications,
+        goal: supabasePatient.goal,
+        waist: supabasePatient.waist_circumference_cm,
         communityUsername: supabasePatient.community_username,
 
         // Compatibilidade

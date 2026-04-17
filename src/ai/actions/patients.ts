@@ -181,6 +181,9 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.riskLevel !== undefined) dbUpdates.risk_level = updates.riskLevel;
     if (updates.weightGoal !== undefined) dbUpdates.weight_goal_kg = updates.weightGoal;
+    if (updates.goal !== undefined) dbUpdates.goal = updates.goal || null;
+    if (updates.waist !== undefined) dbUpdates.waist_circumference_cm = updates.waist;
+    if (updates.medications !== undefined) dbUpdates.medications = updates.medications;
 
     // Handle subscription if present (it's a JSON column usually, but let's check schema)
     // Assuming subscription is stored in columns or a jsonb column. 
@@ -346,6 +349,9 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
     if (patientData.healthConditions) dbInsert.health_conditions = patientData.healthConditions;
     if (patientData.allergies) dbInsert.allergies = patientData.allergies;
     if (patientData.status) dbInsert.status = patientData.status;
+    if (patientData.goal) dbInsert.goal = patientData.goal;
+    if (patientData.waist) dbInsert.waist_circumference_cm = patientData.waist;
+    if (patientData.medications) dbInsert.medications = patientData.medications;
 
     // Default gamification if needed
     if (patientData.gamification) dbInsert.gamification = patientData.gamification;
