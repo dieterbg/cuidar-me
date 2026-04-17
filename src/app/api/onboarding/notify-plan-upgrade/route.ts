@@ -51,20 +51,35 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: false, error: 'Paciente sem WhatsApp cadastrado' }, { status: 422 });
         }
 
+        // Buscar estado de onboarding para ver se precisamos confirmar conclusão
+        const { data: onboarding } = await supabase
+            .from('onboarding_states')
+            .select('completed_at')
+            .eq('patient_id', patientId)
+            .maybeSingle();
+
+        const isJustCompleting = onboarding && !onboarding.completed_at;
+
         // Montar mensagem de acordo com o plano
         const planEmoji = newPlan === 'vip' ? '⭐' : '💎';
         const planLabel = newPlan === 'vip' ? 'VIP' : 'Premium';
         const firstName = (patient.full_name || '').split(' ')[0];
 
-        const message = [
-            `${planEmoji} *Boa notícia, ${firstName}!*`,
-            ``,
-            `Seu plano foi atualizado para *${planLabel}* e o protocolo *${protocolName}* foi iniciado hoje.`,
-            ``,
-            `A partir de amanhã cedo você começará a receber seus check-ins diários aqui pelo WhatsApp.`,
-            ``,
-            `Qualquer dúvida, é só responder esta mensagem. 💪`,
-        ].join('\n');
+        let messageParts = [];
+
+        if (isJustCompleting) {
+            messageParts.push(`Pronto! 🌅 Seu cadastro está completo.\n`);
+        }
+
+        messageParts.push(`${planEmoji} *Boa notícia, ${firstName}!*`);
+        messageParts.push(``);
+        messageParts.push(`Seu plano foi atualizado para *${planLabel}* e o protocolo *${protocolName}* foi iniciado hoje.`);
+        messageParts.push(``);
+        messageParts.push(`A partir de amanhã cedo você começará a receber seus check-ins diários aqui pelo WhatsApp.`);
+        messageParts.push(``);
+        messageParts.push(`Qualquer dúvida, é só responder esta mensagem. 💪`);
+
+        const message = messageParts.join('\n');
 
         // Usar template aprovado se disponível — necessário fora da janela de 24h
         // TWILIO_PLAN_UPGRADE_SID: template dedicado (vars: {{1}}=nome, {{2}}=plano, {{3}}=protocolo)
