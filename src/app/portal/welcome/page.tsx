@@ -404,20 +404,39 @@ export default function WelcomePage() {
           </Card>
 
           {/* COMMUNITY / EDUCATION SNEAK PEEK */}
-          <Card className="bg-card shadow-sm border-border/40 hover:bg-accent/5 transition-colors group cursor-pointer" onClick={() => router.push('/portal/education')}>
+          <Card 
+            className={cn(
+              "bg-card shadow-sm border-border/40 transition-colors", 
+              isProfileComplete ? "hover:bg-accent/5 group cursor-pointer" : "opacity-80"
+            )} 
+            onClick={() => isProfileComplete && router.push('/portal/education')}
+          >
             <CardHeader className="pb-2">
-              <BookOpen className="h-6 w-6 text-primary mb-2 group-hover:scale-110 transition-transform" />
-              <CardTitle className="text-base font-bold">Conteúdo Elite</CardTitle>
+              <BookOpen className={cn("h-6 w-6 text-primary mb-2 transition-transform", isProfileComplete && "group-hover:scale-110")} />
+              <CardTitle className="text-base font-bold flex items-center justify-between">
+                Conteúdo Elite
+                {!isProfileComplete && <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground bg-secondary/20 px-2 py-0.5 rounded-full">Bloqueado</span>}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">Artigos e masterclasses exclusivas para sua evolução.</p>
             </CardContent>
           </Card>
 
-          <Card className={cn("bg-card shadow-sm border-border/40 hover:bg-accent/5 transition-colors group cursor-pointer", !isFreemium ? "lg:col-span-2" : "")} onClick={() => router.push('/portal/community')}>
+          <Card 
+            className={cn(
+              "bg-card shadow-sm border-border/40 transition-colors", 
+              !isFreemium && "lg:col-span-2",
+              isProfileComplete ? "hover:bg-accent/5 group cursor-pointer" : "opacity-80"
+            )} 
+            onClick={() => isProfileComplete && router.push('/portal/community')}
+          >
             <CardHeader className="pb-2">
-              <Users className="h-6 w-6 text-primary mb-2 group-hover:scale-110 transition-transform" />
-              <CardTitle className="text-base font-bold">Comunidade</CardTitle>
+              <Users className={cn("h-6 w-6 text-primary mb-2 transition-transform", isProfileComplete && "group-hover:scale-110")} />
+              <CardTitle className="text-base font-bold flex items-center justify-between">
+                Comunidade
+                {!isProfileComplete && <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground bg-secondary/20 px-2 py-0.5 rounded-full">Bloqueado</span>}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">Conecte-se com outros pacientes focados no mesmo objetivo.</p>
