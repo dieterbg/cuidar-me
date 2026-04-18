@@ -55,6 +55,8 @@ firebase-debug.log
 # Logs
 logs/
 *.log
+!src/app/**/logs/
+!src/app/**/logs/**
 
 # Temporary files
 tmp/

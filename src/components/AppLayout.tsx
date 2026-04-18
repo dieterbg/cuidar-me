@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { Home, Users, Video as VideoIcon, LogOut, ClipboardList, Megaphone, UserCog, MessageSquareText, HandCoins, LayoutDashboard, Settings, Sparkles, Trophy, ShoppingBag } from 'lucide-react';
+import { Home, Users, Video as VideoIcon, LogOut, ClipboardList, Megaphone, UserCog, MessageSquareText, HandCoins, LayoutDashboard, Settings, Sparkles, Trophy, ShoppingBag, FileSearch } from 'lucide-react';
 import Image from 'next/image';
 
 import {
@@ -49,7 +49,8 @@ const allMenuItems = [
 
 const adminMenuItems = [
   { href: '/admin', label: 'Gestão de Equipe', icon: UserCog },
-  { href: '/admin/settings', label: 'Credenciais', icon: Settings }
+  { href: '/admin/settings', label: 'Credenciais', icon: Settings },
+  { href: '/admin/logs', label: 'Logs & Auditoria', icon: FileSearch },
 ];
 
 
