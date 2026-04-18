@@ -67,8 +67,8 @@ const SENSITIVE_KEY_PATTERNS = [
 ];
 
 const PII_KEY_PATTERNS = [
-    /^email$/i, /^phone$/i, /whatsapp/i, /cpf/i, /^full_?name$/i,
-    /last_message/i, /message_content/i, /^text$/i,
+    /^email$/i, /^phone$/i, /whatsapp/i, /cpf/i, /^full_?name$/i, /^name$/i,
+    /last_message/i, /message_content/i, /^text$/i, /^display_?name$/i,
 ];
 
 function maskPhone(value: string): string {
