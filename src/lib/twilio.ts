@@ -105,7 +105,11 @@ export async function sendWhatsappMessage(
 
 
 export async function validateTwilioWebhook(request: NextRequest, body: any) {
-    if (process.env.NODE_ENV === 'development') {
+    // LOW-1 fix: usar variável explícita em vez de NODE_ENV.
+    // NODE_ENV poderia ser acidentalmente 'development' em Vercel Preview,
+    // abrindo o webhook para requisições não assinadas.
+    // Para pular validação em dev local, setar SKIP_TWILIO_VALIDATION=1 no .env.local
+    if (process.env.SKIP_TWILIO_VALIDATION === '1') {
         return true;
     }
 

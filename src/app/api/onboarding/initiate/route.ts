@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getCurrentUser } from '@/lib/supabase-server-utils';
+import { createClient } from '@/lib/supabase-server';
 import { getStepMessage } from '@/ai/onboarding';
 import type { OnboardingStep } from '@/ai/onboarding';
 
 /**
  * API Route: POST /api/onboarding/initiate
  * Inicia o onboarding WhatsApp para um paciente
- * Requer: usuário autenticado (staff ou paciente) ou CRON_SECRET header
+ * Requer: usuário autenticado (staff) ou CRON_SECRET header
  */
 export async function POST(request: NextRequest) {
     try {
-        // Verificar autenticação — permite usuário logado OU cron interno
+        // Lê o body uma única vez (stream não pode ser relido)
+        const { patientId } = await request.json();
+
+        // Verificar autenticação — permite cron interno OU staff autenticado
         const cronSecret = request.headers.get('x-cron-secret');
         const isValidCron = cronSecret && cronSecret === process.env.CRON_SECRET;
 
@@ -22,9 +26,36 @@ export async function POST(request: NextRequest) {
                     { status: 401 }
                 );
             }
-        }
 
-        const { patientId } = await request.json();
+            // MEDIUM-5 fix: verificar role do caller para autorizar acesso a patientId arbitrário
+            const supabaseUser = createClient();
+            const { data: profile } = await supabaseUser
+                .from('profiles')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            const STAFF_ROLES = ['admin', 'equipe_saude', 'assistente'];
+            const callerIsStaff = !!(profile && STAFF_ROLES.includes(profile.role));
+
+            // Se não é staff, verifica que o patientId pertence ao próprio usuário
+            if (!callerIsStaff) {
+                const supabaseAdmin = createServiceRoleClient();
+                const { data: ownPatient } = await supabaseAdmin
+                    .from('patients')
+                    .select('id')
+                    .eq('id', patientId)
+                    .eq('user_id', user.id)
+                    .single();
+
+                if (!ownPatient) {
+                    return NextResponse.json(
+                        { success: false, error: 'Acesso negado — você só pode iniciar seu próprio onboarding' },
+                        { status: 403 }
+                    );
+                }
+            }
+        }
 
         if (!patientId) {
             return NextResponse.json(
