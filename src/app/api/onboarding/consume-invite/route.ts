@@ -1,12 +1,36 @@
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
+import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { loggers } from '@/lib/logger';
+
+const log = loggers.onboarding;
 
 export async function POST(req: Request) {
     try {
-        const { token, userId } = await req.json();
+        // ── Autenticação (CRITICAL-4 fix) ────────────────────────────────────
+        // userId é sempre derivado da sessão autenticada — nunca aceito do body.
+        // Isso impede IDOR: um atacante não pode passar userId de outro paciente
+        // para elevar o plano de uma conta arbitrária.
+        const supabaseUser = createClient();
+        const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+        }
+
+        const userId = user.id; // fonte única e confiável do userId
+
+        // Lê apenas o token do body — userId é ignorado mesmo se enviado
+        const body = await req.json();
+        const token = body?.token;
+
+        if (!token) {
+            return NextResponse.json({ error: 'Token de convite ausente' }, { status: 400 });
+        }
+
         const supabase = createServiceRoleClient();
 
-        // 1. Verify token is valid (not used, not expired)
+        // 1. Verificar se o token é válido (não usado, não expirado)
         const { data: invite, error: inviteError } = await supabase
             .from('invite_tokens')
             .select('*')
@@ -16,21 +40,27 @@ export async function POST(req: Request) {
             .single();
 
         if (inviteError || !invite) {
-            console.error('Invalid or expired invite token:', token, inviteError);
+            log.warn('Token de convite inválido ou expirado', { userId });
+            await log.security({
+                eventType: 'invalid_invite_token',
+                severity: 'warning',
+                actorId: userId,
+                description: 'Tentativa de consumo de convite inválido ou expirado',
+            });
             return NextResponse.json({ error: 'Convite inválido ou expirado' }, { status: 400 });
         }
 
-        // 2. Mark token as used
+        // 2. Marcar token como usado — com o userId da sessão
         const { error: updateTokenError } = await supabase
             .from('invite_tokens')
             .update({
                 used_by: userId,
-                used_at: new Date().toISOString()
+                used_at: new Date().toISOString(),
             })
             .eq('token', token);
 
         if (updateTokenError) {
-            console.error('Error updating invite token status:', updateTokenError);
+            log.error('Erro ao marcar invite token como usado', updateTokenError, { userId });
             return NextResponse.json({ error: 'Erro ao processar convite' }, { status: 500 });
         }
 
@@ -46,14 +76,13 @@ export async function POST(req: Request) {
 
         if (profileError) {
             // Se as colunas não existem, tenta via auth metadata (fallback seguro)
-            console.warn('Could not update profile with invite data (columns may not exist):', profileError.message);
+            log.warn('Não foi possível atualizar profile com dados do convite (colunas podem não existir)', { userId });
 
-            // Fallback: atualizar auth user metadata
             await supabase.auth.admin.updateUserById(userId, {
                 user_metadata: {
                     invite_plan: invite.plan,
                     invite_pre_approved: true,
-                }
+                },
             });
         }
 
@@ -67,12 +96,21 @@ export async function POST(req: Request) {
             .eq('user_id', userId);
 
         if (patientUpdateError) {
-            console.log('[consume-invite] Patient record not found yet — invite_pre_approved saved in profile/metadata for later.');
+            log.info('Registro de paciente ainda não existe — invite_pre_approved salvo no profile para uso posterior');
         }
+
+        await log.audit({
+            actorId: userId,
+            actorRole: 'patient',
+            action: 'consume_invite_token',
+            resourceType: 'invite_token',
+            resourceId: invite.id,
+            metadata: { plan: invite.plan },
+        });
 
         return NextResponse.json({ success: true, plan: invite.plan });
     } catch (err: any) {
-        console.error('Unexpected error in consume-invite:', err);
+        log.error('Erro inesperado em consume-invite', err);
         return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

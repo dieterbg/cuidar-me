@@ -153,7 +153,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const response = await fetch('/api/onboarding/consume-invite', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: pendingInvite, userId: authData.user.id })
+          // userId NÃO é enviado — o servidor deriva da sessão autenticada (anti-IDOR)
+          body: JSON.stringify({ token: pendingInvite })
         });
         
         if (response.ok) {

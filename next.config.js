@@ -7,15 +7,12 @@ const nextConfig = {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
     return config;
   },
-  env: {
-    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
-    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
-    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
-    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-    TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-    CRON_SECRET: process.env.CRON_SECRET || 'CuidarMeCronSecret123',
-  },
+  // SECURITY: Não usar o bloco `env` para variáveis servidor — ele injeta os
+  // valores no bundle do cliente. Variáveis servidor (TWILIO_AUTH_TOKEN,
+  // FIREBASE_PRIVATE_KEY, CRON_SECRET, SUPABASE_SERVICE_ROLE_KEY) são lidas
+  // diretamente via process.env em routes/server actions, onde o Node.js as
+  // resolve nativamente sem precisar deste bloco.
+  // Apenas variáveis NEXT_PUBLIC_* devem aparecer aqui ou em .env.local.
   images: {
     dangerouslyAllowSVG: true,
     remotePatterns: [
