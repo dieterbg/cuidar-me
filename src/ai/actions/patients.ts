@@ -87,12 +87,8 @@ export async function getPatientDetails(patientId: string): Promise<{
         .eq('patient_id', patientId)
         .order('date', { ascending: false });
 
-    console.log(`[getPatientDetails] Patient: ${patientId}, Metrics found: ${metricsData?.length}`);
-    if (!metricsData || metricsData.length === 0) {
-        console.log('[getPatientDetails] No metrics found. Check RLS or table content.');
-    } else {
-        console.log('[getPatientDetails] First metric:', metricsData[0]);
-    }
+    // PII redacted: dados de métricas não logados em plaintext
+    console.log(`[getPatientDetails] Patient: ${patientId}, Metrics found: ${metricsData?.length ?? 0}`);
 
     // Fetch sent videos
     const { data: sentVideosData } = await supabase
@@ -190,7 +186,8 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
     // If updates.plan is passed directly:
     if ((updates as any).plan) dbUpdates.plan = (updates as any).plan;
 
-    console.log("Updating patient:", patientId, "Payload:", dbUpdates);
+    // PII redacted: payload de atualização não logado (pode conter nome, telefone)
+    console.log("Updating patient:", patientId, "Fields:", Object.keys(dbUpdates));
 
     if (Object.keys(dbUpdates).length === 0) {
         return { success: true }; // Nada para atualizar
@@ -239,7 +236,8 @@ export async function deletePatient(patientId: string): Promise<{ success: boole
 }
 
 export async function createPatientRecord(patientData: Partial<Patient>): Promise<{ success: boolean; patientId?: string; error?: string }> {
-    console.log('createPatientRecord called with:', patientData);
+    // PII redacted: patientData pode conter telefone, email, CPF
+    console.log('createPatientRecord called for userId:', patientData.userId);
     const supabase = createClient();
     const adminSupabase = createAdminClient(); // Use admin for checks to avoid RLS issues
 

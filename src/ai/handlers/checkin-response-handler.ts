@@ -1,6 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { sendWhatsappMessage } from '@/lib/twilio';
 import type { Perspective } from '@/lib/types';
+import { loggers } from '@/lib/logger';
 
 /**
  * Processa resposta de check-in de gamificação.
@@ -18,19 +19,14 @@ export async function processCheckinResponse(
     whatsappNumber: string,
     supabase: SupabaseClient
 ): Promise<{ processed: boolean }> {
-    console.log(`[DEBUG-CHECKIN] ========== CHECKIN HANDLER ==========`);
-    console.log(`[DEBUG-CHECKIN] checkinType: "${checkinType}"`);
-    console.log(`[DEBUG-CHECKIN] messageText: "${messageText}"`);
-    console.log(`[DEBUG-CHECKIN] patient.id: "${patient.id}"`);
-    console.log(`[DEBUG-CHECKIN] patient.userId: "${patient.userId}"`);
-    console.log(`[DEBUG-CHECKIN] patient.user_id: "${patient.user_id}"`);
-    console.log(`[DEBUG-CHECKIN] whatsappNumber: "${whatsappNumber}"`);
+    // PII redacted: messageText e whatsappNumber removidos dos logs
+    loggers.ai.debug('checkin handler iniciado', { patientId: patient.id, checkinType });
 
     // ── VALIDAÇÃO DE TAMANHO ──────────────────────────
     // Se a mensagem for muito longa, provavelmente é conversacional → IA
     const words = messageText.trim().split(/\s+/);
     if (words.length > 3) {
-        console.log(`[DEBUG-CHECKIN] ⏩ Message too long (${words.length} words), passing to AI.`);
+        loggers.ai.debug('mensagem longa, passando para IA', { patientId: patient.id, wordCount: words.length });
         return { processed: false };
     }
 

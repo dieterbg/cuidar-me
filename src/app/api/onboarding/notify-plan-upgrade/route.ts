@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getCurrentUser } from '@/lib/supabase-server-utils';
+import { createClient } from '@/lib/supabase-server';
 import { sendWhatsappMessage } from '@/lib/twilio';
 import { scheduleProtocolMessages } from '@/cron/send-protocol-messages';
+import { loggers } from '@/lib/logger';
+
+const log = loggers.admin;
 
 /**
  * POST /api/onboarding/notify-plan-upgrade
@@ -14,10 +18,24 @@ import { scheduleProtocolMessages } from '@/cron/send-protocol-messages';
  */
 export async function POST(request: NextRequest) {
     try {
-        // Auth: apenas staff autenticado pode disparar isso
+        // Auth: apenas staff autenticado pode disparar isso (HIGH-2 fix)
         const user = await getCurrentUser();
         if (!user) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Role check — paciente autenticado não pode disparar notificações para outros pacientes
+        const supabaseUser = createClient();
+        const { data: profile } = await supabaseUser
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        const STAFF_ROLES = ['admin', 'equipe_saude', 'assistente'];
+        if (!profile || !STAFF_ROLES.includes(profile.role)) {
+            log.warn('Tentativa de notify-plan-upgrade sem role de staff', { userId: user.id, role: profile?.role });
+            return NextResponse.json({ success: false, error: 'Acesso negado' }, { status: 403 });
         }
 
         let { patientId, newPlan, protocolName } = await request.json();

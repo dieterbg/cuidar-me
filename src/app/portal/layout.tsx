@@ -205,7 +205,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       return;
     }
 
-    console.log("createPatientDocument called for user:", user.id, user.email);
+    // PII redacted: email removido dos logs (apenas userId para rastreabilidade)
+    console.log("createPatientDocument called for user:", user.id);
 
     if (!activationName.trim()) {
       toast({ variant: "destructive", title: "Nome obrigatório", description: "Por favor, preencha seu nome completo." });

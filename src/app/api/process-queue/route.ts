@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { handlePatientReply } from '@/ai/handle-patient-reply';
+import { loggers } from '@/lib/logger';
 
 // This forces Next.js to not cache the response, ensuring it always processes the queue
 export const dynamic = 'force-dynamic';
@@ -49,13 +50,8 @@ export async function POST(req: NextRequest) {
 
         if (lockError) throw lockError;
 
-        console.log(`[DEBUG-PROCESS-QUEUE] ========== PROCESSING ==========`);
-        console.log(`[DEBUG-PROCESS-QUEUE] msg.id: ${msg.id}`);
-        console.log(`[DEBUG-PROCESS-QUEUE] msg.whatsapp_number: ${msg.whatsapp_number}`);
-        console.log(`[DEBUG-PROCESS-QUEUE] msg.message_text: "${msg.message_text}"`);
-        console.log(`[DEBUG-PROCESS-QUEUE] msg.profile_name: "${msg.profile_name}"`);
-        console.log(`[DEBUG-PROCESS-QUEUE] msg.message_sid: "${msg.message_sid}"`);
-        console.log(`[DEBUG-PROCESS-QUEUE] ====================================`);
+        // PII redacted: whatsapp_number, message_text e profile_name removidos dos logs
+        loggers.api.debug('processando mensagem da fila', { msgId: msg.id, messageSid: msg.message_sid });
 
         // 4. Delegate to the original AI handler
         const result = await handlePatientReply(

@@ -507,7 +507,8 @@ export async function testProtocolScheduling(patientId: string): Promise<{
         const gamificationSteps = getGamificationSteps(protocolId);
 
         let totalMessages = 0;
-        console.log(`[TEST] 👤 ${patientProtocol.patient.full_name} - Dia ${currentDay}/${patientProtocol.protocol.duration_days}`);
+        // PII redacted: full_name removido dos logs (usa patientId + dia)
+        loggers.protocol.debug('processando paciente', { patientId: patientProtocol.patient.id, currentDay, totalDays: patientProtocol.protocol.duration_days });
 
         for (let day = currentDay; day <= patientProtocol.protocol.duration_days; day++) {
             const gamMsgs = gamificationSteps.filter(m => m.day === day);

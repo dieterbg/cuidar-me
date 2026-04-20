@@ -39,7 +39,14 @@ async function handleCronRequest(request: NextRequest) {
         const tokenParam = request.nextUrl.searchParams.get('token');
         const cronSecret = process.env.CRON_SECRET;
 
-        const isAuthorized = !cronSecret ||
+        // HIGH-1 fix: fail-closed — se CRON_SECRET não estiver configurado,
+        // recusa em vez de abrir o endpoint para qualquer chamada.
+        if (!cronSecret) {
+            console.error('[UNIFIED CRON] CRON_SECRET não configurado — recusando request');
+            return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+        }
+
+        const isAuthorized =
             authHeader === `Bearer ${cronSecret}` ||
             tokenParam === cronSecret;
 
