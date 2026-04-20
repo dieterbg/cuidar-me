@@ -7,6 +7,13 @@
 
 ---
 
+> **✅ REMEDIAÇÃO APLICADA — 2026-04-20**
+> Todos os 5 CRITICAL foram corrigidos no commit `82681ca`.
+> Migration `20260420_security_hardening.sql` deve ser aplicada no Supabase.
+> **Ação pendente do operador:** rotacionar TWILIO_AUTH_TOKEN, FIREBASE_PRIVATE_KEY e CRON_SECRET nos painéis Twilio / Firebase / Vercel — as credenciais estiveram expostas no bundle. Ver seção "Blockers para próximo deploy".
+
+---
+
 ## Executive summary
 
 | Severidade | Quantidade |
