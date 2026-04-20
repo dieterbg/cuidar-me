@@ -732,6 +732,8 @@ A organização atual é **boa e segue os padrões do Next.js 14 App Router**:
 | [Vercel Deploy](./VERCEL_DEPLOY.md) | docs/ | Guia de deploy |
 | [Cost Estimation](./COST-ESTIMATION.md) | docs/ | Estimativa de custos operacionais |
 | [Logs, Auditoria e LGPD](./LOGS_AUDITORIA_LGPD.md) | docs/ | Sistema de logs, trilha de auditoria, compliance LGPD (Fases 1–3 em produção, 4–5 pendentes) |
+| [Backlog de Segurança](./BACKLOG-SEGURANCA.md) | docs/ | Itens de segurança pendentes: rate limit Redis, alertas críticos, PITR, recomendações gerais |
+| [Relatórios de Auditoria](./relatorios-auditoria-seguranca/) | docs/ | Relatórios periódicos da skill `security-audit` — auditoria inicial 2026-04-18 |
 
 ---
 
