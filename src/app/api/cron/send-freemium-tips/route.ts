@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendFreemiumTips } from '@/cron/send-freemium-tips';
+import { validateCronAuth } from '@/lib/cron-auth';
 
 /**
  * API Route para cron job de dicas diárias (BLOCOS FREEMIUM)
@@ -19,12 +20,8 @@ export async function POST(request: NextRequest) {
 
 async function handleCronRequest(request: NextRequest) {
     try {
-        const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET;
-
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const authError = validateCronAuth(request);
+        if (authError) return authError;
 
         const result = await sendFreemiumTips();
 

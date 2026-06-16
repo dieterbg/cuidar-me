@@ -25,7 +25,6 @@ export async function handlePatientReply(
 
     try {
         logger.info('Processing patient message', { 
-            whatsappNumber, 
             messageLength: messageText.length, 
             messageSid 
         });
@@ -41,13 +40,12 @@ export async function handlePatientReply(
         logger.debug('Patient lookup details', { 
             found: !!patientRaw, 
             patientId: patientRaw?.id, 
-            fullName: patientRaw?.full_name,
             plan: patientRaw?.plan
         });
 
         // Se não encontrou paciente, envia mensagem de cadastro e encerra
         if (!patient) {
-            logger.info('Unknown number, sending registration link', { whatsappNumber });
+            logger.info('Unknown number, sending registration link', { messageSid });
             const registrationLink = `https://clinicadornelles.com.br/cadastro?phone=${encodeURIComponent(whatsappNumber)}`;
             const messageText = `Olá! 👋 Notamos que você ainda não possui um cadastro completo conosco. Para utilizar nossa assistente virtual, por favor entre em contato com a Clínica Dornelles para se cadastrar: ${registrationLink}`;
             
@@ -729,12 +727,12 @@ Como está indo? 😊`;
                     text: reminderMessage
                 });
 
-                logger.info('Missed checkin reminder sent', { patientName: protocol.patient.full_name });
+                logger.info('Missed checkin reminder sent', { patientId: protocol.patient_id });
                 processedCount++;
 
             } catch (sendError) {
                 logger.error('Failed to send missed checkin reminder', sendError as Error, { 
-                    patientName: protocol.patient.full_name 
+                    patientId: protocol.patient_id 
                 });
                 // Continua para próximo paciente
             }

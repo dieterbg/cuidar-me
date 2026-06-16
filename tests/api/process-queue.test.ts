@@ -63,6 +63,15 @@ describe('API: Process Queue', () => {
         expect(res.status).toBe(401);
     });
 
+    it('should return 500 if CRON_SECRET is missing', async () => {
+        delete process.env.CRON_SECRET;
+        const req = new NextRequest('http://localhost/api/process-queue', {
+            method: 'POST'
+        });
+        const res = await POST(req);
+        expect(res.status).toBe(500);
+    });
+
     it('should process pending message and mark as completed', async () => {
         (handlePatientReply as any).mockResolvedValue({ success: true });
 

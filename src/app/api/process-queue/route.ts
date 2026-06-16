@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { handlePatientReply } from '@/ai/handle-patient-reply';
 import { loggers } from '@/lib/logger';
+import { validateCronAuth } from '@/lib/cron-auth';
 
 // This forces Next.js to not cache the response, ensuring it always processes the queue
 export const dynamic = 'force-dynamic';
@@ -10,13 +11,9 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-    // 1. Validate authorization
-    const authHeader = req.headers.get('authorization');
-    const expectedToken = process.env.CRON_SECRET || 'fallback-secret';
-
-    if (authHeader !== `Bearer ${expectedToken}`) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    // 1. Validate authorization. Fail closed if CRON_SECRET is missing.
+    const authError = validateCronAuth(req);
+    if (authError) return authError;
 
     const supabase = createServiceRoleClient();
 

@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, FormEvent, FC } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, Phone } from 'lucide-react';
 import { SocialAuthButton } from './SocialAuthButton';
 import { handleAuthError } from './auth-utils';
+
+const CONSENT_VERSION = '2026-06-16';
 
 const OAuthDivider = () => (
   <div className="relative my-4">
@@ -21,7 +25,6 @@ const OAuthDivider = () => (
   </div>
 );
 
-/** Máscara simples de telefone brasileiro (DDD + 9 dígitos) */
 const applyPhoneMask = (value: string): string => {
   let v = value.replace(/\D/g, '');
   if (v.length > 11) v = v.slice(0, 11);
@@ -39,19 +42,44 @@ export const RegisterForm: FC<RegisterFormProps> = ({ userType }) => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
+  const [aiConsent, setAiConsent] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const { toast } = useToast();
   const { signUp, signInWithGoogle } = useAuth();
 
+  const isPatient = userType === 'patient';
+  const patientConsentsAccepted = !isPatient || (privacyConsent && whatsappConsent && aiConsent);
+
+  const warnMissingConsent = () => {
+    toast({
+      variant: 'destructive',
+      title: 'Consentimentos obrigatorios',
+      description: 'Aceite os termos de privacidade, WhatsApp e assistente de IA para continuar.',
+    });
+  };
+
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (isPatient && !patientConsentsAccepted) {
+      warnMissingConsent();
+      return;
+    }
+
     setIsPending(true);
     try {
-      const roleToAssign = userType === 'patient' ? 'paciente' : 'pendente';
+      const roleToAssign = isPatient ? 'paciente' : 'pendente';
       await signUp(email.toLowerCase().trim(), password, {
         displayName: name.trim(),
         role: roleToAssign,
-        phone: whatsapp.replace(/\D/g, ''), // Armazena só dígitos
+        phone: whatsapp.replace(/\D/g, ''),
+        privacyConsentAccepted: privacyConsent,
+        whatsappConsentAccepted: whatsappConsent,
+        aiConsentAccepted: aiConsent,
+        consentVersion: CONSENT_VERSION,
+        consentSource: 'patient_signup_form',
       });
     } catch (error: any) {
       handleAuthError(error, toast);
@@ -60,11 +88,23 @@ export const RegisterForm: FC<RegisterFormProps> = ({ userType }) => {
     }
   };
 
-  const isPatient = userType === 'patient';
+  const handleGoogleSignIn = async () => {
+    if (isPatient && !patientConsentsAccepted) {
+      warnMissingConsent();
+      return;
+    }
+
+    await signInWithGoogle({
+      privacyConsentAccepted: privacyConsent,
+      whatsappConsentAccepted: whatsappConsent,
+      aiConsentAccepted: aiConsent,
+      consentVersion: CONSENT_VERSION,
+      consentSource: 'patient_google_signup_form',
+    });
+  };
 
   return (
     <form onSubmit={handleRegister} className="space-y-4 pt-4">
-      {/* Campos extras apenas para pacientes */}
       {isPatient && (
         <>
           <div className="space-y-2">
@@ -126,7 +166,7 @@ export const RegisterForm: FC<RegisterFormProps> = ({ userType }) => {
           <Input
             id="register-password"
             type="password"
-            placeholder="Mínimo de 6 caracteres"
+            placeholder="Minimo de 6 caracteres"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -137,22 +177,57 @@ export const RegisterForm: FC<RegisterFormProps> = ({ userType }) => {
       </div>
 
       {isPatient && (
-        <p className="text-xs text-muted-foreground text-center">
-          Sem app para baixar. O Cuidar.me funciona direto no seu WhatsApp.
-        </p>
+        <div className="space-y-3 rounded-lg border border-border/60 bg-white/40 p-3 text-xs text-muted-foreground">
+          <label className="flex items-start gap-2">
+            <Checkbox
+              checked={privacyConsent}
+              onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
+              disabled={isPending}
+              aria-label="Aceito a politica de privacidade"
+            />
+            <span>
+              Li e aceito a politica de privacidade e o uso dos meus dados para acompanhamento digital em saude.
+              {' '}
+              <Link href="/privacidade" className="font-medium text-primary underline-offset-4 hover:underline">
+                Ver politica
+              </Link>
+            </span>
+          </label>
+          <label className="flex items-start gap-2">
+            <Checkbox
+              checked={whatsappConsent}
+              onCheckedChange={(checked) => setWhatsappConsent(checked === true)}
+              disabled={isPending}
+              aria-label="Aceito receber mensagens por WhatsApp"
+            />
+            <span>Aceito receber check-ins, lembretes e orientacoes pelo WhatsApp informado.</span>
+          </label>
+          <label className="flex items-start gap-2">
+            <Checkbox
+              checked={aiConsent}
+              onCheckedChange={(checked) => setAiConsent(checked === true)}
+              disabled={isPending}
+              aria-label="Aceito apoio de assistente de IA"
+            />
+            <span>Entendo que a assistente de IA oferece apoio educativo e triagem, sem substituir consulta medica.</span>
+          </label>
+          <p className="text-center">
+            Sem app para baixar. O Cuidar.me funciona direto no seu WhatsApp.
+          </p>
+        </div>
       )}
 
       <Button
         type="submit"
         className="w-full h-12 text-base rounded-xl bg-brand hover:bg-brand-hover shadow-lg shadow-brand/20 transition-all hover:-translate-y-0.5"
-        disabled={isPending}
+        disabled={isPending || !patientConsentsAccepted}
       >
-        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Começar Minha Jornada'}
+        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Comecar Minha Jornada'}
       </Button>
 
       <OAuthDivider />
 
-      <SocialAuthButton provider="google" onClick={signInWithGoogle} disabled={isPending} />
+      <SocialAuthButton provider="google" onClick={handleGoogleSignIn} disabled={isPending || !patientConsentsAccepted} />
     </form>
   );
 };

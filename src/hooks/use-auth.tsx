@@ -17,6 +17,22 @@ export interface UserProfile {
   photo_url: string | null;
   role: UserRole;
   phone?: string;
+  privacy_consent_at?: string | null;
+  whatsapp_consent_at?: string | null;
+  ai_consent_at?: string | null;
+  consent_version?: string | null;
+  consent_source?: string | null;
+}
+
+export interface SignUpMetadata {
+  displayName?: string;
+  role: UserRole;
+  phone?: string;
+  privacyConsentAccepted?: boolean;
+  whatsappConsentAccepted?: boolean;
+  aiConsentAccepted?: boolean;
+  consentVersion?: string;
+  consentSource?: string;
 }
 
 export interface AuthContextType {
@@ -25,9 +41,9 @@ export interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata: { displayName: string; role: UserRole; phone?: string }) => Promise<void>;
+  signUp: (email: string, password: string, metadata: SignUpMetadata) => Promise<void>;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (metadata?: Partial<SignUpMetadata>) => Promise<void>;
   triggerPatientsUpdate: () => void;
   patientsUpdateCount: number;
 }
@@ -47,13 +63,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPatientsUpdateCount(count => count + 1);
   };
 
+  const persistPendingConsent = async (userId: string) => {
+    if (typeof window === 'undefined') return;
+
+    const raw = localStorage.getItem('pendingPatientConsent');
+    if (!raw) return;
+
+    try {
+      const consent = JSON.parse(raw) as {
+        privacy_consent_at?: string | null;
+        whatsapp_consent_at?: string | null;
+        ai_consent_at?: string | null;
+        consent_version?: string | null;
+        consent_source?: string | null;
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(consent)
+        .eq('id', userId);
+
+      if (error) {
+        loggers.auth.warn('Pending consent update failed', { error: error.message });
+        return;
+      }
+
+      localStorage.removeItem('pendingPatientConsent');
+    } catch {
+      loggers.auth.warn('Pending consent parse failed');
+      localStorage.removeItem('pendingPatientConsent');
+    }
+  };
+
   useEffect(() => {
     // Buscar sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        persistPendingConsent(session.user.id).finally(() => fetchProfile(session.user.id));
       } else {
         setLoading(false);
       }
@@ -66,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        persistPendingConsent(session.user.id).finally(() => fetchProfile(session.user.id));
       } else {
         setProfile(null);
         setLoading(false);
@@ -95,6 +143,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           photo_url: data.photo_url,
           role: data.role as UserRole,
           phone: data.phone,
+          privacy_consent_at: data.privacy_consent_at,
+          whatsapp_consent_at: data.whatsapp_consent_at,
+          ai_consent_at: data.ai_consent_at,
+          consent_version: data.consent_version,
+          consent_source: data.consent_source,
         });
       }
     } catch (error) {
@@ -127,8 +180,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (
     email: string,
     password: string,
-    metadata: { displayName?: string; role: UserRole; phone?: string }
+    metadata: SignUpMetadata
   ) => {
+    const consentAt = (
+      metadata.privacyConsentAccepted &&
+      metadata.whatsappConsentAccepted &&
+      metadata.aiConsentAccepted
+    ) ? new Date().toISOString() : null;
+
     // 1. Criar usuário no Supabase Auth (O Trigger do banco criará o perfil automaticamente)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
@@ -138,6 +197,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           displayName: metadata.displayName || '',
           role: metadata.role,
           phone: metadata.phone || '',
+          privacy_consent_at: metadata.privacyConsentAccepted ? consentAt : null,
+          whatsapp_consent_at: metadata.whatsappConsentAccepted ? consentAt : null,
+          ai_consent_at: metadata.aiConsentAccepted ? consentAt : null,
+          consent_version: metadata.consentVersion || null,
+          consent_source: metadata.consentSource || null,
         }
       }
     });
@@ -145,10 +209,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (authError) throw authError;
     if (!authData.user) throw new Error('Failed to create user');
 
+    if (consentAt) {
+      const { error: consentError } = await supabase
+        .from('profiles')
+        .update({
+          privacy_consent_at: metadata.privacyConsentAccepted ? consentAt : null,
+          whatsapp_consent_at: metadata.whatsappConsentAccepted ? consentAt : null,
+          ai_consent_at: metadata.aiConsentAccepted ? consentAt : null,
+          consent_version: metadata.consentVersion || null,
+          consent_source: metadata.consentSource || null,
+        })
+        .eq('id', authData.user.id);
+
+      if (consentError) {
+        loggers.auth.warn('Consent profile update failed', {
+          error: consentError.message,
+        });
+      }
+    }
+
     // 2. Consume Invite if present
     const pendingInvite = typeof window !== 'undefined' ? sessionStorage.getItem('pendingInvite') : null;
     if (pendingInvite && authData.user) {
-      loggers.auth.info('Found pending invite, consuming...', { inviteToken: pendingInvite, userId: authData.user.id });
+      loggers.auth.info('Found pending invite, consuming...');
       try {
         const response = await fetch('/api/onboarding/consume-invite', {
           method: 'POST',
@@ -158,13 +241,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         
         if (response.ok) {
-          loggers.auth.info('Invite consumed successfully', { userId: authData.user.id });
+          loggers.auth.info('Invite consumed successfully');
           sessionStorage.removeItem('pendingInvite');
         } else {
-          loggers.auth.error('Failed to consume invite', new Error('Response not OK'), { userId: authData.user.id });
+          loggers.auth.error('Failed to consume invite', new Error('Response not OK'));
         }
       } catch (err) {
-        loggers.auth.error('Error consuming invite', err, { userId: authData.user.id });
+        loggers.auth.error('Error consuming invite', err);
       }
     }
 
@@ -205,7 +288,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (metadata?: Partial<SignUpMetadata>) => {
+    if (
+      typeof window !== 'undefined' &&
+      metadata?.privacyConsentAccepted &&
+      metadata?.whatsappConsentAccepted &&
+      metadata?.aiConsentAccepted
+    ) {
+      const consentAt = new Date().toISOString();
+      localStorage.setItem('pendingPatientConsent', JSON.stringify({
+        privacy_consent_at: consentAt,
+        whatsapp_consent_at: consentAt,
+        ai_consent_at: consentAt,
+        consent_version: metadata.consentVersion || null,
+        consent_source: metadata.consentSource || 'patient_google_signup_form',
+      }));
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

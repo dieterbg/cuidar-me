@@ -4,6 +4,7 @@ import { validateTwilioWebhook } from '@/lib/twilio';
 import { handlePatientReply } from '@/ai/handle-patient-reply';
 import twilio from 'twilio';
 import { loggers } from '@/lib/logger';
+import { getCronSecretOrThrow } from '@/lib/cron-auth';
 
 // This is the endpoint that Twilio will call when a message is received.
 export async function POST(request: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     const isTwilioRequest = await validateTwilioWebhook(request, body);
 
     if (!isTwilioRequest) {
-      loggers.whatsapp.warn("Received a request that failed Twilio validation.", { from, messageSid });
+      loggers.whatsapp.warn("Received a request that failed Twilio validation.", { messageSid });
       return new NextResponse('Invalid Twilio Signature', { status: 401 });
     }
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceRoleClient();
 
     // 1. O(1) Decoupled Architecture: Insert into queue immediately
-    loggers.whatsapp.info(`Queueing message`, { from, messageSid, textLength: messageText?.length });
+    loggers.whatsapp.info(`Queueing message`, { messageSid, textLength: messageText?.length });
     const { error: queueError } = await supabase
       .from('message_queue')
       .insert({
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       if (queueError.code === '23505') {
         loggers.whatsapp.info(`Duplicate webhook detected. Ignoring.`, { messageSid });
       } else {
-        loggers.whatsapp.error("Failed to enqueue message", queueError, { from, messageSid });
+        loggers.whatsapp.error("Failed to enqueue message", queueError, { messageSid });
         // Important: still return 200 to Twilio to stop retries, even if queue fails (though this is rare).
       }
     } else {
@@ -58,7 +59,13 @@ export async function POST(request: NextRequest) {
       const hostValue = request.headers.get('host');
       const processUrl = `${protocolValue}://${hostValue}/api/process-queue`;
 
-      const expectedToken = process.env.CRON_SECRET || 'fallback-secret';
+      let expectedToken: string;
+      try {
+        expectedToken = getCronSecretOrThrow();
+      } catch (error) {
+        loggers.whatsapp.error("CRON_SECRET missing; background processor not triggered", error);
+        return new NextResponse('Webhook temporarily unavailable', { status: 503 });
+      }
 
       const { waitUntil } = require('@vercel/functions');
 

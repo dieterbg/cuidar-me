@@ -31,6 +31,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { getLevelName } from '@/lib/level-system';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -43,8 +44,37 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
   const [activationName, setActivationName] = useState('');
   const [activationPhone, setActivationPhone] = useState('');
+  const [activationPrivacyConsent, setActivationPrivacyConsent] = useState(false);
+  const [activationWhatsappConsent, setActivationWhatsappConsent] = useState(false);
+  const [activationAiConsent, setActivationAiConsent] = useState(false);
   const autoCreateAttempted = useRef(false); // evita dupla chamada no StrictMode
   const { toast } = useToast();
+
+  const hasStoredConsent = Boolean(
+    (profile?.privacy_consent_at || user?.user_metadata?.privacy_consent_at) &&
+    (profile?.whatsapp_consent_at || user?.user_metadata?.whatsapp_consent_at) &&
+    (profile?.ai_consent_at || user?.user_metadata?.ai_consent_at)
+  );
+
+  const activationConsentsAccepted = hasStoredConsent || (
+    activationPrivacyConsent &&
+    activationWhatsappConsent &&
+    activationAiConsent
+  );
+
+  const getConsentFields = () => {
+    const manualConsentAt = activationConsentsAccepted && !hasStoredConsent
+      ? new Date().toISOString()
+      : null;
+
+    return {
+      privacyConsentAt: profile?.privacy_consent_at || user?.user_metadata?.privacy_consent_at || manualConsentAt,
+      whatsappConsentAt: profile?.whatsapp_consent_at || user?.user_metadata?.whatsapp_consent_at || manualConsentAt,
+      aiConsentAt: profile?.ai_consent_at || user?.user_metadata?.ai_consent_at || manualConsentAt,
+      consentVersion: profile?.consent_version || user?.user_metadata?.consent_version || '2026-06-16',
+      consentSource: profile?.consent_source || user?.user_metadata?.consent_source || 'patient_activation_form',
+    };
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -67,7 +97,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     const name = profile.display_name?.trim();
     const rawPhone = profile.phone?.replace(/\D/g, '');
 
-    if (name && rawPhone) {
+    if (name && rawPhone && hasStoredConsent) {
       // Dados completos — criação silenciosa, sem form
       autoCreateAttempted.current = true;
       autoCreatePatient(name, rawPhone);
@@ -82,7 +112,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         setActivationPhone(v);
       }
     }
-  }, [profile, patient, isStatusLoading]);
+  }, [profile, patient, isStatusLoading, hasStoredConsent, activationName, activationPhone]);
 
   useEffect(() => {
     if (user) {
@@ -159,6 +189,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   // Criação automática quando perfil já tem nome + telefone do cadastro
   const autoCreatePatient = async (name: string, rawPhone: string) => {
     if (!user) return;
+    if (!activationConsentsAccepted) {
+      toast({
+        variant: "destructive",
+        title: "Consentimentos obrigatorios",
+        description: "Aceite os termos de privacidade, WhatsApp e assistente de IA para ativar a conta.",
+      });
+      return;
+    }
+
     setIsCreatingPatient(true);
     try {
       const invitePreApproved = user.user_metadata?.invite_pre_approved === true;
@@ -172,6 +211,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         fullName: name,
         whatsappNumber: rawPhone,
         status: patientStatus,
+        ...getConsentFields(),
       });
 
       if (!result.success) throw new Error(result.error || 'Erro ao criar registro');
@@ -205,8 +245,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       return;
     }
 
-    // PII redacted: email removido dos logs (apenas userId para rastreabilidade)
-    console.log("createPatientDocument called for user:", user.id);
+    console.log("createPatientDocument called");
 
     if (!activationName.trim()) {
       toast({ variant: "destructive", title: "Nome obrigatório", description: "Por favor, preencha seu nome completo." });
@@ -236,6 +275,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         fullName: activationName,
         whatsappNumber: activationPhone,
         status: patientStatus,
+        ...getConsentFields(),
       });
 
       if (!result.success) {
@@ -340,11 +380,39 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 }}
               />
             </div>
+            {!hasStoredConsent && (
+              <div className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-3 text-xs text-muted-foreground">
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={activationPrivacyConsent}
+                    onCheckedChange={(checked) => setActivationPrivacyConsent(checked === true)}
+                    aria-label="Aceito a politica de privacidade"
+                  />
+                  <span>Li e aceito a politica de privacidade e o uso dos meus dados para acompanhamento digital em saude.</span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={activationWhatsappConsent}
+                    onCheckedChange={(checked) => setActivationWhatsappConsent(checked === true)}
+                    aria-label="Aceito receber mensagens por WhatsApp"
+                  />
+                  <span>Aceito receber check-ins, lembretes e orientacoes pelo WhatsApp informado.</span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <Checkbox
+                    checked={activationAiConsent}
+                    onCheckedChange={(checked) => setActivationAiConsent(checked === true)}
+                    aria-label="Aceito apoio de assistente de IA"
+                  />
+                  <span>Entendo que a assistente de IA oferece apoio educativo e triagem, sem substituir consulta medica.</span>
+                </label>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex-col gap-3">
             <Button
               onClick={createPatientDocument}
-              disabled={isCreatingPatient}
+              disabled={isCreatingPatient || !activationConsentsAccepted}
               className="w-full rounded-full h-12 text-base shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
             >
               {isCreatingPatient ? 'Ativando...' : 'Salvar e Ativar Conta'}

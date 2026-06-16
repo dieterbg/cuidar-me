@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processMessageQueue } from '@/ai/handle-patient-reply';
 import { loggers } from '@/lib/logger';
+import { validateCronAuth } from '@/lib/cron-auth';
 
 const logger = loggers.cron;
 
@@ -23,18 +24,13 @@ export async function POST(request: NextRequest) {
 async function handleCronRequest(request: NextRequest) {
     try {
         // Verificar autenticação via secret
-        const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET;
-
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        const authError = validateCronAuth(request);
+        if (authError) {
             logger.error('Unauthorized cron request attempt', { 
                 ip: request.ip, 
                 ua: request.headers.get('user-agent') 
             });
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
+            return authError;
         }
 
         logger.info('Processing message queue via API');

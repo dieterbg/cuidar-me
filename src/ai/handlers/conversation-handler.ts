@@ -2,6 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { generateChatbotReply } from '@/ai/flows/generate-chatbot-reply';
 import { sendWhatsappMessage } from '@/lib/twilio';
+import { loggers } from '@/lib/logger';
 
 /**
  * Processa conversa com IA
@@ -34,7 +35,11 @@ export async function handleAIConversation(
 
         if (aiResponse.chatbotReply) {
             const replyWithPrefix = `Deia: ${aiResponse.chatbotReply}`;
-            console.log(`[handleAIConversation] AI Response: ${replyWithPrefix.substring(0, 30)}...`);
+            loggers.ai.debug('AI response generated', {
+                patientId: patient.id,
+                replyLength: replyWithPrefix.length,
+                decision: aiResponse.decision,
+            });
 
             const sent = await sendWhatsappMessage(whatsappNumber, replyWithPrefix);
 
@@ -45,13 +50,15 @@ export async function handleAIConversation(
                     text: replyWithPrefix,
                 });
             } else {
-                console.error(`[handleAIConversation] Failed to send WhatsApp to ${whatsappNumber}`);
+                loggers.ai.error('[handleAIConversation] Failed to send WhatsApp', undefined, {
+                    patientId: patient.id,
+                });
             }
         }
 
         return { success: true };
     } catch (err: any) {
-        console.error('[handleAIConversation] Error:', err);
+        loggers.ai.error('[handleAIConversation] Error', err, { patientId: patient.id });
         throw err;
     }
 }

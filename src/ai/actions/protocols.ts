@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { getCurrentUser } from '@/lib/supabase-server-utils';
 import type { Protocol, ProtocolStep } from '@/lib/types';
+import { requireStaff } from '@/lib/authz';
 
 export async function getProtocols(): Promise<Protocol[]> {
     const supabase = createClient();
@@ -51,6 +52,7 @@ export async function getProtocols(): Promise<Protocol[]> {
 
 export async function addProtocol(protocol: Omit<Protocol, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; protocolId?: string; error?: string }> {
     const supabase = createClient();
+    await requireStaff();
     const user = await getCurrentUser();
 
     // Extrair messages para salvar separadamente
@@ -102,6 +104,7 @@ export async function addProtocol(protocol: Omit<Protocol, 'id' | 'created_at' |
 
 export async function deleteProtocol(protocolId: string): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
+    await requireStaff();
 
     const { error } = await supabase
         .from('protocols')
@@ -121,6 +124,7 @@ export async function addProtocolStep(
     step: Omit<ProtocolStep, 'id' | 'created_at'>
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
+    await requireStaff();
 
     const { error } = await supabase
         .from('protocol_steps')
@@ -142,6 +146,7 @@ export async function removeProtocolStep(
     step: ProtocolStep
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
+    await requireStaff();
 
     // Delete by matching protocol_id, day, title, and message
     // since ProtocolStep doesn't have an id field
@@ -167,6 +172,7 @@ export async function assignProtocolToPatient(
     weightGoal: number | null
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
+    await requireStaff();
 
     // Validar se o paciente não é Freemium (Regra de Ouro)
     const { data: patient, error: patientError } = await supabase
@@ -219,6 +225,7 @@ export async function assignProtocolToPatient(
 
 export async function unassignProtocolFromPatient(patientId: string): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
+    await requireStaff();
 
     const { error } = await supabase
         .from('patient_protocols')

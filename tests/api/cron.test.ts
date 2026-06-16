@@ -15,6 +15,10 @@ vi.mock('@/cron/send-daily-checkins', () => ({
     sendDailyCheckins: vi.fn(),
 }));
 
+vi.mock('@/cron/send-freemium-tips', () => ({
+    sendFreemiumTips: vi.fn(),
+}));
+
 vi.mock('@/lib/error-handler', () => ({
     withRetry: vi.fn((fn) => fn()),
 }));
@@ -29,6 +33,7 @@ import { withRetry } from '@/lib/error-handler';
 import { GET as queueGET } from '@/app/api/cron/process-message-queue/route';
 import { GET as protocolGET } from '@/app/api/cron/schedule-protocol-messages/route';
 import { GET as dailyGET } from '@/app/api/cron/send-daily-checkins/route';
+import { GET as freemiumGET } from '@/app/api/cron/send-freemium-tips/route';
 
 // --- Mock do Environment ---
 const CRON_SECRET = 'test-secret';
@@ -37,6 +42,7 @@ process.env.CRON_SECRET = CRON_SECRET;
 describe('API Routes: Cron Jobs', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        process.env.CRON_SECRET = CRON_SECRET;
     });
 
     function createReq(auth?: string) {
@@ -46,6 +52,13 @@ describe('API Routes: Cron Jobs', () => {
     }
 
     describe('process-message-queue', () => {
+        it('CRN-05: falha fechado se CRON_SECRET não estiver configurado', async () => {
+            delete process.env.CRON_SECRET;
+            const req = createReq();
+            const res = await queueGET(req);
+            expect(res.status).toBe(500);
+        });
+
         it('CRN-04: rejeita se sem secret correto', async () => {
             const req = createReq('Bearer wrong');
             const res = await queueGET(req);
@@ -76,6 +89,13 @@ describe('API Routes: Cron Jobs', () => {
     });
 
     describe('schedule-protocol-messages', () => {
+        it('rejeita execução se CRON_SECRET estiver ausente', async () => {
+            delete process.env.CRON_SECRET;
+            const req = createReq();
+            const res = await protocolGET(req);
+            expect(res.status).toBe(500);
+        });
+
         it('CRN-02: agenda mensagens de protocolo', async () => {
             (scheduleProtocolMessages as any).mockResolvedValue({ success: true, messagesScheduled: 10, protocolsCompleted: 1 });
 
@@ -90,6 +110,13 @@ describe('API Routes: Cron Jobs', () => {
     });
 
     describe('send-daily-checkins', () => {
+        it('rejeita execução se CRON_SECRET estiver ausente', async () => {
+            delete process.env.CRON_SECRET;
+            const req = createReq();
+            const res = await dailyGET(req);
+            expect(res.status).toBe(500);
+        });
+
         it('CRN-03: envia check-ins diários', async () => {
             (sendDailyCheckins as any).mockResolvedValue({ processed: 3, skipped: 0 });
 
@@ -100,6 +127,15 @@ describe('API Routes: Cron Jobs', () => {
             expect(res.status).toBe(200);
             expect(data.processed).toBe(3);
             expect(sendDailyCheckins).toHaveBeenCalled();
+        });
+    });
+
+    describe('send-freemium-tips', () => {
+        it('rejeita execução se CRON_SECRET estiver ausente', async () => {
+            delete process.env.CRON_SECRET;
+            const req = createReq();
+            const res = await freemiumGET(req);
+            expect(res.status).toBe(500);
         });
     });
 });

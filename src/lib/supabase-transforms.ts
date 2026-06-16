@@ -71,6 +71,11 @@ export function transformPatientFromSupabase(supabasePatient: any): Patient {
         goal: supabasePatient.goal,
         waist: supabasePatient.waist_circumference_cm,
         communityUsername: supabasePatient.community_username,
+        privacyConsentAt: supabasePatient.privacy_consent_at,
+        whatsappConsentAt: supabasePatient.whatsapp_consent_at,
+        aiConsentAt: supabasePatient.ai_consent_at,
+        consentVersion: supabasePatient.consent_version,
+        consentSource: supabasePatient.consent_source,
 
         // Compatibilidade
         plan: supabasePatient.plan,

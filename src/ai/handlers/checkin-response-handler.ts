@@ -72,7 +72,10 @@ export async function processCheckinResponse(
             }
             
             // Para qualquer outra coisa (interação humana), deixa a IA responder
-            console.log(`[DEBUG-CHECKIN] ⏩ Message "${messageText}" not a strict letter, passing to AI.`);
+            loggers.ai.debug('checkin response not strict letter, passing to AI', {
+                patientId: patient.id,
+                messageLength: messageText.length,
+            });
             return { processed: false };
         }
 

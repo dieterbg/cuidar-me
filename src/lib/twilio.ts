@@ -1,11 +1,11 @@
 import twilio from 'twilio';
 import { NextRequest } from 'next/server';
-import { getTwilioCredentials } from '@/ai/actions/system';
+import { getTwilioCredentialsInternal } from '@/lib/twilio-credentials';
 
 
 // This function dynamically gets the Twilio client.
 async function getTwilioClient() {
-    const creds = await getTwilioCredentials();
+    const creds = await getTwilioCredentialsInternal();
 
     // Prioritize values from .env.local for easier local configuration
     const accountSid = process.env.TWILIO_ACCOUNT_SID || creds?.accountSid;
@@ -36,7 +36,7 @@ export async function sendWhatsappMessage(
     const normalizedTo = normalizeBrazilianNumber(to);
 
     // Get the configured Twilio phone number
-    const creds = await getTwilioCredentials();
+    const creds = await getTwilioCredentialsInternal();
     const fromNumber = process.env.TWILIO_PHONE_NUMBER || creds?.phoneNumber;
 
     if (!fromNumber) {
@@ -126,7 +126,7 @@ export async function validateTwilioWebhook(request: NextRequest, body: any) {
         ? `${process.env.NEXT_PUBLIC_APP_URL}${request.nextUrl.pathname}`
         : null;
 
-    const creds = await getTwilioCredentials();
+    const creds = await getTwilioCredentialsInternal();
     const authToken = process.env.TWILIO_AUTH_TOKEN || creds?.authToken;
 
     if (!authToken) return false;

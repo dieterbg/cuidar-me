@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { normalizeBrazilianNumber } from '@/lib/utils';
 import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
+import { getAuthenticatedUserAndRole, requireAdmin, requirePatientOwnerOrStaff, STAFF_ROLES } from '@/lib/authz';
 
 // Force recompile: 2025-11-25T00:45:00
 // ... (código anterior)
@@ -42,6 +43,12 @@ export async function getPatients(): Promise<Patient[]> {
 
 export async function getPatientProfileByUserId(userId: string): Promise<Patient | null> {
     const supabase = createClient();
+    const auth = await getAuthenticatedUserAndRole();
+    const callerIsStaff = !!auth.role && STAFF_ROLES.includes(auth.role as any);
+
+    if (!callerIsStaff && auth.userId !== userId) {
+        throw new Error('Acesso negado — você só pode ver seu próprio perfil');
+    }
 
     const { data, error } = await supabase
         .from('patients')
@@ -65,6 +72,7 @@ export async function getPatientDetails(patientId: string): Promise<{
     sentVideos: SentVideo[];
     messages: Message[];
 }> {
+    await requirePatientOwnerOrStaff(patientId);
     const supabase = createAdminClient();
 
     // Fetch patient
@@ -88,7 +96,7 @@ export async function getPatientDetails(patientId: string): Promise<{
         .order('date', { ascending: false });
 
     // PII redacted: dados de métricas não logados em plaintext
-    console.log(`[getPatientDetails] Patient: ${patientId}, Metrics found: ${metricsData?.length ?? 0}`);
+    console.log(`[getPatientDetails] Metrics found: ${metricsData?.length ?? 0}`);
 
     // Fetch sent videos
     const { data: sentVideosData } = await supabase
@@ -158,6 +166,7 @@ export async function getPatientDetails(patientId: string): Promise<{
 
 export async function updatePatient(patientId: string, updates: Partial<Patient>): Promise<{ success: boolean; error?: string }> {
     const supabase = createClient();
+    const access = await requirePatientOwnerOrStaff(patientId);
 
     // Mapear campos do frontend (camelCase) para o banco (snake_case)
     // CRITICAL: Create a NEW object to avoid sending any extra fields
@@ -174,9 +183,9 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
     if (updates.initialWeight !== undefined) dbUpdates.initial_weight_kg = updates.initialWeight;
     if (updates.healthConditions !== undefined) dbUpdates.health_conditions = updates.healthConditions;
     if (updates.allergies !== undefined) dbUpdates.allergies = updates.allergies;
-    if (updates.status !== undefined) dbUpdates.status = updates.status;
-    if (updates.riskLevel !== undefined) dbUpdates.risk_level = updates.riskLevel;
-    if (updates.weightGoal !== undefined) dbUpdates.weight_goal_kg = updates.weightGoal;
+    if (access.isStaff && updates.status !== undefined) dbUpdates.status = updates.status;
+    if (access.isStaff && updates.riskLevel !== undefined) dbUpdates.risk_level = updates.riskLevel;
+    if (access.isStaff && updates.weightGoal !== undefined) dbUpdates.weight_goal_kg = updates.weightGoal;
     if (updates.goal !== undefined) dbUpdates.goal = updates.goal || null;
     if (updates.waist !== undefined) dbUpdates.waist_circumference_cm = updates.waist;
     if (updates.medications !== undefined) dbUpdates.medications = updates.medications;
@@ -184,10 +193,10 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
     // Handle subscription if present (it's a JSON column usually, but let's check schema)
     // Assuming subscription is stored in columns or a jsonb column. 
     // If updates.plan is passed directly:
-    if ((updates as any).plan) dbUpdates.plan = (updates as any).plan;
+    if (access.isStaff && (updates as any).plan) dbUpdates.plan = (updates as any).plan;
 
     // PII redacted: payload de atualização não logado (pode conter nome, telefone)
-    console.log("Updating patient:", patientId, "Fields:", Object.keys(dbUpdates));
+    console.log("Updating patient fields:", Object.keys(dbUpdates));
 
     if (Object.keys(dbUpdates).length === 0) {
         return { success: true }; // Nada para atualizar
@@ -220,6 +229,7 @@ export async function updatePatient(patientId: string, updates: Partial<Patient>
 }
 
 export async function deletePatient(patientId: string): Promise<{ success: boolean; error?: string }> {
+    await requireAdmin();
     const supabase = createClient();
 
     const { error } = await supabase
@@ -237,8 +247,23 @@ export async function deletePatient(patientId: string): Promise<{ success: boole
 
 export async function createPatientRecord(patientData: Partial<Patient>): Promise<{ success: boolean; patientId?: string; error?: string }> {
     // PII redacted: patientData pode conter telefone, email, CPF
-    console.log('createPatientRecord called for userId:', patientData.userId);
+    console.log('createPatientRecord called');
     const supabase = createClient();
+    let auth;
+    try {
+        auth = await getAuthenticatedUserAndRole();
+    } catch (error: any) {
+        return { success: false, error: error.message || 'Não autenticado' };
+    }
+
+    const callerIsStaff = !!auth.role && STAFF_ROLES.includes(auth.role as any);
+    if (!callerIsStaff) {
+        if (patientData.userId && patientData.userId !== auth.userId) {
+            return { success: false, error: 'Acesso negado — não é permitido criar paciente para outro usuário.' };
+        }
+        patientData.userId = auth.userId;
+    }
+
     const adminSupabase = createAdminClient(); // Use admin for checks to avoid RLS issues
 
     // Verify if user exists in auth.users using admin client
@@ -246,10 +271,10 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
         try {
             const { data: user, error: userError } = await adminSupabase.auth.admin.getUserById(patientData.userId);
             if (userError || !user) {
-                console.error('User not found in auth.users:', patientData.userId, userError);
-                return { success: false, error: `User not found: ${patientData.userId}` };
+                console.error('User not found in auth.users:', userError?.message);
+                return { success: false, error: 'User not found' };
             }
-            console.log('User verified in auth.users:', user);
+            console.log('User verified in auth.users');
 
             // Check if profile exists
             const { data: profile, error: profileError } = await adminSupabase
@@ -259,7 +284,7 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
                 .single();
 
             if (profileError || !profile) {
-                console.error('Profile not found for user:', patientData.userId, profileError);
+                console.error('Profile not found for user:', profileError?.message);
                 // If profile is missing, try to create it manually (fallback)
                 console.log('Attempting to create missing profile...');
                 const { error: createProfileError } = await adminSupabase.from('profiles').insert({
@@ -267,7 +292,12 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
                     email: patientData.email,
                     role: 'paciente', // Default role
                     display_name: patientData.fullName || '',
-                    phone: patientData.whatsappNumber || ''
+                    phone: patientData.whatsappNumber || '',
+                    privacy_consent_at: patientData.privacyConsentAt || null,
+                    whatsapp_consent_at: patientData.whatsappConsentAt || null,
+                    ai_consent_at: patientData.aiConsentAt || null,
+                    consent_version: patientData.consentVersion || null,
+                    consent_source: patientData.consentSource || null,
                 });
 
                 if (createProfileError) {
@@ -276,7 +306,7 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
                 }
                 console.log('Fallback profile created successfully.');
             } else {
-                console.log('Profile verified:', profile);
+                console.log('Profile verified');
             }
 
         } catch (err) {
@@ -293,7 +323,7 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
             .single();
 
         if (existingPatient) {
-            console.log('Found existing patient with this WhatsApp:', existingPatient.id);
+            console.log('Found existing patient with this WhatsApp');
 
             // Case A: Already linked to THIS user
             if (existingPatient.user_id === patientData.userId) {
@@ -303,20 +333,25 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
 
             // Case B: Linked to ANOTHER user
             if (existingPatient.user_id && existingPatient.user_id !== patientData.userId) {
-                console.warn('Patient linked to another user:', existingPatient.user_id);
+                console.warn('Patient linked to another user');
                 return { success: false, error: 'Este número de WhatsApp já está associado a outra conta.' };
             }
 
             // Case C: Unlinked (Ghost Patient) -> Claim it!
             if (!existingPatient.user_id) {
-                console.log('Patient is unlinked. Claiming for user:', patientData.userId);
+                console.log('Patient is unlinked. Claiming for authenticated user');
 
                 const updateData: any = {
                     user_id: patientData.userId,
                     email: patientData.email,
                     status: 'pending', // Reset to pending to force onboarding review if needed? Or keep as is? Let's set to pending or active based on input.
                     // Update name if provided
-                    full_name: patientData.fullName || existingPatient.full_name
+                    full_name: patientData.fullName || existingPatient.full_name,
+                    privacy_consent_at: patientData.privacyConsentAt || existingPatient.privacy_consent_at,
+                    whatsapp_consent_at: patientData.whatsappConsentAt || existingPatient.whatsapp_consent_at,
+                    ai_consent_at: patientData.aiConsentAt || existingPatient.ai_consent_at,
+                    consent_version: patientData.consentVersion || existingPatient.consent_version,
+                    consent_source: patientData.consentSource || existingPatient.consent_source,
                 };
 
                 const { error: updateError } = await adminSupabase
@@ -350,6 +385,11 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
     if (patientData.goal) dbInsert.goal = patientData.goal;
     if (patientData.waist) dbInsert.waist_circumference_cm = patientData.waist;
     if (patientData.medications) dbInsert.medications = patientData.medications;
+    if (patientData.privacyConsentAt) dbInsert.privacy_consent_at = patientData.privacyConsentAt;
+    if (patientData.whatsappConsentAt) dbInsert.whatsapp_consent_at = patientData.whatsappConsentAt;
+    if (patientData.aiConsentAt) dbInsert.ai_consent_at = patientData.aiConsentAt;
+    if (patientData.consentVersion) dbInsert.consent_version = patientData.consentVersion;
+    if (patientData.consentSource) dbInsert.consent_source = patientData.consentSource;
 
     // Default gamification if needed
     if (patientData.gamification) dbInsert.gamification = patientData.gamification;

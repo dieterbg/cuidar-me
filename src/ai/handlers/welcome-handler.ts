@@ -3,6 +3,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { sendWhatsappMessage } from '@/lib/twilio';
 import type { Patient } from '@/lib/types';
+import { loggers } from '@/lib/logger';
 
 /**
  * Envia mensagem de boas-vindas proativa baseada no plano do paciente
@@ -12,7 +13,10 @@ export async function sendWelcomeMessage(
     supabase: SupabaseClient
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        console.log(`[WelcomeHandler] Sending welcome to ${patient.fullName} (${patient.plan})`);
+        loggers.ai.info('[WelcomeHandler] Sending welcome message', {
+            patientId: patient.id,
+            plan: patient.plan,
+        });
 
         let message = '';
 
@@ -78,7 +82,9 @@ Assim que você escolher, começaremos nosso acompanhamento diário! 😉`;
         return { success: true };
 
     } catch (error: any) {
-        console.error('[WelcomeHandler] Error sending welcome message:', error);
+        loggers.ai.error('[WelcomeHandler] Error sending welcome message', error, {
+            patientId: patient.id,
+        });
         return { success: false, error: error.message };
     }
 }

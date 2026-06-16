@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scheduleProtocolMessages } from '@/cron/send-protocol-messages';
 import { withRetry } from '@/lib/error-handler';
+import { validateCronAuth } from '@/lib/cron-auth';
 
 /**
  * API Route para cron job de agendamento de mensagens de protocolo
@@ -25,15 +26,10 @@ export async function POST(request: NextRequest) {
 async function handleCronRequest(request: NextRequest) {
     try {
         // Verificar autenticação via secret
-        const authHeader = request.headers.get('authorization');
-        const cronSecret = process.env.CRON_SECRET;
-
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+        const authError = validateCronAuth(request);
+        if (authError) {
             console.error('[CRON API] Unauthorized request');
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
+            return authError;
         }
 
         const { searchParams } = new URL(request.url);

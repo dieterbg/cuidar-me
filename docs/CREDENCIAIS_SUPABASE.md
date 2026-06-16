@@ -7,8 +7,8 @@ Copie o conteúdo abaixo e cole no arquivo `.env` na raiz do projeto:
 # SUPABASE
 # =====================================================
 NEXT_PUBLIC_SUPABASE_URL=https://asvbmcuilrwjgfjquxpq.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzdmJtY3VpbHJ3amdmanF1eHBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5OTg5MTIsImV4cCI6MjA3OTU3NDkxMn0.tUbtBwjvBTTY-XyFL3BFhac-VkI-Fm6foqlhqWuUrJE
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFzdmJtY3VpbHJ3amdmanF1eHBxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mzk5ODkxMiwiZXhwIjoyMDc5NTc0OTEyfQ.hA4mlqaP-Zu9WfgAWqcw2fOQQVoeiqDsGbL1lbwb4Tw
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key-publica-do-projeto>
+SUPABASE_SERVICE_ROLE_KEY=<rotacione-e-configure-somente-no-ambiente>
 
 # =====================================================
 # TWILIO (WhatsApp)

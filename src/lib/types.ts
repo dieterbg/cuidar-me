@@ -163,6 +163,11 @@ export interface Patient {
     waist?: number | null;
     communityUsername?: string;
     plan?: PatientPlan; // Legacy for patient edit form
+    privacyConsentAt?: string | null;
+    whatsappConsentAt?: string | null;
+    aiConsentAt?: string | null;
+    consentVersion?: string | null;
+    consentSource?: string | null;
 }
 
 
