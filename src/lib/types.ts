@@ -114,6 +114,16 @@ export interface GamificationState {
     level: string;
     badges: string[];
     weeklyProgress: WeeklyProgress;
+    weeklyProtocolScores?: Record<string, {
+        protocolId: string;
+        week: number;
+        score: number;
+        band: string;
+        label: string;
+        adherence: 'A' | 'B' | 'C';
+        weightKg: number;
+        answeredAt: string;
+    }>;
     streak?: StreakData;          // Sistema de sequências
 }
 
@@ -224,7 +234,10 @@ export interface ScheduledMessage {
     errorInfo: string | null;
     metadata?: {
         isGamification?: boolean;
+        weeklyMessageRole?: 'weekly_checkin' | 'education' | 'weekly_summary';
+        protocolId?: string;
         protocolDay?: number;
+        protocolWeek?: number;
         messageTitle?: string;
         checkinTitle?: string;
         perspective?: string;

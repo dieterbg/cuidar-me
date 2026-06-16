@@ -5,6 +5,7 @@ import { generateChatbotReply } from '@/ai/flows/generate-chatbot-reply';
 import { sendWhatsappMessage } from '@/lib/twilio';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { loggers } from '@/lib/logger';
+import { buildWeeklySummaryMessage } from '@/lib/data';
 
 const logger = loggers.ai;
 
@@ -247,8 +248,11 @@ export async function handlePatientReply(
         const pendingType = (patientRaw as any).last_checkin_type as string | null;
         const pendingAt = (patientRaw as any).last_checkin_at ? new Date((patientRaw as any).last_checkin_at) : null;
         const ageMs = pendingAt ? Date.now() - pendingAt.getTime() : null;
+        const checkinWindowMs = pendingType?.includes('Check-in Semanal')
+            ? 72 * 60 * 60 * 1000
+            : 2 * 60 * 60 * 1000;
         const isPendingCheckin = pendingType && pendingAt &&
-            (ageMs! < 2 * 60 * 60 * 1000); // janela de 2 horas
+            (ageMs! < checkinWindowMs);
 
         logger.debug('Check-in gate details', { 
             patientId: patient.id, 
@@ -434,10 +438,10 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
     const { data: patientRows } = await supabase
         .from('patients')
         .select(`
-            id, full_name,
+            id, full_name, gamification, total_points, level,
             patient_protocols!inner (
                 id, current_day, is_active,
-                protocols:protocol_id ( name, duration_days )
+                protocols:protocol_id ( id, name, duration_days )
             )
         `)
         .in('id', uniquePatientIds)
@@ -503,6 +507,24 @@ async function _processSingleMessage(
     // Resolver template e variáveis
     let contentSid: string | undefined;
     let contentVariables: Record<string, string> | undefined;
+    let messageContent = msg.message_content;
+
+    if (msg.metadata?.weeklyMessageRole === 'weekly_summary') {
+        const activeProto = patientRow?.patient_protocols?.[0];
+        const protocolId = msg.metadata?.protocolId || activeProto?.protocols?.id || '';
+        const week = Number(msg.metadata?.protocolWeek || 1);
+        const weeklyKey = `${protocolId}:week:${week}`;
+        const weeklyScore = patientRow?.gamification?.weeklyProtocolScores?.[weeklyKey];
+
+        messageContent = buildWeeklySummaryMessage({
+            protocolId,
+            week,
+            score: weeklyScore?.score ?? null,
+            adherence: weeklyScore?.adherence ?? null,
+            weightKg: weeklyScore?.weightKg ?? null,
+            totalPoints: patientRow?.gamification?.totalPoints ?? patientRow?.total_points ?? null,
+        });
+    }
 
     if (msg.source === 'protocol' || msg.metadata?.isGamification) {
         const metadata = msg.metadata || {};
@@ -520,18 +542,18 @@ async function _processSingleMessage(
                 contentSid = sidPesagem;
                 contentVariables = usingNewTemplates
                     ? { "1": String(protocolDay), "2": protocolName, "3": patientName }
-                    : { "1": patientName, "2": msg.message_content };
+                    : { "1": patientName, "2": messageContent };
             } else {
                 contentSid = sidCheckin;
                 contentVariables = usingNewTemplates
-                    ? { "1": String(protocolDay), "2": protocolName, "3": patientName, "4": msg.message_content }
-                    : { "1": patientName, "2": msg.message_content };
+                    ? { "1": String(protocolDay), "2": protocolName, "3": patientName, "4": messageContent }
+                    : { "1": patientName, "2": messageContent };
             }
         } else {
             contentSid = sidRegistro;
             contentVariables = usingNewTemplates
-                ? { "1": String(protocolDay), "2": String(durationDays), "3": protocolName, "4": patientName, "5": msg.message_content }
-                : { "1": patientName, "2": msg.message_content };
+                ? { "1": String(protocolDay), "2": String(durationDays), "3": protocolName, "4": patientName, "5": messageContent }
+                : { "1": patientName, "2": messageContent };
         }
     }
 
@@ -549,19 +571,21 @@ async function _processSingleMessage(
     }
 
     // ── Enviar via Twilio ──
-    const twilioSid = await sendWhatsappMessage(msg.patient_whatsapp_number, msg.message_content, {
+    const twilioSid = await sendWhatsappMessage(msg.patient_whatsapp_number, messageContent, {
         contentSid, contentVariables
     });
 
     if (twilioSid) {
         const checkinTitle = msg.metadata?.checkinTitle || msg.metadata?.title || msg.metadata?.messageTitle || 'Mensagem do Sistema';
+        const shouldSetCheckinContext = msg.metadata?.weeklyMessageRole === 'weekly_checkin'
+            || (!!msg.metadata?.isGamification && !msg.metadata?.weeklyMessageRole);
 
         // Três writes em paralelo (context + mark sent + log)
         await Promise.all([
-            supabase.from('patients').update({
+            shouldSetCheckinContext ? supabase.from('patients').update({
                 last_checkin_type: checkinTitle,
                 last_checkin_at: new Date().toISOString()
-            }).eq('id', msg.patient_id),
+            }).eq('id', msg.patient_id) : Promise.resolve(null),
 
             supabase.from('scheduled_messages').update({
                 status: 'sent',
@@ -572,7 +596,7 @@ async function _processSingleMessage(
             supabase.from('messages').insert({
                 patient_id: msg.patient_id,
                 sender: 'system',
-                text: msg.message_content,
+                text: messageContent,
                 metadata: msg.metadata || null,
             }),
         ]);
@@ -604,10 +628,12 @@ async function _processSingleMessage(
                             const { data: patRow } = await supabase.from('patients').select('total_points, badges').eq('id', msg.patient_id).single();
                             if (patRow) {
                                 const badges = patRow.badges || [];
-                                const hasBadge = badges.some((b: any) => b.id === 'protocol_complete');
+                                const hasBadge = badges.some((b: any) =>
+                                    typeof b === 'string' ? b === 'protocol_complete' : b?.id === 'protocol_complete'
+                                );
                                 await supabase.from('patients').update({
                                     total_points: (patRow.total_points || 0) + 300,
-                                    badges: hasBadge ? badges : [...badges, { id: 'protocol_complete', earnedAt: new Date().toISOString() }]
+                                    badges: hasBadge ? badges : [...badges, 'protocol_complete']
                                 }).eq('id', msg.patient_id);
                             }
                         } catch {}

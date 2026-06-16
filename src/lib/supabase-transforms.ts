@@ -9,6 +9,18 @@ import type { Patient } from './types';
  * Transforma um paciente do formato Supabase para o formato do frontend
  */
 export function transformPatientFromSupabase(supabasePatient: any): Patient {
+    const gamification = supabasePatient.gamification || {};
+    const defaultWeeklyProgress = {
+        weekStartDate: new Date(),
+        perspectives: {
+            alimentacao: { current: 0, goal: 5, isComplete: false },
+            movimento: { current: 0, goal: 5, isComplete: false },
+            hidratacao: { current: 0, goal: 5, isComplete: false },
+            disciplina: { current: 0, goal: 5, isComplete: false },
+            bemEstar: { current: 0, goal: 5, isComplete: false },
+        },
+    };
+
     return {
         id: supabasePatient.id,
         userId: supabasePatient.user_id,    // Necessário para gamificação (awardGamificationPoints)
@@ -34,19 +46,11 @@ export function transformPatientFromSupabase(supabasePatient: any): Patient {
 
         // Gamificação
         gamification: {
-            totalPoints: supabasePatient.total_points || 0,
-            level: supabasePatient.level || 'Iniciante',
-            badges: supabasePatient.badges || [],
-            weeklyProgress: {
-                weekStartDate: new Date(),
-                perspectives: {
-                    alimentacao: { current: 0, goal: 5, isComplete: false },
-                    movimento: { current: 0, goal: 5, isComplete: false },
-                    hidratacao: { current: 0, goal: 5, isComplete: false },
-                    disciplina: { current: 0, goal: 5, isComplete: false },
-                    bemEstar: { current: 0, goal: 5, isComplete: false },
-                },
-            },
+            ...gamification,
+            totalPoints: gamification.totalPoints ?? supabasePatient.total_points ?? 0,
+            level: gamification.level ?? supabasePatient.level ?? 'Iniciante',
+            badges: gamification.badges ?? supabasePatient.badges ?? [],
+            weeklyProgress: gamification.weeklyProgress ?? defaultWeeklyProgress,
         },
 
         // Attention Request (será buscado separadamente se necessário)

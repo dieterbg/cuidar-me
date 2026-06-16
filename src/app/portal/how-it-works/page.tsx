@@ -68,12 +68,12 @@ const perspectives = [
 ];
 
 const storeHighlights = [
-    { name: 'Protecao de Streak', cost: '100', icon: '🛡️', tier: 'Comum' },
-    { name: 'E-book de Receitas', cost: '1.500', icon: '📚', tier: 'Bronze' },
-    { name: 'Cupom 15% Parceiros', cost: '4.000', icon: '🎟️', tier: 'Prata' },
-    { name: 'Camiseta Exclusiva', cost: '8.000', icon: '👕', tier: 'Ouro' },
-    { name: 'Consultoria VIP', cost: '8.000', icon: '👩‍⚕️', tier: 'Ouro' },
-    { name: '50% Desconto Anual', cost: '15.000', icon: '💎', tier: 'Diamante' },
+    { name: 'Protecao de Semana', cost: '200', icon: '🛡️', tier: 'Comum' },
+    { name: 'E-book de Receitas', cost: '900', icon: '📚', tier: 'Bronze' },
+    { name: 'Cupom 15% Parceiros', cost: '3.500', icon: '🎟️', tier: 'Prata' },
+    { name: 'Camiseta Exclusiva', cost: '6.000', icon: '👕', tier: 'Ouro' },
+    { name: 'Consultoria VIP', cost: '6.500', icon: '👩‍⚕️', tier: 'Ouro' },
+    { name: '50% Desconto Anual', cost: '12.000', icon: '💎', tier: 'Diamante' },
 ];
 
 export default function HowItWorksPage() {
@@ -135,8 +135,8 @@ export default function HowItWorksPage() {
                                 </div>
                                 <h3 className="text-xl font-black">2. Acumule Pontos</h3>
                                 <p className="text-sm text-muted-foreground leading-relaxed">
-                                    Cada acao gera Health Coins. Metas semanais, streaks e badges
-                                    dao bonus extras. Quanto mais consistente, mais voce ganha.
+                                    Check-ins semanais, Estrela do Cuidado e badges geram Health Coins.
+                                    Quanto mais consistente e honesto for o registro, mais clara fica sua evolucao.
                                 </p>
                             </CardContent>
                         </Card>
@@ -160,7 +160,7 @@ export default function HowItWorksPage() {
                 <section className="space-y-8">
                     <div className="text-center">
                         <h2 className="text-2xl font-black text-foreground">5 Pilares do Cuidado</h2>
-                        <p className="text-muted-foreground mt-2">Complete 3 acoes por semana em cada pilar e ganhe bonus de 50 pts.</p>
+                        <p className="text-muted-foreground mt-2">A Estrela mostra o equilibrio semanal entre os pilares, com foco diferente por protocolo.</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -240,7 +240,7 @@ export default function HowItWorksPage() {
                                 <div className="flex items-start gap-2 pt-3 p-3 rounded-lg bg-background/50 border border-border/50">
                                     <Shield className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                                     <p className="text-xs text-muted-foreground">
-                                        <strong className="text-foreground">Protecao de Streak:</strong> Compre na loja por apenas 100 pts e proteja seu streak se precisar faltar um dia. Voce pode ter ate 2 protecoes ativas.
+                                        <strong className="text-foreground">Protecao de Semana:</strong> Compre na loja por 200 pts para proteger uma semana dificil sem perder o ritmo da jornada.
                                     </p>
                                 </div>
                             </CardContent>

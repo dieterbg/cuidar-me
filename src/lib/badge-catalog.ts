@@ -168,6 +168,134 @@ export const BADGE_CATALOG: BadgeDefinition[] = [
         criteria: { type: 'special', requirement: 'protocol_completed' }
     },
     {
+        id: 'weekly_first_step',
+        name: 'Primeira Semana Registrada',
+        description: 'Complete seu primeiro check-in semanal consolidado',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'weekly_first_checkin' }
+    },
+    {
+        id: 'weekly_consistency_4',
+        name: '4 Semanas na Rota',
+        description: 'Registre quatro semanas de protocolo',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'weekly_4_checkins' }
+    },
+    {
+        id: 'weekly_consistency_8',
+        name: '8 Semanas de Constancia',
+        description: 'Registre oito semanas de protocolo',
+        icon: 'â­â­',
+        rarity: 'raro',
+        criteria: { type: 'special', requirement: 'weekly_8_checkins' }
+    },
+    {
+        id: 'weekly_consistency_12',
+        name: 'Ciclo Quase Completo',
+        description: 'Registre doze semanas de protocolo',
+        icon: 'â­â­â­',
+        rarity: 'epico',
+        criteria: { type: 'special', requirement: 'weekly_12_checkins' }
+    },
+    {
+        id: 'fundamentos_first_checkin',
+        name: 'Base Iniciada',
+        description: 'Complete seu primeiro check-in do protocolo Fundamentos',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'fundamentos_first_checkin' }
+    },
+    {
+        id: 'fundamentos_consistency_4',
+        name: 'Base 4 Semanas',
+        description: 'Registre quatro semanas no protocolo Fundamentos',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'fundamentos_4_checkins' }
+    },
+    {
+        id: 'fundamentos_consistency_8',
+        name: 'Base Sustentada',
+        description: 'Registre oito semanas no protocolo Fundamentos',
+        icon: 'â­â­',
+        rarity: 'raro',
+        criteria: { type: 'special', requirement: 'fundamentos_8_checkins' }
+    },
+    {
+        id: 'fundamentos_consistency_12',
+        name: 'Base Consolidada',
+        description: 'Registre doze semanas no protocolo Fundamentos',
+        icon: 'â­â­â­',
+        rarity: 'epico',
+        criteria: { type: 'special', requirement: 'fundamentos_12_checkins' }
+    },
+    {
+        id: 'evolucao_first_checkin',
+        name: 'Evolucao Iniciada',
+        description: 'Complete seu primeiro check-in do protocolo Evolucao',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'evolucao_first_checkin' }
+    },
+    {
+        id: 'evolucao_consistency_4',
+        name: 'Evolucao 4 Semanas',
+        description: 'Registre quatro semanas no protocolo Evolucao',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'evolucao_4_checkins' }
+    },
+    {
+        id: 'evolucao_consistency_8',
+        name: 'Evolucao Sustentada',
+        description: 'Registre oito semanas no protocolo Evolucao',
+        icon: 'â­â­',
+        rarity: 'raro',
+        criteria: { type: 'special', requirement: 'evolucao_8_checkins' }
+    },
+    {
+        id: 'evolucao_consistency_12',
+        name: 'Evolucao de Ciclo',
+        description: 'Registre doze semanas no protocolo Evolucao',
+        icon: 'â­â­â­',
+        rarity: 'epico',
+        criteria: { type: 'special', requirement: 'evolucao_12_checkins' }
+    },
+    {
+        id: 'performance_first_checkin',
+        name: 'Performance Iniciada',
+        description: 'Complete seu primeiro check-in do protocolo Performance',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'performance_first_checkin' }
+    },
+    {
+        id: 'performance_consistency_4',
+        name: 'Performance 4 Semanas',
+        description: 'Registre quatro semanas no protocolo Performance',
+        icon: 'â­',
+        rarity: 'comum',
+        criteria: { type: 'special', requirement: 'performance_4_checkins' }
+    },
+    {
+        id: 'performance_consistency_8',
+        name: 'Performance Sustentada',
+        description: 'Registre oito semanas no protocolo Performance',
+        icon: 'â­â­',
+        rarity: 'raro',
+        criteria: { type: 'special', requirement: 'performance_8_checkins' }
+    },
+    {
+        id: 'performance_consistency_12',
+        name: 'Performance de Ciclo',
+        description: 'Registre doze semanas no protocolo Performance',
+        icon: 'â­â­â­',
+        rarity: 'epico',
+        criteria: { type: 'special', requirement: 'performance_12_checkins' }
+    },
+    {
         id: 'perfectionist',
         name: 'Perfeccionista',
         description: 'Complete todas as metas semanais 4 semanas seguidas',

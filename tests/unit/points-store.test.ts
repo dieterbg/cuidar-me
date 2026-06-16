@@ -15,7 +15,7 @@ describe('Points Store', () => {
         expect(item).toBeDefined();
         expect(item!.id).toBe('streak_freeze');
         expect(item!.name).toContain('Proteção');
-        expect(item!.cost).toBe(100);
+        expect(item!.cost).toBe(200);
         expect(item!.category).toBe('streak');
         expect(item!.type).toBe('instant');
     });

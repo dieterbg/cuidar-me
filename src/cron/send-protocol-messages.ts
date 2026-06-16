@@ -10,7 +10,8 @@
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import {
     protocols,
-    getGamificationSteps
+    getGamificationSteps,
+    getWeeklyProtocolMessages
 } from '@/lib/data';
 import { toZonedTime } from 'date-fns-tz';
 import { loggers } from '@/lib/logger';
@@ -33,12 +34,22 @@ function brtTime(baseDate: Date, hour: number, minute: number = 0): Date {
  * Determina o horário de envio baseado no tipo de mensagem.
  * Para bulk scheduling, usa a data do dia do protocolo (não "hoje").
  */
-function getScheduledTime(messageTitle: string, calendarDate: Date, isFastTrack: boolean = false, offsetMinutes: number = 0): Date {
+function getScheduledTime(
+    messageTitle: string,
+    calendarDate: Date,
+    isFastTrack: boolean = false,
+    offsetMinutes: number = 0,
+    weeklyRole?: string
+): Date {
     if (isFastTrack) {
         const now = new Date();
         now.setMinutes(now.getMinutes() + offsetMinutes);
         return now;
     }
+
+    if (weeklyRole === 'weekly_checkin') return brtTime(calendarDate, 7);
+    if (weeklyRole === 'education') return brtTime(calendarDate, 10);
+    if (weeklyRole === 'weekly_summary') return brtTime(calendarDate, 18);
 
     // Pesagem: 7h BRT
     if (messageTitle.includes('Peso')) return brtTime(calendarDate, 7);
@@ -82,6 +93,68 @@ async function bulkScheduleAllDays(
     const currentDay = patientProtocol.current_day;
     const patientId = patientProtocol.patient.id;
     const whatsappNumber = patientProtocol.patient.whatsapp_number;
+    const useWeeklyProtocolCadence = process.env.PROTOCOL_CADENCE !== 'legacy_daily';
+
+    if (useWeeklyProtocolCadence) {
+        const weeklyMessages = getWeeklyProtocolMessages(protocolId, durationDays)
+            .filter(message => message.day >= currentDay);
+
+        const messagesToInsert = weeklyMessages.map((message) => {
+            const calendarDate = new Date(startDateNoon);
+            calendarDate.setDate(calendarDate.getDate() + (message.day - 1));
+            const sendTime = getScheduledTime(message.title, calendarDate, false, 0, message.role);
+            const isGamification = message.role !== 'education';
+
+            return {
+                patient_id: patientId,
+                patient_whatsapp_number: whatsappNumber,
+                message_content: message.message,
+                send_at: sendTime.toISOString(),
+                source: 'protocol',
+                status: 'pending',
+                metadata: {
+                    isGamification,
+                    protocolId,
+                    protocolDay: message.day,
+                    protocolWeek: message.week,
+                    weeklyMessageRole: message.role,
+                    perspective: message.perspective || null,
+                    checkinTitle: message.role === 'weekly_checkin' ? message.title : null,
+                    messageTitle: message.title,
+                }
+            };
+        });
+
+        if (messagesToInsert.length === 0) {
+            logger.warn('Nenhuma mensagem semanal para agendar', {
+                patientId,
+                days: `${currentDay}-${durationDays}`
+            });
+            return 0;
+        }
+
+        let totalInserted = 0;
+        for (let i = 0; i < messagesToInsert.length; i += 100) {
+            const batch = messagesToInsert.slice(i, i + 100);
+            const { error } = await supabase.from('scheduled_messages').insert(batch);
+            if (error) {
+                logger.error('Batch insert semanal falhou', error, { offset: i, patientId });
+                break;
+            }
+            totalInserted += batch.length;
+        }
+
+        const daysWithMessages = new Set(messagesToInsert.map(m => m.metadata.protocolDay));
+        logger.info('BULK semanal: mensagens agendadas', {
+            totalInserted,
+            daysCount: daysWithMessages.size,
+            firstDate: messagesToInsert[0]?.send_at,
+            lastDate: messagesToInsert[messagesToInsert.length - 1]?.send_at,
+            patientId
+        });
+
+        return totalInserted;
+    }
 
     // Usar gamificação correta por protocolo (Fundamentos=acolhedor, Performance=técnico, etc.)
     const gamificationSteps = getGamificationSteps(protocolId);
@@ -277,13 +350,12 @@ export async function scheduleProtocolMessages(_isPulse: boolean = false): Promi
 
                     if (patientRow) {
                         const currentBadges: any[] = patientRow.badges || [];
-                        const hasBadge = currentBadges.some((b: any) => b.id === 'protocol_complete');
+                        const hasBadge = currentBadges.some((b: any) =>
+                            typeof b === 'string' ? b === 'protocol_complete' : b?.id === 'protocol_complete'
+                        );
                         await supabase.from('patients').update({
                             total_points: (patientRow.total_points || 0) + 300,
-                            badges: hasBadge ? currentBadges : [
-                                ...currentBadges,
-                                { id: 'protocol_complete', earnedAt: new Date().toISOString() }
-                            ]
+                            badges: hasBadge ? currentBadges : [...currentBadges, 'protocol_complete']
                         }).eq('id', patientProtocol.patient.id);
                         logger.info('Points and badge granted', { 
                             patientId: patientProtocol.patient.id, 
@@ -503,6 +575,20 @@ export async function testProtocolScheduling(patientId: string): Promise<{
 
         const currentDay = patientProtocol.current_day;
         const protocolId = patientProtocol.protocol.id;
+        const useWeeklyProtocolCadence = process.env.PROTOCOL_CADENCE !== 'legacy_daily';
+
+        if (useWeeklyProtocolCadence) {
+            const weeklyMessages = getWeeklyProtocolMessages(protocolId, patientProtocol.protocol.duration_days)
+                .filter(message => message.day >= currentDay);
+
+            weeklyMessages.slice(0, 6).forEach((message) => {
+                console.log(`[TEST] Dia ${message.day}: ${message.title}`);
+            });
+
+            console.log(`[TEST] Total semanal: ${weeklyMessages.length} mensagens em ${patientProtocol.protocol.duration_days - currentDay + 1} dias`);
+            return { success: true, messagesScheduled: weeklyMessages.length };
+        }
+
         const protocolData = protocols.find(p => p.id === protocolId);
         const gamificationSteps = getGamificationSteps(protocolId);
 

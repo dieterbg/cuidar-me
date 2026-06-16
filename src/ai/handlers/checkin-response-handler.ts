@@ -2,6 +2,12 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { sendWhatsappMessage } from '@/lib/twilio';
 import type { Perspective } from '@/lib/types';
 import { loggers } from '@/lib/logger';
+import { calculateLevel } from '@/lib/level-system';
+import {
+    buildWeeklyStarProgress,
+    calculateWeeklyScore,
+    getWeeklyProtocolProfile
+} from '@/lib/data';
 
 /**
  * Processa resposta de check-in de gamificação.
@@ -21,6 +27,10 @@ export async function processCheckinResponse(
 ): Promise<{ processed: boolean }> {
     // PII redacted: messageText e whatsappNumber removidos dos logs
     loggers.ai.debug('checkin handler iniciado', { patientId: patient.id, checkinType });
+
+    if (isWeeklyProtocolCheckin(checkinType)) {
+        return processWeeklyProtocolCheckin(patient, messageText, checkinType, whatsappNumber, supabase);
+    }
 
     // ── VALIDAÇÃO DE TAMANHO ──────────────────────────
     // Se a mensagem for muito longa, provavelmente é conversacional → IA
@@ -136,6 +146,165 @@ export async function processCheckinResponse(
 }
 
 // ── PARSER: Flexível para A, B ou C ────────────────────
+async function processWeeklyProtocolCheckin(
+    patient: any,
+    messageText: string,
+    checkinType: string,
+    whatsappNumber: string,
+    supabase: SupabaseClient
+): Promise<{ processed: boolean }> {
+    const weightKg = extractNumber(messageText);
+    const adherence = parseWeeklyAdherence(messageText);
+
+    if (!weightKg || weightKg < 30 || weightKg > 300 || !adherence) {
+        const retryMsg = [
+            'Para registrar seu check-in semanal, responda em uma unica mensagem:',
+            '',
+            'Peso: 84,7',
+            'Semana: A, B ou C',
+            '',
+            'A) fui consistente',
+            'B) oscilei, mas mantive parte do plano',
+            'C) tive dificuldade e quero retomar',
+        ].join('\n');
+
+        await sendWhatsappMessage(whatsappNumber, retryMsg);
+        await supabase.from('messages').insert({
+            patient_id: patient.id,
+            sender: 'system',
+            text: retryMsg,
+        });
+        return { processed: true };
+    }
+
+    const { data: activeProtocol } = await supabase
+        .from('patient_protocols')
+        .select('protocol_id, current_day, protocols:protocol_id(id, name, duration_days)')
+        .eq('patient_id', patient.id)
+        .eq('is_active', true)
+        .single();
+
+    const protocolId = (activeProtocol as any)?.protocol_id
+        || (activeProtocol as any)?.protocols?.id
+        || patient.protocol?.protocolId
+        || '';
+    const week = parseWeekFromCheckin(checkinType)
+        || Math.max(1, Math.ceil(((activeProtocol as any)?.current_day || 1) / 7));
+    const scoreResult = calculateWeeklyScore({ weightKg, adherence });
+    const profile = getWeeklyProtocolProfile(protocolId);
+
+    const { data: patientRow } = await supabase
+        .from('patients')
+        .select('gamification, total_points, level, badges')
+        .eq('id', patient.id)
+        .single();
+
+    const currentGamification = ((patientRow as any)?.gamification || {}) as any;
+    const weeklyProtocolScores = {
+        ...(currentGamification.weeklyProtocolScores || {}),
+    };
+    const weeklyKey = `${protocolId}:week:${week}`;
+    const previousScore = Number(weeklyProtocolScores[weeklyKey]?.score || 0);
+    const pointsEarned = Math.max(scoreResult.score - previousScore, 0);
+    const currentTotal = Number(currentGamification.totalPoints ?? (patientRow as any)?.total_points ?? 0);
+    const updatedTotal = currentTotal + pointsEarned;
+    const updatedLevel = calculateLevel(updatedTotal);
+
+    weeklyProtocolScores[weeklyKey] = {
+        protocolId,
+        week,
+        score: scoreResult.score,
+        band: scoreResult.band,
+        label: scoreResult.label,
+        adherence,
+        weightKg,
+        answeredAt: new Date().toISOString(),
+    };
+
+    const completedWeeks = Object.values(weeklyProtocolScores)
+        .filter((entry: any) => entry?.protocolId === protocolId)
+        .length;
+
+    const currentBadges = normalizeBadgeIds(currentGamification.badges || (patientRow as any)?.badges || []);
+    const badgesToAdd = [
+        completedWeeks >= 1 ? profile.badges.first : null,
+        completedWeeks >= 4 ? profile.badges.fourWeeks : null,
+        completedWeeks >= 8 ? profile.badges.eightWeeks : null,
+        completedWeeks >= 12 ? profile.badges.twelveWeeks : null,
+    ].filter(Boolean) as string[];
+    const updatedBadges = Array.from(new Set([...currentBadges, ...badgesToAdd]));
+    const newBadges = updatedBadges.filter(badge => !currentBadges.includes(badge));
+    const weeklyProgress = {
+        weekStartDate: new Date().toISOString(),
+        perspectives: buildWeeklyStarProgress(protocolId, week, adherence),
+    };
+
+    await supabase.from('health_metrics').insert({
+        patient_id: patient.id,
+        date: new Date().toISOString().split('T')[0],
+        weight_kg: weightKg,
+    });
+
+    await supabase.from('patients').update({
+        gamification: {
+            ...currentGamification,
+            totalPoints: updatedTotal,
+            level: updatedLevel,
+            badges: updatedBadges,
+            weeklyProtocolScores,
+            weeklyProgress,
+        },
+        total_points: updatedTotal,
+        level: updatedLevel,
+        badges: updatedBadges,
+        last_checkin_type: null,
+        last_checkin_at: null,
+    }).eq('id', patient.id);
+
+    const confirmation = [
+        `Check-in semanal registrado - ${profile.shortName}.`,
+        `Peso: ${formatWeight(weightKg)} kg`,
+        `Score: ${scoreResult.score}/100 (${scoreResult.label})`,
+        pointsEarned > 0 ? `+${pointsEarned} Health Coins` : 'Semana ja registrada; score atualizado sem duplicar pontos.',
+        `Total acumulado: ${updatedTotal} Health Coins`,
+        'Estrela do Cuidado atualizada com o foco desta semana.',
+        newBadges.length > 0 ? `Nova conquista: ${newBadges.join(', ')}` : null,
+    ].filter(Boolean).join('\n');
+
+    await sendWhatsappMessage(whatsappNumber, confirmation);
+    await supabase.from('messages').insert({
+        patient_id: patient.id,
+        sender: 'system',
+        text: confirmation,
+    });
+
+    return { processed: true };
+}
+
+function isWeeklyProtocolCheckin(type: string): boolean {
+    return type.includes('Check-in Semanal');
+}
+
+function parseWeekFromCheckin(type: string): number | null {
+    const match = type.match(/Semana\s+(\d+)/i);
+    return match ? Number(match[1]) : null;
+}
+
+function parseWeeklyAdherence(text: string): 'A' | 'B' | 'C' | null {
+    const normalized = text.trim().toUpperCase();
+    const explicit = normalized.match(/SEMANA\s*:\s*([ABC])/);
+    if (explicit) return explicit[1] as 'A' | 'B' | 'C';
+
+    const standalone = normalized.match(/(?:^|\s|[(:;-])([ABC])(?:\s|$|[).,;:-])/);
+    return standalone ? standalone[1] as 'A' | 'B' | 'C' : null;
+}
+
+function normalizeBadgeIds(badges: any[]): string[] {
+    return badges
+        .map((badge) => typeof badge === 'string' ? badge : badge?.id)
+        .filter((badge): badge is string => !!badge);
+}
+
 function parseLetter(text: string): 'A' | 'B' | 'C' | null {
     const t = text.trim().toUpperCase();
     
@@ -157,6 +326,10 @@ function parseLetter(text: string): 'A' | 'B' | 'C' | null {
 function extractNumber(text: string): number | null {
     const match = text.trim().replace(',', '.').match(/(\d+\.?\d*)/);
     return match ? parseFloat(match[1]) : null;
+}
+
+function formatWeight(weight: number): string {
+    return weight.toFixed(1).replace('.', ',');
 }
 
 // ── CATEGORIZAÇÃO ───────────────────────────────────────
