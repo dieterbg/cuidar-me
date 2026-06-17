@@ -28,6 +28,10 @@ describe('Server Action: Protocols', () => {
         const sb = createMockSupabase();
         mockContainer.supabase = sb.mock;
         mockFrom = sb.mockFrom;
+        sb.mock.auth.getUser.mockResolvedValue({
+            data: { user: { id: 'admin-1' } },
+        });
+        sb.mockFrom('profiles', { data: { role: 'admin' }, error: null });
     });
 
     // =================================================================

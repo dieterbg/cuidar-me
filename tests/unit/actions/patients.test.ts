@@ -60,6 +60,7 @@ describe('Server Action: Patients', () => {
         sb.mock.auth.getUser.mockResolvedValue({
             data: { user: { id: 'user-1' } },
         });
+        sb.mockFrom('profiles', { data: { role: 'admin' }, error: null });
     });
 
     // =================================================================

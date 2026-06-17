@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from '@/app/api/whatsapp/route';
 import { NextRequest } from 'next/server';
 
@@ -33,14 +33,23 @@ import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 describe('WhatsApp Webhook API', () => {
     let mockSupabase: any;
 
+    let originalCronSecret: string | undefined;
+
     beforeEach(() => {
         vi.clearAllMocks();
         
+        originalCronSecret = process.env.CRON_SECRET;
+        process.env.CRON_SECRET = 'test-secret';
+
         // Setup default Supabase mock chain
         const insertMock = vi.fn().mockResolvedValue({ error: null });
         const fromMock = vi.fn().mockReturnValue({ insert: insertMock });
         mockSupabase = { from: fromMock };
         (createServiceRoleClient as any).mockReturnValue(mockSupabase);
+    });
+
+    afterEach(() => {
+        process.env.CRON_SECRET = originalCronSecret;
     });
 
     it('should return 401 if Twilio validation fails', async () => {
