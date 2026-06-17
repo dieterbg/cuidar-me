@@ -246,8 +246,8 @@ export default function ClinicaPage() {
                                 </div>
                             </div>
                             <h1 className="text-4xl md:text-5xl lg:text-[3.4rem] font-bold text-[#2D3B2D] leading-[1.15] tracking-tight">
-                                Cuidar da sua saúde não precisa ser{' '}
-                                <span className="text-brand">solitário.</span>
+                                Cuidar de você deveria ser simples.{' '}
+                                <span className="text-brand">A gente faz ser.</span>
                             </h1>
                             <p className="text-lg text-[#5A6B5A] leading-relaxed max-w-lg">
                                 Na Clínica Dornelles, você tem acompanhamento de verdade — todos os dias, 
