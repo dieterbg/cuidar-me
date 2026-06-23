@@ -7,8 +7,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { addHealthMetric } from '@/ai/actions/patients';
-import { scheduleReminder } from '@/ai/actions/messages';
+import { scheduleReminder } from '@/ai/tools/schedule-reminder';
 import { z } from 'zod';
 import type { Patient } from '@/lib/types';
 import { GenerateChatbotReplyInputSchema, GenerateChatbotReplyOutputSchema } from '@/lib/types';

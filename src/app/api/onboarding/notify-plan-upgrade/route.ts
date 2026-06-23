@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server';
 import { sendWhatsappMessage } from '@/lib/twilio';
 import { scheduleProtocolMessages } from '@/cron/send-protocol-messages';
 import { loggers } from '@/lib/logger';
+import { addMessageRecord } from '@/lib/message-store';
 
 const log = loggers.admin;
 
@@ -130,8 +131,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Registrar no histórico de mensagens
-        const { addMessage } = await import('@/ai/actions/messages');
-        await addMessage(patientId, { sender: 'system', text: message });
+        await addMessageRecord(patientId, { sender: 'system', text: message }, supabase);
 
         // Marcar onboarding como concluído e atualizar o plano.
         // O admin atribuiu um protocolo explicitamente — o onboarding WhatsApp

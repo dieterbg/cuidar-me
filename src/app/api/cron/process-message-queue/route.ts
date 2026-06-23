@@ -27,7 +27,7 @@ async function handleCronRequest(request: NextRequest) {
         const authError = validateCronAuth(request);
         if (authError) {
             logger.error('Unauthorized cron request attempt', { 
-                ip: request.ip, 
+                ip: getClientIp(request),
                 ua: request.headers.get('user-agent') 
             });
             return authError;
@@ -80,4 +80,12 @@ async function handleCronRequest(request: NextRequest) {
             { status: 500 }
         );
     }
+}
+
+function getClientIp(request: NextRequest) {
+    return (
+        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+        request.headers.get('x-real-ip') ||
+        'unknown'
+    );
 }

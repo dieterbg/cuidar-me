@@ -45,6 +45,8 @@ export async function handlePatientReply(
         });
 
         // Se não encontrou paciente, envia mensagem de cadastro e encerra
+
+        // Se não encontrou paciente, envia mensagem de cadastro e encerra
         if (!patient) {
             logger.info('Unknown number, sending registration link', { messageSid });
             const registrationLink = `https://clinicadornelles.com.br/cadastro?phone=${encodeURIComponent(whatsappNumber)}`;
@@ -58,36 +60,45 @@ export async function handlePatientReply(
         // 🛑 RATE LIMITING POR PLANO (C4)
         // Protege contra abuso e controla custos Gemini/Twilio
         // =====================================================
-        const DAILY_LIMITS: Record<string, number> = {
-            freemium: 5,     // Restored as per user request
-            premium: 100,    // Increased from 30
-            vip: Infinity,
+        const LIMITS: Record<string, { count: number; windowDays: number }> = {
+            freemium: { count: 3, windowDays: 7 }, // 3 messages per 7 days
+            premium: { count: 100, windowDays: 1 },
+            vip: { count: Infinity, windowDays: 1 },
         };
 
-        const patientPlan = patient.subscription.plan || 'freemium';
+        const patientPlan = patient.subscription?.plan || 'freemium';
         logger.info('Patient plan identified', { patientId: patient.id, plan: patientPlan });
-        const dailyLimit = DAILY_LIMITS[patientPlan] ?? DAILY_LIMITS.freemium;
+        const planLimit = LIMITS[patientPlan] ?? LIMITS.freemium;
 
-        if (dailyLimit !== Infinity) {
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
+        let freemiumWarnings = "";
 
-            const { count: todayMsgCount } = await supabase
+        if (planLimit.count !== Infinity) {
+            const windowStart = new Date();
+            windowStart.setHours(0, 0, 0, 0);
+            if (planLimit.windowDays > 1) {
+                windowStart.setDate(windowStart.getDate() - (planLimit.windowDays - 1));
+            }
+
+            const { count: msgCount } = await supabase
                 .from('messages')
                 .select('*', { count: 'exact', head: true })
                 .eq('patient_id', patient.id)
                 .eq('sender', 'patient')
-                .gte('created_at', todayStart.toISOString());
+                .gte('created_at', windowStart.toISOString());
 
-            if ((todayMsgCount ?? 0) >= dailyLimit) {
+            const currentCount = msgCount ?? 0;
+
+            if (currentCount >= planLimit.count) {
                 logger.warn('Rate limit hit', { 
                     patientId: patient.id, 
                     plan: patientPlan, 
-                    limit: dailyLimit 
+                    limit: planLimit.count 
                 });
+                
                 const limitMsg = patientPlan === 'freemium'
-                    ? "Você atingiu o limite diário de mensagens do plano gratuito. 💡 Conheça nossos planos Premium para acompanhamento ilimitado! Acesse: https://clinicadornelles.com.br/portal/journey"
+                    ? "Obrigado pela sua mensagem! 😊\n\nNo plano Gratuito, você recebe dicas de saúde.\n\nVocê já utilizou suas 3 consultas inteligentes gratuitas da semana! Para continuar conversando comigo 24h por dia e ter protocolos de cuidado, assine o plano Premium.\n\n💎 Quer ir além? Com o Plano **Premium** você tem:\n✅ Assistente de saúde com IA 24h\n✅ Check-in diário personalizado\n✅ Gamificação e conquistas\n✅ Protocolos de acompanhamento\n\nAcesse e faça o upgrade: https://clinicadornelles.com.br/portal/journey"
                     : "Você atingiu o limite diário de mensagens. Tente novamente amanhã! 😊";
+                
                 await sendWhatsappMessage(whatsappNumber, limitMsg);
 
                 // Salvar no histórico para o admin ver o bloqueio
@@ -99,9 +110,13 @@ export async function handlePatientReply(
 
                 return { success: true };
             }
+            
+            // Soft warning check for freemium
+            if (patientPlan === 'freemium' && currentCount === planLimit.count - 1) {
+                freemiumWarnings = "\n\n💡 *Aviso:* Esta é sua última mensagem gratuita da semana. Assine o Premium para ter conversas ilimitadas!";
+            }
         }
 
-        // 2. Salvar mensagem (incluindo twilio_sid para idempotência futura)
         // 2. Salvar mensagem (sem twilio_sid pois a coluna não existe no banco atual)
         const { error: insertError } = await supabase.from('messages').insert({
             patient_id: patient.id,
@@ -166,54 +181,10 @@ export async function handlePatientReply(
         }
 
         // =====================================================
-        // 🛑 GATE FREEMIUM: BLOQUEIO TOTAL DE CONVERSA
-        // Freemium = Somente Broadcast (dica diária).
-        // QUALQUER mensagem de um Freemium → Upsell para Premium.
-        // (Exceto: opt-out e onboarding, já tratados acima)
-        // (Exceto: emergências por keyword, tratadas abaixo)
-        // =====================================================
-        if (patientPlan === 'freemium') {
-            // Ainda detecta emergências por keyword para Freemium
-            const EMERGENCY_PATTERNS = [
-                /dor.{0,15}(peito|braço|cabeça\s+forte|torax)/i,
-                /desmai|desfale|apag|perd.{0,10}(consciência|sentidos)/i,
-                /suicid|me\s+mat|não\s+aguento\s+mais|não\s+vejo\s+saída|quero\s+sumir/i,
-                /não\s+consigo\s+respir|falta\s+de\s+ar|sufoc/i,
-                /reação.{0,15}(medicamento|alergi|remédio)/i,
-                /visão\s+(escurec|embara)|quase\s+desmaiei/i,
-                /tremed?eira|suando\s+frio|convuls/i,
-                /inchaço.{0,15}(língua|garganta|rosto)/i,
-            ];
-
-            const isEmergencyByKeyword = EMERGENCY_PATTERNS.some(p => p.test(messageText));
-
-            if (isEmergencyByKeyword) {
-                logger.info('Emergency keyword match for FREEMIUM patient', { patientId: patient.id });
-                const safetyMsg = `⚠️ Percebemos que você pode estar passando por uma situação de saúde importante.\n\nPor favor, procure atendimento médico imediatamente:\n\n🚑 **SAMU:** Ligue **192**\n🏥 **Pronto-socorro** mais próximo\n📞 **CVV (apoio emocional):** Ligue **188**\n\nSua saúde é prioridade. Não deixe de buscar ajuda profissional! ❤️`;
-
-                await sendWhatsappMessage(whatsappNumber, safetyMsg);
-                await supabase.from('messages').insert({
-                    patient_id: patient.id,
-                    sender: 'system',
-                    text: safetyMsg,
-                });
-                return { success: true };
-            }
-
-            // Qualquer outra mensagem → upsell
-            logger.info('Blocking freemium chat, sending upsell', { patientId: patient.id });
-            const upsellMsg = `Obrigado pela sua mensagem! 😊\n\nNo plano Gratuito, você recebe dicas de saúde diárias às 8h.\n\n💎 Quer ir além? Com o Plano **Premium** você tem:\n✅ Assistente de saúde com IA 24h\n✅ Check-in diário personalizado\n✅ Gamificação e conquistas\n✅ Protocolos de acompanhamento\n\nFale com a clínica para fazer o upgrade! 🚀`;
-
-            await sendWhatsappMessage(whatsappNumber, upsellMsg);
-            await supabase.from('messages').insert({
-                patient_id: patient.id,
-                sender: 'system',
-                text: upsellMsg,
-            });
-            return { success: true };
-        }
-
-        // =====================================================
+        // 🛑 GATE FREEMIUM ANTIGO: REMOVIDO
+        // Freemium agora possui um limite de 3 mensagens via Rate Limiting.
+        // O tráfego cai normalmente nas validações de IA abaixo.
+        // ==============================================================
         // A PARTIR DAQUI: APENAS PREMIUM E VIP
         // =====================================================
 
@@ -336,18 +307,15 @@ export async function handlePatientReply(
         // deixamos a IA responder algo genérico se necessário, ou encaminhamos para a conversa normal.
 
         // 5.3 DAILY CHECK-IN — REMOVIDO
-        // Premium/VIP sempre tem protocolo. Sem protocolo = sem check-ins automáticos.
-        // Gamificação é o único sistema de check-ins (dentro de protocolos).
-
         // 5.4 SOCIAL - Resposta rápida
         if (classification.intent === MessageIntent.SOCIAL || classification.intent === MessageIntent.QUESTION) {
             const { handleAIConversation } = await import('@/ai/handlers/conversation-handler');
-            return await handleAIConversation(patient, messageText, whatsappNumber, supabase);
+            return await handleAIConversation(patient, messageText, whatsappNumber, supabase, freemiumWarnings);
         }
 
         // 5.5 IA CONVERSACIONAL (padrão)
         const { handleAIConversation: defaultConv } = await import('@/ai/handlers/conversation-handler');
-        return await defaultConv(patient, messageText, whatsappNumber, supabase);
+        return await defaultConv(patient, messageText, whatsappNumber, supabase, freemiumWarnings);
 
     } catch (error: any) {
         logger.error('Error in handlePatientReply', { 
@@ -438,7 +406,7 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
     const { data: patientRows } = await supabase
         .from('patients')
         .select(`
-            id, full_name, gamification, total_points, level,
+            id, user_id, full_name, gamification, total_points, level,
             patient_protocols!inner (
                 id, current_day, is_active,
                 protocols:protocol_id ( id, name, duration_days )
@@ -524,6 +492,28 @@ async function _processSingleMessage(
             weightKg: weeklyScore?.weightKg ?? null,
             totalPoints: patientRow?.gamification?.totalPoints ?? patientRow?.total_points ?? null,
         });
+
+        // Tentar gerar Magic Link nativo para o portal
+        try {
+            if (patientRow?.user_id) {
+                const { data: userRecord } = await supabase.auth.admin.getUserById(patientRow.user_id);
+                if (userRecord?.user?.email) {
+                    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+                        type: 'magiclink',
+                        email: userRecord.user.email,
+                        options: {
+                            redirectTo: 'https://clinicadornelles.com.br/portal/journey' // URL do portal
+                        }
+                    });
+                    
+                    if (!linkError && linkData?.properties?.action_link) {
+                        messageContent += `\n\n🌟 *Toque no link mágico abaixo* para entrar no portal sem precisar de senha e ver sua Estrela do Cuidado brilhar!\n${linkData.properties.action_link}`;
+                    }
+                }
+            }
+        } catch (e) {
+            logger.error('Failed to generate magic link for weekly summary', e);
+        }
     }
 
     if (msg.source === 'protocol' || msg.metadata?.isGamification) {

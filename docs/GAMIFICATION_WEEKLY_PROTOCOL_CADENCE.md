@@ -21,7 +21,7 @@ Padrao por semana:
 
 1. Check-in semanal: coleta peso e percepcao da semana.
 2. Conteudo educativo curto: reforco especifico do protocolo.
-3. Resumo semanal: consolida score, Health Coins, peso e mensagem de continuidade.
+3. Resumo semanal: consolida score, Health Coins, peso e mensagem de continuidade, finalizando com um **Magic Link nativo** de acesso instantâneo ao Portal do Paciente.
 
 Em um protocolo de 90 dias, isso gera ate 39 mensagens por paciente, em vez de aproximadamente 168 a 180 mensagens.
 
@@ -31,7 +31,7 @@ Em um protocolo de 90 dias, isso gera ate 39 mensagens por paciente, em vez de a
 |---|---|---:|---|
 | Inicio da semana | `weekly_checkin` | 07:00 | Pede peso e classificacao A/B/C da semana |
 | Meio da semana | `education` | 10:00 | Envia uma dica curta, diferente por protocolo |
-| Fim da semana | `weekly_summary` | 18:00 | Resume progresso real da semana |
+| Fim da semana | `weekly_summary` | 18:00 | Resume progresso real da semana e gera o Magic Link de acesso ao Portal |
 
 O fallback legado ainda existe, mas so e ativado com:
 

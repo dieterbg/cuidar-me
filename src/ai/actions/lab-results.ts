@@ -8,6 +8,9 @@
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { extractLabResults, getAlertPriority } from '@/ai/flows/extract-lab-results';
 import { sendWhatsappMessage } from '@/lib/twilio';
+import { authErrorMessage, requirePatientOwnerOrStaff } from '@/lib/authz';
+
+const MAX_LAB_IMAGE_BASE64_CHARS = 10_000_000;
 
 /**
  * Processa upload de exame laboratorial
@@ -17,7 +20,23 @@ export async function processLabResultUpload(
     imageBase64: string,
     whatsappNumber: string
 ): Promise<{ success: boolean; error?: string; hasAlerts?: boolean }> {
+    // Validate payload size before auth/AI calls to reduce abuse and cost risk.
+    const imageValidationError = validateLabImageBase64(imageBase64);
+    if (imageValidationError) {
+        return { success: false, error: imageValidationError };
+    }
+
+    // Authorize with the logged-in session before creating a service-role client.
+    // Service role is only a database capability, not proof of user permission.
+    let access;
+    try {
+        access = await requirePatientOwnerOrStaff(patientId);
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
     const supabase = createServiceRoleClient();
+    const normalizedImageBase64 = imageBase64.trim();
 
     try {
         console.log(`[processLabResultUpload] Processing lab results for patient ${patientId}`);
@@ -25,7 +44,7 @@ export async function processLabResultUpload(
         // Buscar dados do paciente
         const { data: patient, error: patientError } = await supabase
             .from('patients')
-            .select('comorbidities, full_name, plan')
+            .select('comorbidities, full_name, plan, whatsapp_number')
             .eq('id', patientId)
             .single();
 
@@ -33,9 +52,16 @@ export async function processLabResultUpload(
             return { success: false, error: 'Patient not found' };
         }
 
+        // Patient messages should go to the number stored on the patient record.
+        // The caller-provided number is allowed only as a staff fallback.
+        const destinationWhatsappNumber = patient.whatsapp_number || (access.isStaff ? whatsappNumber : null);
+        if (!destinationWhatsappNumber) {
+            return { success: false, error: 'Patient WhatsApp number not found' };
+        }
+
         // Extrair dados do exame com Gemini Vision
         const extraction = await extractLabResults({
-            imageBase64,
+            imageBase64: normalizedImageBase64,
             patientId,
             patientComorbidities: patient.comorbidities || [],
         });
@@ -132,7 +158,7 @@ export async function processLabResultUpload(
                 patient.plan
             );
 
-            await sendWhatsappMessage(whatsappNumber, alertMessage);
+            await sendWhatsappMessage(destinationWhatsappNumber, alertMessage);
 
             // Salvar mensagem enviada
             await supabase
@@ -151,7 +177,7 @@ export async function processLabResultUpload(
                     : 'Upgrade para Premium para acessar análises detalhadas!'
                 }`;
 
-            await sendWhatsappMessage(whatsappNumber, normalMessage);
+            await sendWhatsappMessage(destinationWhatsappNumber, normalMessage);
 
             await supabase
                 .from('messages')
@@ -168,8 +194,31 @@ export async function processLabResultUpload(
 
     } catch (error: any) {
         console.error('[processLabResultUpload] Error:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: 'Erro ao processar exame' };
     }
+}
+
+function validateLabImageBase64(imageBase64: string): string | null {
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+        return 'Imagem do exame obrigatoria';
+    }
+
+    const normalized = imageBase64.trim();
+    if (normalized.length === 0) {
+        return 'Imagem do exame obrigatoria';
+    }
+
+    if (normalized.length > MAX_LAB_IMAGE_BASE64_CHARS) {
+        return 'Imagem do exame muito grande';
+    }
+
+    const isDataImage = normalized.startsWith('data:image/');
+    const isRawBase64 = /^[A-Za-z0-9+/=\s]+$/.test(normalized);
+    if (!isDataImage && !isRawBase64) {
+        return 'Formato de imagem invalido';
+    }
+
+    return null;
 }
 
 /**

@@ -6,7 +6,7 @@ Plataforma completa de acompanhamento de pacientes com protocolo clínico person
 
 ## 🚀 Stack Tecnológico
 
-- **Framework:** Next.js 14 (App Router)
+- **Framework:** Next.js 15 (App Router)
 - **Linguagem:** TypeScript
 - **Database:** Supabase (PostgreSQL + Realtime)
 - **Autenticação:** Supabase Auth
@@ -299,6 +299,7 @@ A aplicação usa uma fila para enviar mensagens programadas. Configure um job p
 
 - [GAMIFICATION_ANALYSIS.md](./GAMIFICATION_ANALYSIS.md) - Análise completa do sistema de gamificação
 - [PROTOCOL_CLINICAL_ANALYSIS.md](./PROTOCOL_CLINICAL_ANALYSIS.md) - Detalhes dos protocolos clínicos
+- [docs/SEGURANCA_ATUAL.md](./docs/SEGURANCA_ATUAL.md) - Estado atual de segurança, aprendizados e pontos críticos do código
 - [CREDENCIAIS_SUPABASE.md](./CREDENCIAIS_SUPABASE.md) - Guia de configuração Supabase
 
 ---

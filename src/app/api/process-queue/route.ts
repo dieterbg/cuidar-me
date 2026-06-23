@@ -38,14 +38,20 @@ export async function POST(req: NextRequest) {
 
         const msg = pendingMessages[0];
 
-        // 3. Mark as processing IMMEDIATELY
-        const { error: lockError } = await supabase
+        // Atomic claim: only the worker that changes pending -> processing may send.
+        // This keeps frequent external cron hits from duplicating WhatsApp sends.
+        const { data: claimedRows, error: lockError } = await supabase
             .from('message_queue')
             .update({ status: 'processing', updated_at: new Date().toISOString() })
             .eq('id', msg.id)
-            .eq('status', 'pending'); // Ensure it wasn't picked up by another concurrent request
+            .eq('status', 'pending') // Ensure it wasn't picked up by another concurrent request
+            .select('id');
 
         if (lockError) throw lockError;
+        if (!claimedRows || claimedRows.length === 0) {
+            loggers.api.info('mensagem da fila ja reivindicada por outro worker', { msgId: msg.id });
+            return NextResponse.json({ success: true, message: 'Message already claimed' });
+        }
 
         // PII redacted: whatsapp_number, message_text e profile_name removidos dos logs
         loggers.api.debug('processando mensagem da fila', { msgId: msg.id, messageSid: msg.message_sid });

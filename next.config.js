@@ -3,6 +3,9 @@ require('dotenv').config();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Keep heavy server-only SDKs out of the Next server bundle. They remain
+  // available at runtime through node_modules and avoid slow/fragile builds.
+  serverExternalPackages: ['twilio', 'genkit', '@genkit-ai/google-genai'],
   webpack: (config) => {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
     return config;

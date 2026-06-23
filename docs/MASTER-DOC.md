@@ -401,7 +401,7 @@ Classifica cada mensagem em: `EMERGENCY`, `SOCIAL`, `CHECKIN_RESPONSE`, `QUESTIO
 
 | Camada | Tecnologia |
 |--------|-----------|
-| **Framework** | Next.js 14 (App Router) |
+| **Framework** | Next.js 15 (App Router) |
 | **Linguagem** | TypeScript |
 | **Banco de Dados** | Supabase (PostgreSQL + Realtime) |
 | **Autenticação** | Supabase Auth |
@@ -561,7 +561,7 @@ Cuidar-me/
 
 ## 10. Segurança e Resiliência
 
-- **Rate Limiting:** Freemium 5/dia, Premium 30/dia, VIP ilimitado
+- **Rate Limiting:** Freemium 3/semana (Test-Drive interativo), Premium 100/dia (limite técnico amplo), VIP ilimitado. Soft warnings aplicados antes do bloqueio total para retenção orgânica.
 - **Webhook Validation:** Assinatura Twilio validada em cada request
 - **Idempotência:** `twilio_sid` previne duplicação de mensagens
 - **Supabase RLS:** Row Level Security em todas as tabelas
@@ -601,13 +601,12 @@ NEXT_PUBLIC_APP_URL
 ## 12. Estado Atual vs Idealizado
 
 ### ✅ Implementado e Funcionando
-
 | Feature | Status |
 |---------|--------|
 | Onboarding WhatsApp (3 planos) | ✅ Funcional |
 | Dica diária Freemium (cron 8h) | ✅ Funcional |
-| Chat IA (Premium/VIP) | ✅ Funcional |
-| Freemium Gate (upsell) | ✅ Funcional |
+| Chat IA (Premium/VIP/Test-Drive) | ✅ Funcional |
+| Freemium Test-Drive (3 msgs/semana) | ✅ Funcional |
 | Rate Limiting por plano | ✅ Funcional |
 | Detecção de emergência | ✅ Funcional |
 | Gamificação (pontos, níveis, badges) | ✅ Funcional |
@@ -682,7 +681,7 @@ NEXT_PUBLIC_APP_URL
 
 | Prática | Implementação |
 |---------|--------------|
-| **App Router (Next.js 14)** | Uso correto de route groups, layouts, server components |
+| **App Router (Next.js 15)** | Uso correto de route groups, layouts, server components |
 | **Server Actions** | Separação clara entre client e server (`'use server'`) |
 | **Separação de Concerns** | `ai/handlers/` para lógica, `ai/flows/` para IA, `ai/actions/` para CRUD |
 | **Barrel Exports** | `actions.ts` centraliza re-exports |
@@ -705,7 +704,7 @@ NEXT_PUBLIC_APP_URL
 
 ### Estrutura de Pastas — Avaliação
 
-A organização atual é **boa e segue os padrões do Next.js 14 App Router**:
+A organização atual é **boa e segue os padrões do Next.js 15 App Router**:
 
 - ✅ `src/app/` para rotas (correto para App Router)
 - ✅ `src/components/` separado de pages
@@ -732,8 +731,9 @@ A organização atual é **boa e segue os padrões do Next.js 14 App Router**:
 | [Vercel Deploy](./VERCEL_DEPLOY.md) | docs/ | Guia de deploy |
 | [Cost Estimation](./COST-ESTIMATION.md) | docs/ | Estimativa de custos operacionais |
 | [Logs, Auditoria e LGPD](./LOGS_AUDITORIA_LGPD.md) | docs/ | Sistema de logs, trilha de auditoria, compliance LGPD (Fases 1–3 em produção, 4–5 pendentes) |
+| [Seguranca Atual](./SEGURANCA_ATUAL.md) | docs/ | Estado atual de seguranca, aprendizados e pontos criticos do codigo |
 | [Backlog de Segurança](./BACKLOG-SEGURANCA.md) | docs/ | Itens de segurança pendentes: rate limit Redis, alertas críticos, PITR, recomendações gerais |
-| [Relatórios de Auditoria](./relatorios-auditoria-seguranca/) | docs/ | Relatórios periódicos da skill `security-audit` — auditoria inicial 2026-04-18 |
+| [Relatórios de Auditoria](./relatorios-auditoria-seguranca/) | docs/ | Relatórios periódicos da skill `security-audit` — auditoria inicial 2026-04-18 e reaudit 2026-06-23 |
 
 ---
 

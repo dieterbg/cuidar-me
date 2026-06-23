@@ -4,6 +4,14 @@ console.log('[DEBUG] actions-extended.ts loaded');
 import { createClient } from '@/lib/supabase-server';
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import type { CommunityTopic, CommunityComment, ScheduledMessage, UserProfile } from '@/lib/types';
+import {
+    authErrorMessage,
+    getAuthenticatedUserAndRole,
+    requireAdmin,
+    requirePatientOwnerOrStaff,
+    requireStaff,
+    STAFF_ROLES
+} from '@/lib/authz';
 
 // =====================================================
 // COMMUNITY ACTIONS
@@ -76,6 +84,23 @@ export async function createCommunityTopic(
     title: string,
     text: string
 ): Promise<{ success: boolean; topicId?: string; error?: string }> {
+    try {
+        const auth = await getAuthenticatedUserAndRole();
+        if (authorId !== auth.userId) {
+            return { success: false, error: 'Acesso negado' };
+        }
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
+    if (!title.trim() || !text.trim()) {
+        return { success: false, error: 'Titulo e texto sao obrigatorios' };
+    }
+
+    if (title.length > 180 || text.length > 4000) {
+        return { success: false, error: 'Conteudo muito longo' };
+    }
+
     const supabase = createClient();
 
     const { data, error } = await supabase
@@ -103,6 +128,23 @@ export async function addCommentToTopic(
     authorUsername: string,
     text: string
 ): Promise<{ success: boolean; error?: string }> {
+    try {
+        const auth = await getAuthenticatedUserAndRole();
+        if (authorId !== auth.userId) {
+            return { success: false, error: 'Acesso negado' };
+        }
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
+    if (!text.trim()) {
+        return { success: false, error: 'Comentario vazio' };
+    }
+
+    if (text.length > 4000) {
+        return { success: false, error: 'Comentario muito longo' };
+    }
+
     const supabase = createClient();
 
     const { error } = await supabase
@@ -123,7 +165,13 @@ export async function addCommentToTopic(
 }
 
 export async function togglePinStatus(topicId: string, isPinned: boolean): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
         .from('community_topics')
@@ -139,7 +187,13 @@ export async function togglePinStatus(topicId: string, isPinned: boolean): Promi
 }
 
 export async function deleteTopic(topicId: string): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
         .from('community_topics')
@@ -155,6 +209,17 @@ export async function deleteTopic(topicId: string): Promise<{ success: boolean; 
 }
 
 export async function ensureCommunityUsername(patientId: string): Promise<{ success: boolean; username?: string; error?: string }> {
+    try {
+        const auth = await getAuthenticatedUserAndRole();
+        const isStaff = !!auth.role && STAFF_ROLES.includes(auth.role as any);
+
+        if (!isStaff && patientId !== auth.userId) {
+            await requirePatientOwnerOrStaff(patientId);
+        }
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
     const supabase = createClient();
 
     // Verificar se já tem username
@@ -173,7 +238,12 @@ export async function ensureCommunityUsername(patientId: string): Promise<{ succ
     }
 
     // Gerar username único
-    const baseName = patient.full_name.split(' ')[0].toLowerCase();
+    const baseName = ((patient.full_name || 'usuario').split(' ')[0] || 'usuario')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '')
+        .slice(0, 24) || 'usuario';
     let username = baseName;
     let counter = 1;
 
@@ -209,6 +279,12 @@ export async function ensureCommunityUsername(patientId: string): Promise<{ succ
 // =====================================================
 
 export async function getScheduledMessages(): Promise<ScheduledMessage[]> {
+    try {
+        await requireStaff();
+    } catch {
+        return [];
+    }
+
     const supabase = createClient();
 
     const { data, error } = await supabase
@@ -226,7 +302,7 @@ export async function getScheduledMessages(): Promise<ScheduledMessage[]> {
 
 
 
-// scheduleReminder moved to actions/messages.ts
+// scheduleReminder moved to ai/tools/schedule-reminder.ts
 
 
 
@@ -234,13 +310,30 @@ export async function sendCampaignMessage(
     patientIds: string[],
     message: string
 ): Promise<{ success: boolean; error?: string }> {
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
+    const uniquePatientIds = Array.from(new Set(patientIds.filter(Boolean)));
+    const trimmedMessage = message.trim();
+
+    if (uniquePatientIds.length === 0 || uniquePatientIds.length > 500) {
+        return { success: false, error: 'Quantidade de pacientes invalida' };
+    }
+
+    if (!trimmedMessage || trimmedMessage.length > 1500) {
+        return { success: false, error: 'Mensagem invalida' };
+    }
+
     const supabase = createServiceRoleClient();
 
     // Buscar pacientes
     const { data: patients, error: fetchError } = await supabase
         .from('patients')
         .select('id, whatsapp_number')
-        .in('id', patientIds);
+        .in('id', uniquePatientIds);
 
     if (fetchError || !patients) {
         return { success: false, error: 'Failed to fetch patients' };
@@ -250,7 +343,7 @@ export async function sendCampaignMessage(
     const scheduledMessages = (patients as any[]).map((p: any) => ({
         patient_id: p.id,
         patient_whatsapp_number: p.whatsapp_number,
-        message_content: message,
+        message_content: trimmedMessage,
         send_at: new Date().toISOString(),
         source: 'manual' as const,
         status: 'pending' as const,
@@ -277,6 +370,16 @@ export async function updateGamificationProgress(
     perspective: 'alimentacao' | 'movimento' | 'hidratacao' | 'disciplina' | 'bemEstar',
     points: number
 ): Promise<{ success: boolean; error?: string }> {
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
+    if (!patientId || !Number.isInteger(points) || points < 0 || points > 1000) {
+        return { success: false, error: 'Pontuacao invalida' };
+    }
+
     const supabase = createServiceRoleClient();
 
     try {
@@ -302,6 +405,12 @@ export async function deleteAllUsers(): Promise<{ success: boolean; error?: stri
     // Esta função é perigosa e deve ser usada apenas em desenvolvimento
     if (process.env.NODE_ENV === 'production') {
         return { success: false, error: 'Cannot delete all users in production' };
+    }
+
+    try {
+        await requireAdmin();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
     }
 
     const supabase = createServiceRoleClient();

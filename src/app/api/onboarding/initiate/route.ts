@@ -3,6 +3,7 @@ import { createServiceRoleClient, getCurrentUser } from '@/lib/supabase-server-u
 import { createClient } from '@/lib/supabase-server';
 import { getStepMessage } from '@/ai/onboarding';
 import type { OnboardingStep } from '@/ai/onboarding';
+import { addMessageRecord } from '@/lib/message-store';
 
 /**
  * API Route: POST /api/onboarding/initiate
@@ -198,11 +199,10 @@ export async function POST(request: NextRequest) {
         }
 
         // 5. Registrar mensagem no histórico para evitar duplicidade de boas-vindas
-        const { addMessage } = await import('@/ai/actions/messages');
-        await addMessage(patientId, {
+        await addMessageRecord(patientId, {
             sender: 'system',
             text: welcomeMessage
-        });
+        }, supabase);
 
         return NextResponse.json({
             success: true,

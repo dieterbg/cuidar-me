@@ -103,7 +103,18 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(echo \"TSC:$?\")",
       "Bash(npx supabase:*)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(node -e \"console.log\\('node ok'\\)\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(echo \"TSC=$?\")",
+      "Bash(npm audit *)",
+      "Bash(python -c \"import json, sys; d = json.load\\(sys.stdin\\); print\\('vulns:', d.get\\('metadata', {}\\).get\\('vulnerabilities', {}\\)\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/next/package.json'\\).version\\)\")",
+      "Bash(npx eslint *)"
     ]
   }
 }

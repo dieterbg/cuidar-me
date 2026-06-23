@@ -110,6 +110,11 @@ export async function validateTwilioWebhook(request: NextRequest, body: any) {
     // abrindo o webhook para requisições não assinadas.
     // Para pular validação em dev local, setar SKIP_TWILIO_VALIDATION=1 no .env.local
     if (process.env.SKIP_TWILIO_VALIDATION === '1') {
+        const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.VERCEL && !process.env.VERCEL_ENV;
+        if (!isLocalDev) {
+            console.error('[Twilio] SKIP_TWILIO_VALIDATION ignorado fora de dev local.');
+            return false;
+        }
         return true;
     }
 

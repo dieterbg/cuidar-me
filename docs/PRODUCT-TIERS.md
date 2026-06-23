@@ -192,7 +192,7 @@ Exclusividade e paz mental total.
 | **Preço sugerido** | R$ 0 | R$ 29,90/mês | R$ 79,90/mês |
 | Dica diária (8h) | ✅ Genérica | ✅ Personalizada | ✅ Personalizada |
 | Check-in consolidado (20h) | ❌ | ✅ | ✅ |
-| Chat com IA | ❌ (upsell) | ✅ 30 msgs/dia | ✅ Ilimitado |
+| Chat com IA | ✅ 3 msgs/7 dias (Test-Drive) | ✅ 30 msgs/dia | ✅ Ilimitado |
 | Protocolos | ❌ | ✅ Personalizados | ✅ Elite |
 | Gamificação | ❌ | ✅ Completa | ✅ Completa + Exclusiva |
 | Escalação humana | ❌ | Normal | ⭐ Prioritária |
@@ -221,8 +221,8 @@ Exclusividade e paz mental total.
 ```typescript
 // Em handle-patient-reply.ts
 const RATE_LIMITS = {
-  freemium: 5,   // msgs/dia (apenas para upsell, não para IA)
-  premium: 30,   // msgs/dia com IA
-  vip: Infinity  // sem limite
+  freemium: { count: 3, windowDays: 7 }, // 3 mensagens inteligentes a cada 7 dias (Test-Drive)
+  premium: { count: 100, windowDays: 1 }, // Aumentado limite técnico para suportar 30+ gamificação
+  vip: { count: Infinity, windowDays: 1 }  // sem limite
 };
 ```

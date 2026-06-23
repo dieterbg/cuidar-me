@@ -6,7 +6,8 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { normalizeBrazilianNumber } from '@/lib/utils';
 import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
-import { getAuthenticatedUserAndRole, requireAdmin, requirePatientOwnerOrStaff, STAFF_ROLES } from '@/lib/authz';
+import { addHealthMetricRecord } from '@/lib/health-metrics-store';
+import { authErrorMessage, getAuthenticatedUserAndRole, requireAdmin, requirePatientOwnerOrStaff, STAFF_ROLES } from '@/lib/authz';
 
 // Force recompile: 2025-11-25T00:45:00
 // ... (código anterior)
@@ -422,24 +423,11 @@ export async function addHealthMetric(
         physicalActivity?: string;
     }
 ): Promise<{ success: boolean; error?: string }> {
-    // Usar service role para bypass de RLS — esta função roda server-side via webhook
-    const { createServiceRoleClient } = await import('@/lib/supabase-server-utils');
-    const supabase = createServiceRoleClient();
-
-    const { error } = await supabase
-        .from('health_metrics')
-        .insert({
-            patient_id: patientId,
-            date: new Date().toISOString().split('T')[0],
-            weight_kg: data.weight,
-            glucose_level: data.glucoseLevel,
-            waist_circumference_cm: data.waistCircumference,
-        });
-
-    if (error) {
-        console.error('Error adding health metric:', error);
-        return { success: false, error: error.message };
+    try {
+        await requirePatientOwnerOrStaff(patientId);
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
     }
 
-    return { success: true };
+    return addHealthMetricRecord(patientId, data);
 }

@@ -5,6 +5,8 @@ export const STAFF_ROLES = ['admin', 'equipe_saude', 'assistente'] as const;
 export type StaffRole = typeof STAFF_ROLES[number];
 export type AppRole = StaffRole | 'paciente' | 'pendente';
 
+// Centralize authorization here. Callers should prove session ownership or staff
+// role before using any service-role client that can bypass RLS.
 export class AuthorizationError extends Error {
     constructor(message = 'Acesso negado') {
         super(message);

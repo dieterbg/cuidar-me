@@ -219,5 +219,17 @@ describe('Server Action: Patients', () => {
             const result = await addHealthMetric('p1', { weight: 80 });
             expect(result.success).toBe(false);
         });
+
+        it('bloqueia metrica quando paciente nao pertence ao usuario', async () => {
+            mockFrom('profiles', { data: { role: 'paciente' }, error: null });
+            adminMockFrom('patients', { data: null, error: null });
+            adminMockFrom('health_metrics', { data: null, error: null });
+
+            const result = await addHealthMetric('p1', { weight: 80 });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Acesso negado');
+            expect(mockContainer.adminSupabase.from).not.toHaveBeenCalledWith('health_metrics');
+        });
     });
 });

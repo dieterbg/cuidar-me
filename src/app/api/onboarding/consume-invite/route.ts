@@ -30,13 +30,19 @@ export async function POST(req: Request) {
 
         const supabase = createServiceRoleClient();
 
-        // 1. Verificar se o token é válido (não usado, não expirado)
+        // Atomically consume the invite. The update conditions prevent two
+        // requests from using the same token and bind it to the session user.
+        const nowIso = new Date().toISOString();
         const { data: invite, error: inviteError } = await supabase
             .from('invite_tokens')
-            .select('*')
+            .update({
+                used_by: userId,
+                used_at: nowIso,
+            })
             .eq('token', token)
             .is('used_at', null)
-            .gt('expires_at', new Date().toISOString())
+            .gt('expires_at', nowIso)
+            .select('*')
             .single();
 
         if (inviteError || !invite) {
@@ -51,19 +57,6 @@ export async function POST(req: Request) {
         }
 
         // 2. Marcar token como usado — com o userId da sessão
-        const { error: updateTokenError } = await supabase
-            .from('invite_tokens')
-            .update({
-                used_by: userId,
-                used_at: new Date().toISOString(),
-            })
-            .eq('token', token);
-
-        if (updateTokenError) {
-            log.error('Erro ao marcar invite token como usado', updateTokenError, { userId });
-            return NextResponse.json({ error: 'Erro ao processar convite' }, { status: 500 });
-        }
-
         // 3. Salvar no profile que este usuário tem um convite pré-aprovado
         // O portal/layout.tsx vai ler isso ao criar o registro de paciente
         const { error: profileError } = await supabase

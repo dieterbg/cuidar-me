@@ -8,12 +8,23 @@ vi.mock('@/lib/supabase-server', () => ({
     createClient: vi.fn(() => mockContainer.supabase),
 }));
 
+vi.mock('@/lib/supabase-server-utils', () => ({
+    createServiceRoleClient: vi.fn(() => mockContainer.supabase),
+}));
+
 vi.mock('@/lib/twilio', () => ({
     sendWhatsappMessage: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock('@/lib/authz', () => ({
+    requireStaff: vi.fn().mockResolvedValue({ userId: 'staff-1', role: 'admin' }),
+    requirePatientOwnerOrStaff: vi.fn().mockResolvedValue({ userId: 'staff-1', role: 'admin', isStaff: true }),
+    authErrorMessage: vi.fn((error: unknown) => error instanceof Error ? error.message : 'Erro inesperado'),
+}));
+
 import { getMessages, addMessage, addMessageAndSendWhatsapp } from '@/ai/actions/messages';
 import { sendWhatsappMessage } from '@/lib/twilio';
+import { requireStaff } from '@/lib/authz';
 
 describe('Server Action: Messages', () => {
     let mockFrom: ReturnType<typeof createMockSupabase>['mockFrom'];
@@ -97,6 +108,16 @@ describe('Server Action: Messages', () => {
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('Twilio');
+        });
+
+        it('bloqueia envio se usuário não for staff', async () => {
+            (requireStaff as any).mockRejectedValueOnce(new Error('Acesso negado'));
+
+            const result = await addMessageAndSendWhatsapp('p1', 'whatsapp:+5511999', 'Olá');
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Acesso negado');
+            expect(sendWhatsappMessage).not.toHaveBeenCalled();
         });
     });
 });

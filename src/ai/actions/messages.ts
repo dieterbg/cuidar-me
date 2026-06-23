@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase-server';
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { sendWhatsappMessage as sendWhatsappMessageTwilio } from '@/lib/twilio';
 import { loggers } from '@/lib/logger';
+import { addMessageRecord } from '@/lib/message-store';
+import { authErrorMessage, requirePatientOwnerOrStaff, requireStaff } from '@/lib/authz';
 
 const log = loggers.admin;
 
@@ -28,31 +30,12 @@ export async function addMessage(
     patientId: string,
     message: { sender: 'patient' | 'me' | 'system'; text: string; timestamp?: Date | string }
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
-
-    const { error } = await supabase
-        .from('messages')
-        .insert({
-            patient_id: patientId,
-            sender: message.sender,
-            text: message.text,
-        });
-
-    if (error) {
-        console.error('Error adding message:', error);
-        return { success: false, error: error.message };
+    try {
+        await requireStaff();
+        return addMessageRecord(patientId, message);
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
     }
-
-    // Atualizar última mensagem do paciente
-    await supabase
-        .from('patients')
-        .update({
-            last_message: message.text,
-            last_message_timestamp: new Date().toISOString(),
-        })
-        .eq('id', patientId);
-
-    return { success: true };
 }
 
 export async function addMessageAndSendWhatsapp(
@@ -61,6 +44,8 @@ export async function addMessageAndSendWhatsapp(
     text: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
+        await requireStaff();
+
         // 1. Enviar via Twilio
         const sent = await sendWhatsappMessageTwilio(to, text);
         if (!sent) {
@@ -68,7 +53,7 @@ export async function addMessageAndSendWhatsapp(
         }
 
         // 2. Salvar no banco
-        await addMessage(patientId, { sender: 'me', text });
+        await addMessageRecord(patientId, { sender: 'me', text });
 
         // 3. Audit — manual send by staff
         const { actorId, actorRole } = await getActor();
@@ -93,34 +78,14 @@ import type { ScheduledMessage } from '@/lib/types';
 
 // ... (código anterior)
 
-export async function scheduleReminder(
-    patientId: string,
-    whatsappNumber: string,
-    message: string,
-    sendAt: Date
-): Promise<{ success: boolean; error?: string }> {
-    const supabase = createServiceRoleClient();
-
-    const { error } = await supabase
-        .from('scheduled_messages')
-        .insert({
-            patient_id: patientId,
-            patient_whatsapp_number: whatsappNumber,
-            message_content: message,
-            send_at: sendAt.toISOString(),
-            source: 'dynamic_reminder',
-            status: 'pending',
-        });
-
-    if (error) {
-        console.error('Error scheduling reminder:', error);
-        return { success: false, error: error.message };
+export async function getScheduledMessagesForPatient(patientId: string): Promise<ScheduledMessage[]> {
+    try {
+        await requirePatientOwnerOrStaff(patientId);
+    } catch (error) {
+        console.error('Unauthorized scheduled messages access:', authErrorMessage(error));
+        return [];
     }
 
-    return { success: true };
-}
-
-export async function getScheduledMessagesForPatient(patientId: string): Promise<ScheduledMessage[]> {
     const supabase = createServiceRoleClient();
 
     const { data, error } = await supabase
@@ -150,6 +115,13 @@ export async function getScheduledMessagesForPatient(patientId: string): Promise
 }
 
 export async function getScheduledMessagesToday(): Promise<ScheduledMessage[]> {
+    try {
+        await requireStaff();
+    } catch (error) {
+        console.error('Unauthorized scheduled messages today access:', authErrorMessage(error));
+        return [];
+    }
+
     const supabase = createServiceRoleClient();
     const now = new Date();
     const endOfDay = new Date(now);
@@ -185,7 +157,13 @@ export async function updateScheduledMessage(
     messageId: string,
     updates: Partial<ScheduledMessage>
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase
         .from('scheduled_messages')
@@ -203,13 +181,14 @@ export async function updateScheduledMessage(
 export async function resolvePatientAttention(
     patientId: string
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
-
-    // Get current user for resolvedBy field
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        return { success: false, error: 'User not authenticated' };
+    let auth;
+    try {
+        auth = await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
     }
+
+    const supabase = createServiceRoleClient();
 
     // Update patient to clear attention flag
     const { error: patientError } = await supabase
@@ -227,7 +206,7 @@ export async function resolvePatientAttention(
         .from('attention_requests')
         .update({
             is_resolved: true,
-            resolved_by: user.id,
+            resolved_by: auth.userId,
             resolved_at: new Date().toISOString(),
         })
         .eq('patient_id', patientId)
@@ -240,8 +219,8 @@ export async function resolvePatientAttention(
 
     // Audit — resolving attention touches the clinical record
     await log.audit({
-        actorId: user.id,
-        actorRole: 'staff',
+        actorId: auth.userId,
+        actorRole: auth.role || 'staff',
         action: 'resolve_attention',
         resourceType: 'patient',
         resourceId: patientId,
@@ -254,6 +233,13 @@ export async function resolvePatientAttention(
 import type { Message } from '@/lib/types';
 
 export async function getMessages(patientId: string): Promise<Message[]> {
+    try {
+        await requirePatientOwnerOrStaff(patientId);
+    } catch (error) {
+        console.error('Unauthorized messages access:', authErrorMessage(error));
+        return [];
+    }
+
     const supabase = createClient();
 
     const { data, error } = await supabase
@@ -280,6 +266,12 @@ export async function rescheduleMessage(
     messageId: string,
     sendAt: string // ISO string
 ): Promise<{ success: boolean; error?: string }> {
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
     const supabase = createServiceRoleClient();
 
     const minAllowed = new Date(Date.now() + 10 * 60 * 1000);
@@ -320,6 +312,12 @@ export async function rescheduleMessage(
 }
 
 export async function deleteMessages(patientId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
+
     const supabase = createServiceRoleClient();
 
     // 1. Delete all messages for the patient

@@ -116,8 +116,8 @@ export async function handleProtocolGamification(
                 if (result.success && activeProtocolStep.title.includes('Peso')) {
                     const { isValid, value } = processNumericResponse(messageText);
                     if (isValid && value) {
-                        const { addHealthMetric } = await import('@/ai/actions/patients');
-                        await addHealthMetric(patient.id, { weight: value });
+                        const { addHealthMetricRecord } = await import('@/lib/health-metrics-store');
+                        await addHealthMetricRecord(patient.id, { weight: value }, supabase);
                         console.log(`[PROTOCOL-GAMIFICATION] Weight ${value}kg saved for patient ${patient.id}`);
                     }
                 }

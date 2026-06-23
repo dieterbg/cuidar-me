@@ -15,34 +15,41 @@ import { handlePatientReply } from '@/ai/handle-patient-reply';
 
 describe('API: Process Queue', () => {
     let mockSupabase: any;
+    let mockUpdate: any;
+    let pendingMessages: any[];
+    let lockResult: any;
     const CRON_SECRET = 'test-secret';
 
     beforeEach(() => {
         vi.clearAllMocks();
         process.env.CRON_SECRET = CRON_SECRET;
-        
+
+        pendingMessages = [{ id: 1, whatsapp_number: '123', message_text: 'oi', profile_name: 'Teste', message_sid: 'SM1' }];
+        lockResult = { data: [{ id: 1 }], error: null };
+
         // Helper to create a chainable mock that also resolves as a promise
-        const createChainable = () => {
+        const createChainable = (result: any) => {
             const chain = {
                 eq: vi.fn(),
                 order: vi.fn(),
                 limit: vi.fn(),
-                then: (resolve: any) => Promise.resolve({ data: [{ id: 1, whatsapp_number: '123' }], error: null }).then(resolve),
-                catch: (reject: any) => Promise.resolve({ error: null }).catch(reject),
+                select: vi.fn(),
+                then: (resolve: any) => Promise.resolve(result).then(resolve),
+                catch: (reject: any) => Promise.resolve(result).catch(reject),
             };
             chain.eq.mockReturnValue(chain);
             chain.order.mockReturnValue(chain);
             chain.limit.mockReturnValue(chain);
-            // Allow checking result for updates specifically
-            chain.then = (resolve: any) => Promise.resolve({ error: null }).then(resolve);
+            chain.select.mockReturnValue(chain);
             return chain;
         };
 
-        const mockUpdate = vi.fn().mockImplementation(() => createChainable());
+        mockUpdate = vi.fn().mockImplementation((payload: any) => {
+            if (payload?.status === 'processing') return createChainable(lockResult);
+            return createChainable({ error: null });
+        });
         const mockSelect = vi.fn().mockImplementation(() => {
-            const c = createChainable();
-            c.then = (resolve: any) => Promise.resolve({ data: [{ id: 1, whatsapp_number: '123' }], error: null }).then(resolve);
-            return c;
+            return createChainable({ data: pendingMessages, error: null });
         });
 
         mockSupabase = {
@@ -88,6 +95,23 @@ describe('API: Process Queue', () => {
         
         // Verify update to 'completed'
         expect(mockSupabase.from).toHaveBeenCalledWith('message_queue');
+    });
+
+    it('should skip processing if another worker already claimed the message', async () => {
+        lockResult = { data: [], error: null };
+
+        const req = new NextRequest('http://localhost/api/process-queue', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${CRON_SECRET}` }
+        });
+
+        const res = await POST(req);
+        const data = await res.json();
+
+        expect(res.status).toBe(200);
+        expect(data.message).toBe('Message already claimed');
+        expect(handlePatientReply).not.toHaveBeenCalled();
+        expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ status: 'processing' }));
     });
 
     it('should mark as error if AI processing fails', async () => {

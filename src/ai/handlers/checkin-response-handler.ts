@@ -106,8 +106,8 @@ export async function processCheckinResponse(
 
         if (result.success) {
             if (weightValue) {
-                const { addHealthMetric } = await import('../actions/patients');
-                await addHealthMetric(patient.id, { weight: weightValue });
+                const { addHealthMetricRecord } = await import('@/lib/health-metrics-store');
+                await addHealthMetricRecord(patient.id, { weight: weightValue }, supabase);
             }
 
             const emoji = EMOJI[perspective];
