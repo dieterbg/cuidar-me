@@ -11,7 +11,8 @@ export async function handleAIConversation(
     patient: any,
     messageText: string,
     whatsappNumber: string,
-    supabase: SupabaseClient
+    supabase: SupabaseClient,
+    suffixMessage?: string
 ): Promise<{ success: boolean }> {
     try {
         const transformedPatient = transformPatientFromSupabase(patient);
@@ -34,7 +35,10 @@ export async function handleAIConversation(
         }
 
         if (aiResponse.chatbotReply) {
-            const replyWithPrefix = `Deia: ${aiResponse.chatbotReply}`;
+            let replyWithPrefix = `Deia: ${aiResponse.chatbotReply}`;
+            if (suffixMessage) {
+                replyWithPrefix += suffixMessage;
+            }
             loggers.ai.debug('AI response generated', {
                 patientId: patient.id,
                 replyLength: replyWithPrefix.length,

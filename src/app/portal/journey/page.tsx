@@ -115,12 +115,12 @@ export default function JourneyPage() {
     }, [user, authLoading, toast, refetchTrigger]);
 
     const radarChartData = useMemo(() => {
-        if (!patient) return [];
+        if (!patient || !patient.gamification?.weeklyProgress?.perspectives) return [];
 
         const perspectives: Perspective[] = ['bemEstar', 'movimento', 'disciplina', 'alimentacao', 'hidratacao'];
 
         return perspectives.map(p => {
-            const perspectiveData = patient.gamification.weeklyProgress.perspectives[p];
+            const perspectiveData = patient.gamification.weeklyProgress.perspectives[p] || { current: 0, goal: 0, isComplete: false };
             const progress = perspectiveData.goal > 0 ? (perspectiveData.current / perspectiveData.goal) * 100 : 0;
             return {
                 subject: perspectiveConfig[p].label,
@@ -399,7 +399,7 @@ export default function JourneyPage() {
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         {Object.entries(perspectiveConfig).map(([key, config]) => {
-                            const perspectiveData = weeklyPerspectives[key as Perspective];
+                            const perspectiveData = weeklyPerspectives?.[key as Perspective] || { current: 0, goal: 0, isComplete: false };
                             const isComplete = perspectiveData.isComplete;
 
                             return (
@@ -424,10 +424,10 @@ export default function JourneyPage() {
                                         <div className="pt-2">
                                             <div className="flex justify-between text-xs mb-1">
                                                 <span className="text-muted-foreground">Progresso</span>
-                                                <span className={cn("font-bold", config.color)}>{perspectiveData.current}/{perspectiveData.goal}</span>
+                                                <span className={cn("font-bold", config.color)}>{perspectiveData.current}/{perspectiveData.goal > 0 ? perspectiveData.goal : '-'}</span>
                                             </div>
                                             <Progress
-                                                value={(perspectiveData.current / perspectiveData.goal) * 100}
+                                                value={perspectiveData.goal > 0 ? (perspectiveData.current / perspectiveData.goal) * 100 : 0}
                                                 className="h-1.5"
                                             />
                                         </div>
