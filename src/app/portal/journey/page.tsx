@@ -133,7 +133,7 @@ export default function JourneyPage() {
         });
     }, [patient]);
 
-    if (loading || authLoading || !patient) {
+    if (loading || authLoading || !patient || !user) {
         return <JourneySkeleton />;
     }
 
