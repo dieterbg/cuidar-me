@@ -59,7 +59,7 @@ const createFormSchema = (isAdmin: boolean, step: string) => z.object({
     z.number().positive().optional().nullable()
   ),
   medications: z.string().optional().nullable(),
-  whatsappConsent: z.boolean().optional().nullable(),
+
   protocolId: z.string().optional().nullable(),
   weightGoal: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
@@ -656,55 +656,6 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
                 </div>
               </>
             )}
-
-            {/* WhatsApp Consent (Sempre visível no portal para garantir trigger) */}
-            <div className="space-y-4 pt-4 border-t border-border/50">
-              <div className="rounded-2xl bg-brand/5 border border-brand/15 p-5 space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-brand/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <MessageSquare className="h-5 w-5 text-brand" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-[#2D3B2D]">Comunicação via WhatsApp</h3>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Ao ativar, você receberá mensagens de acompanhamento do seu protocolo de saúde,
-                      lembretes e dicas personalizadas via WhatsApp. Você pode cancelar a qualquer momento
-                      enviando &quot;SAIR&quot; no WhatsApp.
-                    </p>
-                  </div>
-                </div>
-                <FormField
-                  control={form.control}
-                  name="whatsappConsent"
-                  render={({ field }) => (
-                    <FormItem className="flex items-start gap-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value ?? false}
-                          onCheckedChange={field.onChange}
-                          className="mt-0.5 data-[state=checked]:bg-brand data-[state=checked]:border-brand"
-                        />
-                      </FormControl>
-                      <div className="leading-none">
-                        <FormLabel className="text-sm font-medium cursor-pointer">
-                          Aceito receber mensagens via WhatsApp
-                        </FormLabel>
-                        <FormDescription className="text-xs mt-1">
-                          Li e concordo com a{' '}
-                          <a
-                            href="/privacidade"
-                            target="_blank"
-                            className="text-brand underline hover:text-brand-hover"
-                          >
-                            Política de Privacidade
-                          </a>.
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
           </>
         )}
 
