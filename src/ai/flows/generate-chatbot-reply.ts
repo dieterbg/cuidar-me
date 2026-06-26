@@ -56,7 +56,7 @@ const prompt = ai.definePrompt({
   input: { schema: GenerateChatbotReplyInputSchema },
   output: { schema: GenerateChatbotReplyOutputSchema },
   tools: [scheduleReminderTool],
-  model: 'googleai/gemini-1.5-flash',
+  model: 'googleai/gemini-2.5-flash-lite',
   config: {
     temperature: 0.3,
     topP: 0.8,
@@ -156,9 +156,9 @@ const generateChatbotReplyFlow = ai.defineFlow(
         messageLength: input.patientMessage.length 
       });
 
-      // Using Gemini 1.5 Flash directly for speed and reliability
+      // Using Gemini 2.5 Flash Lite
       const response = await ai.generate({
-        model: 'googleai/gemini-1.5-flash',
+        model: 'googleai/gemini-2.5-flash-lite',
         prompt: `Você é a "Deia", a secretária virtual e braço direito da Dra. Bruna na plataforma Cuidar.me.
 Seu objetivo é ser prestativa, empática e proativa, ajudando o paciente em sua jornada de saúde.
 
@@ -223,7 +223,7 @@ Retorne no formato JSON rigoroso:
       try {
         logger.warn('Attempting fallback to 1.5 Flash 002', { patientId: input.patient.id });
         const fallbackResponse = await ai.generate({
-          model: 'googleai/gemini-1.5-flash-002',
+          model: 'googleai/gemini-2.5-flash-lite',
           prompt: `Message: ${input.patientMessage}. As Deia (Secretary), should I reply or escalate for medical help? Return JSON only with decision and chatbotReply.`,
           output: { format: 'json', schema: GenerateChatbotReplyOutputSchema }
         });
