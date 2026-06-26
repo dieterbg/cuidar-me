@@ -97,9 +97,13 @@ export default function PortalProfilePage() {
           (updatedPatient as any).goal
         );
 
-        const wasAlreadyActive = patient.status === 'active';
+        const wasIncompleteBefore = !(
+          patient.birthDate &&
+          patient.gender &&
+          (patient as any).goal
+        );
 
-        if (isComplete) {
+        if (isComplete && wasIncompleteBefore) {
           // Award profile completion gamification points (+50 pts — disciplina)
           try {
             await awardGamificationPoints(user!.id, 'disciplina', 50);
