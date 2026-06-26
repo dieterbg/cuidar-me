@@ -156,9 +156,9 @@ const generateChatbotReplyFlow = ai.defineFlow(
         messageLength: input.patientMessage.length 
       });
 
-      // Using Gemini 2.0 Flash directly for speed and reliability
+      // Using Gemini 1.5 Flash directly for speed and reliability
       const response = await ai.generate({
-        model: 'googleai/gemini-2.0-flash',
+        model: 'googleai/gemini-1.5-flash',
         prompt: `Você é a "Deia", a secretária virtual e braço direito da Dra. Bruna na plataforma Cuidar.me.
 Seu objetivo é ser prestativa, empática e proativa, ajudando o paciente em sua jornada de saúde.
 
