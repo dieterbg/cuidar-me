@@ -32,7 +32,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { Textarea } from './ui/textarea';
 
-const createFormSchema = (isAdmin: boolean) => z.object({
+const createFormSchema = (isAdmin: boolean, step: string) => z.object({
   name: z.string().min(3, { message: "O nome deve ter pelo menos 3 caracteres." }),
   whatsappNumber: z.string().min(10, { message: "O número de WhatsApp é obrigatório e deve ter pelo menos 10 dígitos." }).optional().nullable(),
   gender: z.enum(['masculino', 'feminino', 'outro']),
@@ -40,13 +40,15 @@ const createFormSchema = (isAdmin: boolean) => z.object({
   plan: z.enum(['freemium', 'premium', 'vip']),
   height: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
-    z.number({ required_error: "Altura é obrigatória", invalid_type_error: "Altura é obrigatória" })
-     .positive('Altura deve ser um número positivo.')
+    (step === 'health' || step === 'all' || isAdmin)
+      ? z.number({ required_error: "Altura é obrigatória", invalid_type_error: "Altura é obrigatória" }).positive('Altura deve ser um número positivo.')
+      : z.number().positive().optional().nullable()
   ),
   initialWeight: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? null : Number(val)),
-    z.number({ required_error: "Peso inicial é obrigatório", invalid_type_error: "Peso inicial é obrigatório" })
-     .positive('Peso deve ser um número positivo.')
+    (step === 'health' || step === 'all' || isAdmin)
+      ? z.number({ required_error: "Peso inicial é obrigatório", invalid_type_error: "Peso inicial é obrigatório" }).positive('Peso deve ser um número positivo.')
+      : z.number().positive().optional().nullable()
   ),
   birthDate: z.string().optional().nullable(),
   healthConditions: z.string().optional().nullable(),
@@ -105,7 +107,7 @@ export function PatientEditForm({ patient, onSave, context, step = 'all' }: Pati
   const isAdminContext = context === 'admin';
 
   // Geramos o schema com base no contexto para aplicar validações corretas
-  const formSchema = createFormSchema(isAdminContext);
+  const formSchema = createFormSchema(isAdminContext, step);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
