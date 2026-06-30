@@ -221,9 +221,9 @@ Retorne no formato JSON rigoroso:
 
       // Simple fallback to 1.5 Flash 002 if 2.0 has any transient issue
       try {
-        logger.warn('Attempting fallback to 1.5 Flash 002', { patientId: input.patient.id });
+        logger.warn('Attempting fallback to gemini-2.5-flash', { patientId: input.patient.id });
         const fallbackResponse = await ai.generate({
-          model: 'googleai/gemini-2.5-flash-lite',
+          model: 'googleai/gemini-2.5-flash',
           prompt: `Message: ${input.patientMessage}. As Deia (Secretary), should I reply or escalate for medical help? Return JSON only with decision and chatbotReply.`,
           output: { format: 'json', schema: GenerateChatbotReplyOutputSchema }
         });
