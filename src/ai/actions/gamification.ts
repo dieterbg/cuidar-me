@@ -57,6 +57,7 @@ export async function awardGamificationPoints(
     }
 
     // Salvar meta de volta no objeto
+    if (!patient.gamification.weeklyProgress) patient.gamification.weeklyProgress = { perspectives: {} };
     if (!patient.gamification.weeklyProgress.perspectives) patient.gamification.weeklyProgress.perspectives = {};
     patient.gamification.weeklyProgress.perspectives[perspectiveKey] = currentProgress;
 

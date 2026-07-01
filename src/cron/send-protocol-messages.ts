@@ -101,31 +101,65 @@ async function bulkScheduleAllDays(
         const weeklyMessages = getWeeklyProtocolMessages(protocolId, durationDays)
             .filter(message => message.day >= currentDay);
 
-        const messagesToInsert = weeklyMessages.map((message) => {
-            const calendarDate = new Date(startDateNoon);
-            calendarDate.setDate(calendarDate.getDate() + (message.day - 1));
-            const sendTime = getScheduledTime(message.title, calendarDate, false, 0, message.role);
-            const isGamification = message.role !== 'education';
+        // Data de corte para não enviar mensagens no passado
+        const startOfProtocolDay = new Date(startDateNoon);
+        startOfProtocolDay.setHours(0, 0, 0, 0);
 
-            return {
-                patient_id: patientId,
-                patient_whatsapp_number: whatsappNumber,
-                message_content: message.message,
-                send_at: sendTime.toISOString(),
-                source: 'protocol',
-                status: 'pending',
-                metadata: {
-                    isGamification,
-                    protocolId,
-                    protocolDay: message.day,
-                    protocolWeek: message.week,
-                    weeklyMessageRole: message.role,
-                    perspective: message.perspective || null,
-                    checkinTitle: message.role === 'weekly_checkin' ? message.title : null,
-                    messageTitle: message.title,
+        // Encontrar a segunda-feira da semana de início do protocolo
+        const startDayOfWeek = startDateNoon.getDay(); // 0 = Dom, 1 = Seg...
+        const jsDay = startDayOfWeek === 0 ? 7 : startDayOfWeek; // 1 = Seg ... 7 = Dom
+        const mondayOfStartWeek = new Date(startDateNoon);
+        mondayOfStartWeek.setDate(mondayOfStartWeek.getDate() - (jsDay - 1));
+
+        const messagesToInsert = weeklyMessages
+            .map((message) => {
+                // Ancorar na segunda-feira da semana específica (message.week)
+                const baseMonday = new Date(mondayOfStartWeek);
+                baseMonday.setDate(baseMonday.getDate() + (message.week - 1) * 7);
+
+                // Determinar o offset em dias a partir de segunda-feira (0)
+                let targetDayOffset = 0;
+                if (message.role === 'weekly_adherence' || message.role === 'weekly_checkin') {
+                    targetDayOffset = 0; // Segunda
+                } else if (message.role === 'education') {
+                    targetDayOffset = 2; // Quarta
+                } else if (message.role === 'weekly_weight') {
+                    targetDayOffset = 4; // Sexta
+                } else if (message.role === 'weekly_summary') {
+                    targetDayOffset = 5; // Sábado
+                } else {
+                    targetDayOffset = message.day - 1; // Fallback
                 }
-            };
-        });
+
+                const calendarDate = new Date(baseMonday);
+                calendarDate.setDate(calendarDate.getDate() + targetDayOffset);
+                
+                const sendTime = getScheduledTime(message.title, calendarDate, false, 0, message.role);
+                const isGamification = message.role !== 'education';
+
+                return {
+                    patient_id: patientId,
+                    patient_whatsapp_number: whatsappNumber,
+                    message_content: message.message,
+                    send_at: sendTime.toISOString(),
+                    source: 'protocol',
+                    status: 'pending',
+                    metadata: {
+                        isGamification,
+                        protocolId,
+                        protocolDay: message.day, // Mantém o day original para metadados
+                        protocolWeek: message.week,
+                        weeklyMessageRole: message.role,
+                        perspective: message.perspective || null,
+                        checkinTitle: message.role === 'weekly_checkin' ? message.title : null,
+                        messageTitle: message.title,
+                    },
+                    sendTimeObj: sendTime // temp para filtro
+                };
+            })
+            // Ignorar mensagens agendadas para antes do início do protocolo
+            .filter((m) => m.sendTimeObj >= startOfProtocolDay)
+            .map(({ sendTimeObj, ...m }) => m);
 
         if (messagesToInsert.length === 0) {
             logger.warn('Nenhuma mensagem semanal para agendar', {

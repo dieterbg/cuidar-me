@@ -124,7 +124,7 @@ export default function WelcomePage() {
   const isInactive = patient?.status === 'inactive' || patient?.status === 'inactive_cancellation';
   const isProfileComplete = !!patient?.height;
   const isFreemium = patient?.subscription?.plan === 'freemium';
-  const levelInfo = patient ? getLevelInfo(patient.gamification.totalPoints) : null;
+  const levelInfo = patient?.gamification?.totalPoints !== undefined ? getLevelInfo(patient.gamification.totalPoints) : null;
   const points = patient?.gamification?.totalPoints || 0;
 
   // ETAPA 1: Aguardando liberação pela clínica

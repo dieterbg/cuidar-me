@@ -137,13 +137,16 @@ export default function JourneyPage() {
         return <JourneySkeleton />;
     }
 
-    const levelInfo = getLevelInfo(patient.gamification.totalPoints);
-    const levelProgressPercentage = levelInfo.progress;
-    const goalPoints = patient.gamification.totalPoints + levelInfo.pointsForNext;
-    const weeklyPerspectives = patient.gamification.weeklyProgress.perspectives;
-    const perspectivesCompleted = Object.values(weeklyPerspectives).filter(p => p.isComplete).length;
+    const gamification = patient.gamification || { totalPoints: 0, level: 1, badges: [], weeklyProgress: { perspectives: {} } };
+    const subscription = patient.subscription || { plan: 'freemium' };
 
-    const isFreemium = patient.subscription.plan === 'freemium';
+    const levelInfo = getLevelInfo(gamification.totalPoints || 0);
+    const levelProgressPercentage = levelInfo.progress;
+    const goalPoints = (gamification.totalPoints || 0) + levelInfo.pointsForNext;
+    const weeklyPerspectives = gamification.weeklyProgress?.perspectives || {};
+    const perspectivesCompleted = Object.values(weeklyPerspectives).filter((p: any) => p.isComplete).length;
+
+    const isFreemium = subscription.plan === 'freemium';
 
     return (
         <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-background/50 min-h-screen relative overflow-hidden">
@@ -244,7 +247,7 @@ export default function JourneyPage() {
                             </div>
                             <div className="text-right flex flex-col items-end">
                                 <span className="text-sm text-muted-foreground font-medium">Pontuação</span>
-                                <span className="text-lg font-bold text-primary">{patient.gamification.totalPoints} <span className="text-sm font-normal text-muted-foreground">/ {goalPoints} pts</span></span>
+                                <span className="text-lg font-bold text-primary">{gamification.totalPoints || 0} <span className="text-sm font-normal text-muted-foreground">/ {goalPoints} pts</span></span>
                             </div>
                         </div>
                         <div className="relative z-10">
@@ -369,9 +372,9 @@ export default function JourneyPage() {
                                 <CardDescription>Emblemas desbloqueados na sua trajetória.</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1">
-                                {patient.gamification.badges.length > 0 ? (
+                                {(patient?.gamification?.badges || []).length > 0 ? (
                                     <div className="grid grid-cols-3 gap-4">
-                                        {patient.gamification.badges.map(badgeId => (
+                                        {(patient.gamification.badges || []).map(badgeId => (
                                             <div key={badgeId} className="flex flex-col items-center gap-2 p-3 rounded-xl bg-accent/10 border border-accent/20">
                                                 <Image src={badgeImages[badgeId] || '/badges/default.svg'} alt={badgeId} width={48} height={48} />
                                                 <span className="text-[10px] font-medium text-center uppercase tracking-wide text-muted-foreground">
