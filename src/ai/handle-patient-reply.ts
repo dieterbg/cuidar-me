@@ -567,7 +567,9 @@ async function _processSingleMessage(
 
     if (twilioSid) {
         const checkinTitle = msg.metadata?.checkinTitle || msg.metadata?.title || msg.metadata?.messageTitle || 'Mensagem do Sistema';
-        const shouldSetCheckinContext = msg.metadata?.weeklyMessageRole === 'weekly_checkin'
+        const shouldSetCheckinContext = msg.metadata?.weeklyMessageRole === 'weekly_weight'
+            || msg.metadata?.weeklyMessageRole === 'weekly_adherence'
+            || msg.metadata?.weeklyMessageRole === 'weekly_checkin'
             || (!!msg.metadata?.isGamification && !msg.metadata?.weeklyMessageRole);
 
         // Três writes em paralelo (context + mark sent + log)

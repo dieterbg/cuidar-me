@@ -234,7 +234,7 @@ export interface ScheduledMessage {
     errorInfo: string | null;
     metadata?: {
         isGamification?: boolean;
-        weeklyMessageRole?: 'weekly_checkin' | 'education' | 'weekly_summary';
+        weeklyMessageRole?: 'weekly_weight' | 'weekly_adherence' | 'weekly_checkin' | 'education' | 'weekly_summary';
         protocolId?: string;
         protocolDay?: number;
         protocolWeek?: number;

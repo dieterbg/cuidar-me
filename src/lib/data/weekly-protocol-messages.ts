@@ -1,6 +1,6 @@
 import type { Perspective } from '../types';
 
-export type WeeklyMessageRole = 'weekly_checkin' | 'education' | 'weekly_summary';
+export type WeeklyMessageRole = 'weekly_weight' | 'weekly_adherence' | 'weekly_checkin' | 'education' | 'weekly_summary';
 
 export interface WeeklyProtocolMessage {
     day: number;
@@ -164,15 +164,17 @@ export function getWeeklyProtocolMessages(
         const startDay = ((week - 1) * 7) + 1;
         if (startDay > durationDays) continue;
 
+        // Adesão Semanal (Segunda-feira - Dia 1)
         messages.push({
             day: startDay,
             week,
-            role: 'weekly_checkin',
+            role: 'weekly_adherence',
             perspective: 'disciplina',
-            title: `Check-in Semanal - ${profile.shortName} (Semana ${week})`,
-            message: buildWeeklyCheckinMessage(profile, week),
+            title: `Adesão Semanal - ${profile.shortName} (Semana ${week})`,
+            message: buildWeeklyAdherenceCheckinMessage(profile, week),
         });
 
+        // Foco da Semana / Dica Educativa (Quarta-feira - Dia 3)
         const educationDay = startDay + 2;
         if (educationDay <= durationDays) {
             messages.push({
@@ -184,6 +186,20 @@ export function getWeeklyProtocolMessages(
             });
         }
 
+        // Pesagem Semanal (Sexta-feira - Dia 5)
+        const weightDay = startDay + 4;
+        if (weightDay <= durationDays) {
+            messages.push({
+                day: weightDay,
+                week,
+                role: 'weekly_weight',
+                perspective: 'disciplina',
+                title: `Pesagem Semanal - ${profile.shortName} (Semana ${week})`,
+                message: buildWeeklyWeightCheckinMessage(profile, week),
+            });
+        }
+
+        // Resumo Semanal (Sábado - Dia 6)
         const summaryDay = Math.min(startDay + 5, durationDays);
         messages.push({
             day: summaryDay,
@@ -279,6 +295,31 @@ export function buildWeeklySummaryMessage(args: {
     ].filter(Boolean).join('\n');
 }
 
+export function buildWeeklyWeightCheckinMessage(profile: WeeklyProtocolProfile, week: number): string {
+    return [
+        `Semana ${week} - ${profile.shortName}`,
+        'Bom dia! Sexta-feira é dia de pesagem oficial.',
+        '',
+        'Responda apenas com o número do seu peso em jejum (ex: 85). 📊'
+    ].join('\n');
+}
+
+export function buildWeeklyAdherenceCheckinMessage(profile: WeeklyProtocolProfile, week: number): string {
+    return [
+        `Semana ${week} - ${profile.shortName}`,
+        profile.checkinTone,
+        '',
+        'Como foi a sua consistência com a alimentação e treinos na última semana?',
+        'Responda com a letra correspondente:',
+        '',
+        'A) Fui consistente',
+        'B) Oscilei, mas mantive parte do plano',
+        'C) Tive dificuldade e quero retomar',
+        '',
+        'Isso vale até 100 Health Coins na semana.'
+    ].join('\n');
+}
+
 function buildWeeklyCheckinMessage(profile: WeeklyProtocolProfile, week: number): string {
     return [
         `Semana ${week} - ${profile.shortName}`,
@@ -308,7 +349,9 @@ function formatWeight(weight: number): string {
 }
 
 function roleOrder(role: WeeklyMessageRole): number {
+    if (role === 'weekly_adherence') return 1;
     if (role === 'weekly_checkin') return 1;
     if (role === 'education') return 2;
-    return 3;
+    if (role === 'weekly_weight') return 3;
+    return 4;
 }

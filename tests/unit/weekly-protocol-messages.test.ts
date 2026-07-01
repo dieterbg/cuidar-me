@@ -9,11 +9,13 @@ const FUNDAMENTOS_ID = '613a4a63-ed4b-4cbf-9c64-49fe98074032';
 const PERFORMANCE_ID = '63e69258-ca73-4a6f-bd64-13031fa140f2';
 
 describe('weekly protocol messages', () => {
-    it('creates at most three messages per week', () => {
+    it('creates at most four messages per week', () => {
         const messages = getWeeklyProtocolMessages(FUNDAMENTOS_ID, 90);
 
-        expect(messages).toHaveLength(39);
-        expect(messages.filter(message => message.role === 'weekly_checkin')).toHaveLength(13);
+        // 13 weeks * 4 messages/week = 52 messages total
+        expect(messages).toHaveLength(52);
+        expect(messages.filter(message => message.role === 'weekly_weight')).toHaveLength(13);
+        expect(messages.filter(message => message.role === 'weekly_adherence')).toHaveLength(13);
         expect(messages.filter(message => message.role === 'education')).toHaveLength(13);
         expect(messages.filter(message => message.role === 'weekly_summary')).toHaveLength(13);
     });

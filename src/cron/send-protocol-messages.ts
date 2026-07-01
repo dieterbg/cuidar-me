@@ -47,6 +47,8 @@ function getScheduledTime(
         return now;
     }
 
+    if (weeklyRole === 'weekly_weight') return brtTime(calendarDate, 7);
+    if (weeklyRole === 'weekly_adherence') return brtTime(calendarDate, 7);
     if (weeklyRole === 'weekly_checkin') return brtTime(calendarDate, 7);
     if (weeklyRole === 'education') return brtTime(calendarDate, 10);
     if (weeklyRole === 'weekly_summary') return brtTime(calendarDate, 18);
