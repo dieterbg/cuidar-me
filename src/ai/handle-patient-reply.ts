@@ -507,7 +507,8 @@ async function _processSingleMessage(
                     });
                     
                     if (!linkError && linkData?.properties?.action_link) {
-                        messageContent += `\n\n🌟 *Toque no link mágico abaixo* para entrar no portal sem precisar de senha e ver sua Estrela do Cuidado brilhar!\n${linkData.properties.action_link}`;
+                        const fixedLink = linkData.properties.action_link.replace('http://localhost:3000', 'https://clinicadornelles.com.br');
+                        messageContent += `\n\n🌟 *Toque no link mágico abaixo* para entrar no portal sem precisar de senha e ver sua Estrela do Cuidado brilhar!\n${fixedLink}`;
                     }
                 }
             }
