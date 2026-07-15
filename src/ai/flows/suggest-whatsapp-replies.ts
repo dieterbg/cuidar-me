@@ -24,20 +24,6 @@ const SuggestWhatsappRepliesOutputSchema = z.object({
     .describe('The suggested reply to the patient message.'),
 });
 
-const prompt = ai.definePrompt({
-  name: 'suggestWhatsappRepliesPrompt',
-  input: { schema: SuggestWhatsappRepliesInputSchema },
-  model: 'googleai/gemini-2.5-flash-lite',
-  prompt: `Você é um assistente de IA que ajuda profissionais de saúde a responder mensagens de pacientes no WhatsApp.
-
-  Com base na mensagem do paciente, gere um rascunho de resposta que seja útil, empático e profissional.
-  Mantenha a resposta concisa e direta ao ponto.
-
-  Mensagem do Paciente: {{{patientMessage}}}
-
-  Resposta Sugerida:`,
-});
-
 const suggestWhatsappRepliesFlow = ai.defineFlow(
   {
     name: 'suggestWhatsappRepliesFlow',
@@ -45,8 +31,20 @@ const suggestWhatsappRepliesFlow = ai.defineFlow(
     outputSchema: SuggestWhatsappRepliesOutputSchema,
   },
   async input => {
-    const { output } = await prompt(input);
-    return output!;
+    const response = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-lite',
+      prompt: `Você é um assistente de IA que ajuda profissionais de saúde a responder mensagens de pacientes no WhatsApp.
+
+      Com base na mensagem do paciente, gere um rascunho de resposta que seja útil, empático e profissional.
+      Mantenha a resposta concisa e direta ao ponto.
+
+      Mensagem do Paciente: ${input.patientMessage}
+
+      Resposta Sugerida:`,
+    });
+    return {
+      suggestedReply: response.text,
+    };
   }
 );
 

@@ -69,13 +69,13 @@ export async function getClinicalSummaryAction(patientId: string): Promise<{ suc
 
     const recentMessages = messagesData?.map(m => ({
       sender: m.sender,
-      text: m.message_content || m.text,
+      text: m.message_content || m.text || '',
       timestamp: m.created_at,
     })).reverse() || []; // chronological order
 
     const attentionRequests = attentionRequestsData?.map(a => ({
-      reason: a.reason,
-      aiSummary: a.ai_summary,
+      reason: a.reason || 'Sem motivo especificado',
+      aiSummary: a.ai_summary || 'Sem resumo disponível',
       createdAt: a.created_at,
     })) || [];
 
@@ -85,7 +85,7 @@ export async function getClinicalSummaryAction(patientId: string): Promise<{ suc
       plan: patient.subscription.plan,
       protocolName: patient.protocol?.protocolId,
       protocolDay: patient.protocol?.currentDay,
-      level: patient.gamification.level,
+      level: patient.gamification.level !== undefined ? String(patient.gamification.level) : undefined,
       totalPoints: patient.gamification.totalPoints,
       metrics,
       recentMessages,
