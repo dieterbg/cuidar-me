@@ -9,7 +9,16 @@ import { ArrowUp, Bot, Loader2, CheckCircle, MicOff, Sparkles, X } from 'lucide-
 import { resolvePatientAttention, addMessageAndSendWhatsapp } from '@/ai/actions/messages';
 import { suggestWhatsappReplies } from '@/ai/flows/suggest-whatsapp-replies';
 import { getPatientDetails } from '@/ai/actions/patients';
+import { getClinicalSummaryAction } from '@/ai/actions/clinical-summary';
 import type { Message, Patient } from '@/lib/types';
+import { FileText } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -99,6 +108,70 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
 
     const [message, setMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+
+    const [clinicalSummary, setClinicalSummary] = useState<string | null>(null);
+    const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+    const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+
+    const handleGetClinicalSummary = async () => {
+        if (!patientId) return;
+        setIsSummaryLoading(true);
+        setIsSummaryOpen(true);
+        try {
+            const res = await getClinicalSummaryAction(patientId);
+            if (res.success && res.summary) {
+                setClinicalSummary(res.summary);
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro ao gerar resumo.',
+                    description: res.error || 'Falha na resposta da IA.'
+                });
+                setIsSummaryOpen(false);
+            }
+        } catch (error) {
+            console.error("Erro ao obter resumo clínico:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao gerar resumo.',
+                description: error instanceof Error ? error.message : String(error)
+            });
+            setIsSummaryOpen(false);
+        } finally {
+            setIsSummaryLoading(false);
+        }
+    };
+
+    const renderMarkdown = (text: string) => {
+        return text.split('\n').map((line, i) => {
+            if (line.startsWith('### ')) {
+                return <h4 key={i} className="text-sm font-semibold mt-3 mb-1 text-slate-800">{line.replace('### ', '')}</h4>;
+            }
+            if (line.startsWith('## ')) {
+                return <h3 key={i} className="text-base font-bold mt-4 mb-2 text-slate-900 border-b pb-1">{line.replace('## ', '')}</h3>;
+            }
+            if (line.startsWith('# ')) {
+                return <h2 key={i} className="text-lg font-black mt-5 mb-3 text-slate-950">{line.replace('# ', '')}</h2>;
+            }
+            if (line.startsWith('- ')) {
+                return <li key={i} className="ml-4 list-disc text-sm text-slate-700">{line.replace('- ', '')}</li>;
+            }
+            if (line.trim() === '') {
+                return <div key={i} className="h-2" />;
+            }
+            const parts = line.split('**');
+            if (parts.length > 1) {
+                return (
+                    <p key={i} className="text-sm text-slate-700 leading-relaxed">
+                        {parts.map((part, index) => 
+                            index % 2 === 1 ? <strong key={index} className="font-semibold text-slate-950">{part}</strong> : part
+                        )}
+                    </p>
+                );
+            }
+            return <p key={i} className="text-sm text-slate-700 leading-relaxed">{line}</p>;
+        });
+    };
 
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -306,10 +379,16 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
                             />
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
                                 {canSuggestReply && (
-                                    <Button onClick={handleSuggestReply} disabled={isReplyPending || isSending} variant="outline" size="sm">
-                                        <Sparkles className="mr-2 h-4 w-4" />
-                                        {isReplyPending ? '...' : 'Sugerir'}
-                                    </Button>
+                                    <>
+                                        <Button onClick={handleGetClinicalSummary} disabled={isSummaryLoading || isSending} variant="outline" size="sm">
+                                            <FileText className="mr-2 h-4 w-4" />
+                                            {isSummaryLoading ? '...' : 'Resumo'}
+                                        </Button>
+                                        <Button onClick={handleSuggestReply} disabled={isReplyPending || isSending} variant="outline" size="sm">
+                                            <Sparkles className="mr-2 h-4 w-4" />
+                                            {isReplyPending ? '...' : 'Sugerir'}
+                                        </Button>
+                                    </>
                                 )}
                                 <Button size="icon" className="h-9 w-9" onClick={handleSendMessage} disabled={isSending || !message.trim()}>
                                     {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
@@ -324,6 +403,32 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
                     )}
                 </div>
             </Card>
+
+            <Dialog open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary" />
+                            Resumo Clínico da IA
+                        </DialogTitle>
+                        <DialogDescription>
+                            Briefing comportamental e metabólico de {patient?.name} para suporte à decisão clínica.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4 space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                        {isSummaryLoading || !clinicalSummary ? (
+                            <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <p className="text-sm">Analisando métricas e histórico de conversas...</p>
+                            </div>
+                        ) : (
+                            <div className="prose prose-sm max-w-none">
+                                {renderMarkdown(clinicalSummary)}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
