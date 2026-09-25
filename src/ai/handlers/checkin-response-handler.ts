@@ -99,9 +99,9 @@ export async function processCheckinResponse(
     const uid = patient.userId || patient.user_id;
 
     if (points > 0 && uid) {
-        const { awardGamificationPoints } = await import('../actions/gamification');
-        const result = await awardGamificationPoints(
-            uid, perspective, points, supabase
+        const { applyGamificationPoints } = await import('@/lib/gamification-core');
+        const result = await applyGamificationPoints(
+            supabase, uid, perspective, points
         );
 
         if (result.success) {

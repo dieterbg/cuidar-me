@@ -3,6 +3,19 @@
 import { createClient } from '@/lib/supabase-server';
 import { revalidatePath } from 'next/cache';
 import { getStoreItem, STORE_CATALOG } from '@/lib/points-store';
+import { getAuthenticatedUserAndRole } from '@/lib/authz';
+import { randomBytes } from 'crypto';
+
+// SEGURANÇA: funções exportadas são endpoints públicos — o userId recebido
+// só é aceito se for o mesmo usuário da sessão.
+async function isSessionUser(userId: string): Promise<boolean> {
+    try {
+        const auth = await getAuthenticatedUserAndRole();
+        return auth.userId === userId;
+    } catch {
+        return false;
+    }
+}
 
 export interface Transaction {
     id: string;
@@ -26,6 +39,10 @@ export async function purchaseStoreItem(
     newBalance: number;
     redeemCode?: string;
 }> {
+    if (!(await isSessionUser(userId))) {
+        return { success: false, message: 'Acesso negado.', newBalance: 0 };
+    }
+
     const supabase = createClient();
     const item = getStoreItem(itemId);
 
@@ -151,6 +168,8 @@ export async function getUserTransactions(userId: string): Promise<{
     transactions: Transaction[];
     balance: number;
 }> {
+    if (!(await isSessionUser(userId))) return { transactions: [], balance: 0 };
+
     const supabase = createClient();
 
     // Buscar paciente ID primeiro
@@ -176,5 +195,7 @@ export async function getUserTransactions(userId: string): Promise<{
 }
 
 function generateRedeemCode(): string {
-    return Math.random().toString(36).substring(2, 10).toUpperCase();
+    // Criptograficamente seguro (Math.random é previsível). Mesmo formato: 8 chars A-Z0-9.
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return Array.from(randomBytes(8), (b) => alphabet[b % alphabet.length]).join('');
 }

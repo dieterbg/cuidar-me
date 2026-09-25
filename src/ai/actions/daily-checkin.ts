@@ -181,7 +181,7 @@ export async function handleDailyCheckinReply(
                 });
 
             // ========== INTEGRAÇÃO COM GAMIFICAÇÃO ==========
-            const { registerQuickAction } = await import('./gamification');
+            const { applyQuickAction } = await import('@/lib/gamification-core');
 
             // Buscar user_id do paciente
             const { data: patientData } = await supabase
@@ -195,22 +195,22 @@ export async function handleDailyCheckinReply(
 
                 // Hidratação
                 if (updatedData.hydration) {
-                    await registerQuickAction(patientData.user_id, 'hydration', 'hidratacao');
+                    await applyQuickAction(supabase, patientData.user_id, 'hydration', 'hidratacao');
                 }
 
                 // Alimentação
                 if (updatedData.breakfast || updatedData.lunch || updatedData.dinner) {
-                    await registerQuickAction(patientData.user_id, 'mood', 'alimentacao');
+                    await applyQuickAction(supabase, patientData.user_id, 'mood', 'alimentacao');
                 }
 
                 // Movimento
                 if (updatedData.activity) {
-                    await registerQuickAction(patientData.user_id, 'mood', 'movimento');
+                    await applyQuickAction(supabase, patientData.user_id, 'mood', 'movimento');
                 }
 
                 // Bem-Estar
                 if (updatedData.sleep) {
-                    await registerQuickAction(patientData.user_id, 'mood', 'bemEstar');
+                    await applyQuickAction(supabase, patientData.user_id, 'mood', 'bemEstar');
                 }
             }
             // ========== FIM DA INTEGRAÇÃO ==========

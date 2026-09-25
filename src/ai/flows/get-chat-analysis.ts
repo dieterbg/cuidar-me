@@ -20,6 +20,7 @@ import {
 import type { GetChatAnalysisInput, GetChatAnalysisOutput } from '@/lib/schemas'; // Importa os tipos
 import { z } from 'zod';
 import { googleAI } from '@genkit-ai/google-genai';
+import { requireStaff } from '@/lib/authz';
 
 // Re-exporta os tipos para que possam ser importados de outros arquivos.
 export type { GetChatAnalysisInput, GetChatAnalysisOutput };
@@ -27,6 +28,8 @@ export type { GetChatAnalysisInput, GetChatAnalysisOutput };
 export async function getChatAnalysis(
   input: GetChatAnalysisInput
 ): Promise<GetChatAnalysisOutput> {
+  // Server action pública: só a equipe pode acionar (evita abuso de custo do Gemini)
+  await requireStaff();
   return getChatAnalysisFlow(input);
 }
 

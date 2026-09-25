@@ -11,7 +11,7 @@ import { PatientEditForm } from '@/components/patient-edit-form';
 import type { Patient } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { awardGamificationPoints } from '@/ai/actions/gamification';
+import { awardProfileCompletionPoints } from '@/ai/actions/gamification';
 import { cn } from '@/lib/utils';
 
 interface StepProps {
@@ -106,7 +106,7 @@ export default function PortalProfilePage() {
         if (isComplete && wasIncompleteBefore) {
           // Award profile completion gamification points (+50 pts — disciplina)
           try {
-            await awardGamificationPoints(user!.id, 'disciplina', 50);
+            await awardProfileCompletionPoints();
           } catch (e) {
             console.error('Failed to award profile completion points:', e);
           }

@@ -33,9 +33,9 @@ vi.mock('@/ai/protocol-response-processor', () => ({
     processNumericResponse: vi.fn().mockReturnValue({ isValid: false }),
 }));
 
-vi.mock('@/ai/actions/gamification', () => ({
-    registerQuickAction: vi.fn().mockResolvedValue({ success: true }),
-    awardGamificationPoints: vi.fn().mockResolvedValue({ success: true }),
+vi.mock('@/lib/gamification-core', () => ({
+    applyQuickAction: vi.fn().mockResolvedValue({ success: true }),
+    applyGamificationPoints: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 vi.mock('@/lib/level-system', () => ({

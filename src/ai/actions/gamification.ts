@@ -1,113 +1,28 @@
 'use server';
 
-import { createClient } from '@/lib/supabase-server';
-import { revalidatePath } from 'next/cache';
-import type { Patient, Perspective } from '@/lib/types';
-import { calculateLevel, getLevelName, getStreakMultiplier } from '@/lib/level-system';
+import type { Perspective } from '@/lib/types';
+import { getAuthenticatedUserAndRole } from '@/lib/authz';
+import { createServiceRoleClient } from '@/lib/supabase-server-utils';
+import { applyGamificationPoints, applyQuickAction, type GamificationResult } from '@/lib/gamification-core';
 
-/**
- * Adiciona pontos diretamente ao paciente (bypass de rate-limit).
- * Usado pelo sistema de WhatsApp (handlers de protocolo, check-ins de IA).
- */
-export async function awardGamificationPoints(
-    userId: string,
-    perspectiveKey: Perspective,
-    basePoints: number,
-    supabaseClient?: any
-): Promise<{ success: boolean; message: string; pointsEarned: number }> {
-    console.log(`[GAMIFICATION] awardGamificationPoints for user ${userId} perspective ${perspectiveKey} basePoints ${basePoints}`);
-    const supabase = supabaseClient || createClient();
+// Server actions de gamificação expostas ao navegador.
+// SEGURANÇA: toda função exportada aqui é um endpoint público. Por isso:
+//  - o usuário é sempre o da sessão (userId do cliente só é aceito se for igual);
+//  - a quantidade de pontos NUNCA vem do cliente — é definida no servidor.
+// A lógica de pontuação fica em src/lib/gamification-core.ts (não exposta).
 
-    // 1. Buscar dados atuais do paciente
-    const { data: patientData, error: fetchError } = await supabase
-        .from('patients')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+const PROFILE_COMPLETION_POINTS = 50;
 
-    if (fetchError || !patientData) {
-        console.error('Error fetching patient for gamification:', fetchError);
-        return { success: false, message: 'Erro ao identificar paciente.', pointsEarned: 0 };
+async function resolveSessionUser(requestedUserId?: string): Promise<{ userId: string } | { error: GamificationResult }> {
+    try {
+        const auth = await getAuthenticatedUserAndRole();
+        if (requestedUserId && requestedUserId !== auth.userId) {
+            return { error: { success: false, message: 'Acesso negado.', pointsEarned: 0 } };
+        }
+        return { userId: auth.userId };
+    } catch {
+        return { error: { success: false, message: 'Não autenticado.', pointsEarned: 0 } };
     }
-
-    const patient = patientData as any;
-    let pointsEarned = basePoints;
-    let message = `Ação registrada! +${pointsEarned} pontos`;
-
-    // Inicializar estrutura se não existir
-    if (!patient.gamification) patient.gamification = { totalPoints: 0, level: 1, badges: [], weeklyProgress: { perspectives: {} } };
-
-    // ✨ MULTIPLICADOR DE STREAK ✨
-    const currentStreak = patient.gamification?.streak?.currentStreak || 0;
-    const multiplier = getStreakMultiplier(currentStreak);
-    if (multiplier > 1) {
-        pointsEarned = Math.round(basePoints * multiplier);
-        message = `Ação registrada! +${pointsEarned} pontos (${multiplier}x streak) 🔥`;
-    }
-
-    // Atualizar progresso semanal
-    const currentProgress = patient.gamification.weeklyProgress?.perspectives?.[perspectiveKey] || { current: 0, goal: 3, isComplete: false };
-    currentProgress.current += 1;
-
-    // Verificar se completou a meta semanal
-    if (currentProgress.current >= currentProgress.goal && !currentProgress.isComplete) {
-        currentProgress.isComplete = true;
-        pointsEarned += 50; // Bônus por completá-la
-        message += ' e Meta Semanal Concluída! 🚀';
-    }
-
-    // Salvar meta de volta no objeto
-    if (!patient.gamification.weeklyProgress) patient.gamification.weeklyProgress = { perspectives: {} };
-    if (!patient.gamification.weeklyProgress.perspectives) patient.gamification.weeklyProgress.perspectives = {};
-    patient.gamification.weeklyProgress.perspectives[perspectiveKey] = currentProgress;
-
-    // 3. Atualizar pontos totais e nível
-    patient.gamification.totalPoints = (patient.gamification.totalPoints || 0) + pointsEarned;
-
-    // ✨ SISTEMA DE NÍVEIS ✨
-    const oldLevel = patient.gamification.level;
-    const newLevel = calculateLevel(patient.gamification.totalPoints);
-    patient.gamification.level = newLevel;
-
-    // Verificar se subiu de nível — dar bônus de 100 × nível
-    const oldLevelNum = typeof oldLevel === 'number' ? oldLevel : 1;
-    if (newLevel > oldLevelNum) {
-        const levelUpBonus = 100 * newLevel;
-        patient.gamification.totalPoints += levelUpBonus;
-        pointsEarned += levelUpBonus;
-        const levelName = getLevelName(newLevel);
-        message += `\nPARABÉNS! Você subiu para ${levelName}! +${levelUpBonus} pontos bônus! 🎉`;
-    }
-
-    // 4. Salvar no banco
-    const { error: updateError } = await supabase
-        .from('patients')
-        .update({
-            gamification: patient.gamification,
-            total_points: patient.gamification.totalPoints,
-            level: patient.gamification.level,
-            last_checkin_type: null, // Resetar contexto de check-in
-            last_checkin_at: null    // Resetar contexto de check-in
-        })
-        .eq('user_id', userId);
-
-    if (updateError) {
-        console.error('Error updating gamification:', updateError);
-        return { success: false, message: 'Erro ao salvar progresso.', pointsEarned: 0 };
-    }
-
-    // 5. Verificar Badges
-    const { awardNewBadges } = await import('./badges');
-    const badgeResult = await awardNewBadges(userId);
-
-    if (badgeResult.success && badgeResult.newBadges.length > 0) {
-        message += `\n${badgeResult.message}`;
-    }
-
-    revalidatePath('/portal/welcome');
-    revalidatePath('/portal/journey');
-
-    return { success: true, message, pointsEarned };
 }
 
 /**
@@ -118,57 +33,57 @@ export async function registerQuickAction(
     userId: string,
     type: 'hydration' | 'mood',
     perspectiveOverride?: Perspective
-): Promise<{ success: boolean; message: string; pointsEarned: number }> {
-    console.log(`[GAMIFICATION] registerQuickAction (Web UI) called for user ${userId} type ${type}`);
-    const supabase = createClient();
+): Promise<GamificationResult> {
+    const session = await resolveSessionUser(userId);
+    if ('error' in session) return session.error;
 
-    // Buscar rapidamente os bounds de rate limit no paciente
-    const { data: patientData, error: fetchError } = await supabase
+    if (type !== 'hydration' && type !== 'mood') {
+        return { success: false, message: 'Ação inválida.', pointsEarned: 0 };
+    }
+
+    console.log(`[GAMIFICATION] registerQuickAction (Web UI) called for user ${session.userId} type ${type}`);
+    return applyQuickAction(createServiceRoleClient(), session.userId, type, perspectiveOverride);
+}
+
+/**
+ * Concede os pontos de perfil completo (+50 disciplina) uma única vez.
+ * O servidor confere se o perfil está de fato completo — o cliente não
+ * informa pontos nem pode repetir a concessão.
+ */
+export async function awardProfileCompletionPoints(): Promise<GamificationResult> {
+    const session = await resolveSessionUser();
+    if ('error' in session) return session.error;
+
+    const supabase = createServiceRoleClient();
+    const { data: patient, error } = await supabase
         .from('patients')
-        .select('gamification')
-        .eq('user_id', userId)
+        .select('birth_date, gender, goal, gamification')
+        .eq('user_id', session.userId)
         .single();
 
-    if (fetchError || !patientData) return { success: false, message: 'Erro ao identificar paciente.', pointsEarned: 0 };
-
-    const gamification = (patientData.gamification as any) || { lastActionLogs: {}, dailyActionCounts: {} };
-    if (!gamification.lastActionLogs) gamification.lastActionLogs = {};
-    if (!gamification.dailyActionCounts) gamification.dailyActionCounts = {};
-
-    let perspectiveKey: Perspective = perspectiveOverride || (type === 'hydration' ? 'hidratacao' : 'bemEstar');
-    let basePoints = type === 'hydration' ? 10 : 15;
-
-    // ✨ ANTI-CHEAT (RATE LIMITING) ✨
-    const now = Date.now();
-    const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 horas
-    const DAILY_LIMIT = 5;
-
-    // 1. Cooldown Check
-    const lastActionTime = gamification.lastActionLogs[perspectiveKey];
-    if (lastActionTime && (now - lastActionTime) < COOLDOWN_MS) {
-        const minutesLeft = Math.ceil((COOLDOWN_MS - (now - lastActionTime)) / 60000);
-        const hoursLeft = Math.floor(minutesLeft / 60);
-        const remainingMins = minutesLeft % 60;
-        const timeStr = hoursLeft > 0 ? `${hoursLeft}h e ${remainingMins}min` : `${minutesLeft} minutos`;
-        return { success: false, message: `Você já registrou isso há pouco! Volte em ${timeStr}. ⏳`, pointsEarned: 0 };
+    if (error || !patient) {
+        return { success: false, message: 'Erro ao identificar paciente.', pointsEarned: 0 };
     }
 
-    // 2. Daily Limit Check
-    const todayKey = new Date().toISOString().split('T')[0];
-    if (!gamification.dailyActionCounts[todayKey]) gamification.dailyActionCounts[todayKey] = {};
-    
-    const todayCount = gamification.dailyActionCounts[todayKey][perspectiveKey] || 0;
-    if (todayCount >= DAILY_LIMIT) {
-        return { success: false, message: `Limite diário de 5 atingido para esta atividade. Volte amanhã! 🌟`, pointsEarned: 0 };
+    const isComplete = !!(patient.birth_date && patient.gender && patient.goal);
+    if (!isComplete) {
+        return { success: false, message: 'Perfil ainda incompleto.', pointsEarned: 0 };
     }
 
-    // Registrar a hora do novo clique e incrementar contador diário para anti-cheat
-    gamification.lastActionLogs[perspectiveKey] = now;
-    gamification.dailyActionCounts[todayKey][perspectiveKey] = todayCount + 1;
+    const gamification = (patient.gamification as any) || {};
+    if (gamification.profileCompletionAwarded) {
+        return { success: false, message: 'Pontos de perfil já concedidos.', pointsEarned: 0 };
+    }
 
-    // Atualizar dados de anti-cheat antes de dar os pontos (para prevenir concorrência leve na UI)
-    await supabase.from('patients').update({ gamification }).eq('user_id', userId);
+    // Marca antes de pontuar para impedir concessão dupla em cliques repetidos.
+    const { error: markError } = await supabase
+        .from('patients')
+        .update({ gamification: { ...gamification, profileCompletionAwarded: true } })
+        .eq('user_id', session.userId);
 
-    // Chamar a função interna de premiação
-    return await awardGamificationPoints(userId, perspectiveKey, basePoints, supabase);
+    if (markError) {
+        return { success: false, message: 'Erro ao salvar progresso.', pointsEarned: 0 };
+    }
+
+    return applyGamificationPoints(supabase, session.userId, 'disciplina', PROFILE_COMPLETION_POINTS);
 }
