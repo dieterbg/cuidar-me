@@ -19,7 +19,7 @@ const FullScreenSpinner = () => (
 );
 
 function RootPageContent() {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -31,21 +31,12 @@ function RootPageContent() {
     }
   }, [searchParams]);
 
-  // Redirect already-authenticated users based on their role
   useEffect(() => {
-    if (!loading && user && profile) {
-      if (profile.role === 'paciente') {
-        router.replace('/portal/welcome');
-      } else if (profile.role === 'pendente') {
-        router.replace('/dashboard');
-      } else {
-        router.replace('/overview');
-      }
-    }
-  }, [user, profile, loading, router]);
+    if (!loading && user) router.replace('/dashboard');
+  }, [user, loading, router]);
 
   // Show spinner while loading or while redirect is in-flight
-  if (loading || (user && profile)) {
+  if (loading || user) {
     return <FullScreenSpinner />;
   }
 
@@ -153,6 +144,11 @@ function RootPageContent() {
               </CardHeader>
 
               <CardContent>
+                {searchParams.has('auth_error') && (
+                  <p role="alert" className="mb-4 text-sm text-destructive">
+                    Não foi possível concluir a autenticação. Tente entrar novamente.
+                  </p>
+                )}
                 <Tabs defaultValue="login" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 mb-6 h-12 rounded-xl bg-muted/30 p-1">
                     <TabsTrigger

@@ -231,20 +231,14 @@ const features = [
 ];
 
 function ProfissionalPageContent() {
-    const { user, profile, loading } = useAuth();
+    const { user, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && user && profile) {
-            if (profile.role === 'paciente') {
-                router.replace('/portal/welcome');
-            } else {
-                router.replace('/overview');
-            }
-        }
-    }, [user, profile, loading, router]);
+        if (!loading && user) router.replace('/dashboard');
+    }, [user, loading, router]);
 
-    if (loading || (user && profile)) {
+    if (loading || user) {
         return (
             <div className="flex h-screen items-center justify-center bg-background">
                 <Loader2 className="h-8 w-8 animate-spin text-brand" />

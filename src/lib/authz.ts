@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase-server';
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
+import { getProfileRole, STAFF_ROLES, type StaffRole } from '@/lib/profile-role';
 
-export const STAFF_ROLES = ['admin', 'equipe_saude', 'assistente'] as const;
-export type StaffRole = typeof STAFF_ROLES[number];
-export type AppRole = StaffRole | 'paciente' | 'pendente';
+export { STAFF_ROLES, type StaffRole, type AppRole } from '@/lib/profile-role';
 
 // Centralize authorization here. Callers should prove session ownership or staff
 // role before using any service-role client that can bypass RLS.
@@ -21,21 +20,15 @@ export class AuthenticationError extends Error {
     }
 }
 
-export async function getAuthenticatedUserAndRole(): Promise<{ userId: string; role: AppRole | string | null }> {
+export async function getAuthenticatedUserAndRole(): Promise<{ userId: string; role: string | null }> {
     const supabase = createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (error || !user) {
+    if (error || !user || user.is_anonymous) {
         throw new AuthenticationError();
     }
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    return { userId: user.id, role: profile?.role ?? null };
+    return { userId: user.id, role: await getProfileRole(supabase, user.id) };
 }
 
 export async function requireAdmin(): Promise<string> {
