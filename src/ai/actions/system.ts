@@ -3,8 +3,8 @@ console.log('[DEBUG] actions/system.ts loaded');
 
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
 import { createClient } from '@/lib/supabase-server';
-import type { UserProfile } from '@/lib/types';
-import { requireAdmin } from '@/lib/authz';
+import type { UserProfile, UserRole } from '@/lib/types';
+import { authErrorMessage, requireAdmin } from '@/lib/authz';
 import { getTwilioCredentialsInternal } from '@/lib/twilio-credentials';
 
 export async function saveTwilioCredentials(credentials: { accountSid: string; authToken: string; phoneNumber: string }): Promise<{ success: boolean; error?: string }> {
@@ -49,38 +49,50 @@ export async function getSystemUsers(): Promise<UserProfile[]> {
 
     const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, display_name, photo_url, role')
         .order('created_at', { ascending: false });
 
     if (error) {
         console.error('Error fetching system users:', error);
-        return [];
+        throw new Error('Não foi possível carregar as contas.');
     }
 
-    return data || [];
+    return (data ?? []).map((row) => ({
+        id: row.id,
+        email: row.email,
+        displayName: row.display_name,
+        photoURL: row.photo_url,
+        role: row.role,
+    }));
 }
 
 export async function updateUserRole(
     userId: string,
-    role: 'admin' | 'equipe_saude' | 'assistente' | 'paciente' | 'pendente'
-): Promise<{ success: boolean; error?: string }> {
+    role: UserRole,
+): Promise<{ success: true; role: UserRole } | { success: false; error: string }> {
     try {
         await requireAdmin();
         const supabase = createClient();
 
-        const { error } = await supabase
+        const { data: profile, error } = await supabase
             .from('profiles')
             .update({ role })
-            .eq('id', userId);
+            .eq('id', userId)
+            .select('role')
+            .maybeSingle();
 
         if (error) {
             console.error('Error updating user role:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: 'Não foi possível salvar o perfil de acesso.' };
         }
 
-        return { success: true };
-    } catch (error: any) {
-        return { success: false, error: error.message || 'Acesso negado' };
+        if (profile?.role !== role) {
+            return { success: false, error: 'Não foi possível confirmar a alteração. Recarregue a lista antes de tentar novamente.' };
+        }
+
+        return { success: true, role };
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
     }
 }
 

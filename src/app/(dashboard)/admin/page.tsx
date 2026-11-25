@@ -2,8 +2,8 @@
 
 "use client";
 
-import { useState, useEffect, useTransition, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -46,85 +46,100 @@ export default function AdminPage() {
 
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isProcessing, startTransition] = useTransition();
+    const [loadFailed, setLoadFailed] = useState(false);
+    const [reload, setReload] = useState(0);
+    const [draftRoles, setDraftRoles] = useState<Partial<Record<string, UserRole>>>({});
+    const [savingUserId, setSavingUserId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+    const currentUserId = currentUser?.id;
+    const role = profile?.role;
+    const isProcessing = savingUserId !== null || isDeleting;
 
-    // Proteção: apenas admin pode gerenciar usuários do sistema
     useEffect(() => {
         if (authLoading) return;
-        if (!profile) return;
-        if (profile.role !== 'admin') {
-            router.replace('/overview');
-        }
-    }, [authLoading, profile, router]);
-
-    const fetchUsers = useCallback(async () => {
-        setLoading(true);
-        setUsers([]); // Clear users before fetching
-        try {
-            const fetchedUsers = await getSystemUsers();
-            // Filter out the current user if they are the owner, so they can't edit themselves
-            if (profile?.role === 'admin') {
-                setUsers(fetchedUsers.filter(u => u.id !== currentUser?.id));
-            } else {
-                setUsers(fetchedUsers);
-            }
-        } catch (error) {
-            console.error("Failed to fetch users", error);
-            toast({ variant: 'destructive', title: 'Erro ao carregar usuários' });
-        } finally {
-            setLoading(false);
-        }
-    }, [toast, currentUser?.id, profile?.role]);
-
-
-    useEffect(() => {
-        if (!authLoading && profile?.role !== 'admin') {
-            toast({ variant: 'destructive', title: 'Acesso Negado', description: 'Você não tem permissão para acessar esta página.' });
-            router.push('/paciente');
+        if (role !== 'admin') {
+            router.replace(role ? '/overview' : '/paciente');
             return;
         }
 
-        if (!authLoading && profile?.role === 'admin') {
-            fetchUsers();
-        }
-    }, [profile, authLoading, router, toast, fetchUsers]);
+        let active = true;
+        setLoading(true);
+        setLoadFailed(false);
 
-    const handleRoleChange = (id: string, newRole: UserRole) => {
-        setUsers(currentUsers =>
-            currentUsers.map(user =>
-                user.id === id ? { ...user, role: newRole } : user
-            )
-        );
+        getSystemUsers()
+            .then((fetchedUsers) => {
+                if (!active) return;
+                setUsers(fetchedUsers.filter(user => user.id !== currentUserId));
+                setDraftRoles({});
+            })
+            .catch(() => {
+                if (active) setLoadFailed(true);
+            })
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+
+        return () => { active = false; };
+    }, [authLoading, currentUserId, reload, role, router]);
+
+    const reloadUsers = () => {
+        setLoading(true);
+        setReload(previous => previous + 1);
     };
 
-    const handleSaveChanges = (id: string) => {
-        const userToUpdate = users.find(u => u.id === id);
-        if (!userToUpdate) return;
+    const handleRoleChange = (user: UserProfile, newRole: UserRole) => {
+        setDraftRoles(previous => ({
+            ...previous,
+            [user.id]: newRole === user.role ? undefined : newRole,
+        }));
+    };
 
-        startTransition(async () => {
-            const result = await updateUserRole(id, userToUpdate.role);
-            if (result.success) {
-                toast({ title: 'Perfil Atualizado!', description: `As alterações para ${userToUpdate.displayName} foram salvas.` });
-            } else {
-                toast({ variant: 'destructive', title: 'Erro ao Atualizar', description: result.error || 'Falha ao salvar alterações.' });
+    const handleSaveChanges = async (user: UserProfile) => {
+        const newRole = draftRoles[user.id];
+        if (isProcessing || !newRole) return;
+
+        setSavingUserId(user.id);
+        try {
+            const result = await updateUserRole(user.id, newRole);
+            if (!result.success) {
+                toast({ variant: 'destructive', title: 'Erro ao atualizar', description: result.error });
+                return;
             }
-        });
+
+            setUsers(previous => previous.map(account =>
+                account.id === user.id ? { ...account, role: result.role } : account,
+            ));
+            setDraftRoles(previous => ({ ...previous, [user.id]: undefined }));
+            toast({
+                title: 'Perfil atualizado',
+                description: (user.displayName?.trim() || user.email || 'A conta') + ' está com o perfil ' + roleLabels[result.role] + '.',
+            });
+        } catch {
+            toast({ variant: 'destructive', title: 'Não foi possível confirmar a alteração', description: 'Recarregue a página e confira o perfil.' });
+        } finally {
+            setSavingUserId(null);
+        }
     };
 
-    const handleDeleteUser = () => {
-        if (!userToDelete) return;
+    const handleDeleteUser = async () => {
+        if (isProcessing || !userToDelete) return;
 
-        startTransition(async () => {
+        setIsDeleting(true);
+        try {
             const result = await deleteUser(userToDelete.id);
             if (result.success) {
-                toast({ title: 'Usuário Excluído!', description: `O usuário ${userToDelete.displayName} foi removido do sistema.` });
-                fetchUsers(); // Refresh the user list
+                toast({ title: 'Usuário excluído' });
+                reloadUsers();
             } else {
                 toast({ variant: 'destructive', title: 'Erro ao excluir', description: result.error });
             }
+        } catch {
+            toast({ variant: 'destructive', title: 'Não foi possível confirmar a exclusão' });
+        } finally {
+            setIsDeleting(false);
             setUserToDelete(null);
-        });
+        }
     };
 
     if (authLoading || loading) {
@@ -165,74 +180,98 @@ export default function AdminPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {users.map(user => (
-                                <div key={user.id} className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-lg border bg-muted/50 gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar>
-                                            <AvatarImage src={user.photoURL ?? undefined} />
-                                            <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-grow">
-                                            <p className="font-semibold">{user.displayName}</p>
-                                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                                        <Select
-                                            value={user.role}
-                                            onValueChange={(newRole) => handleRoleChange(user.id, newRole as UserRole)}
-                                            disabled={isProcessing}
-                                        >
-                                            <SelectTrigger className="w-full sm:w-[180px]">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {availableRoles.map((role) => (
-                                                    <SelectItem key={role} value={role}>
-                                                        {roleLabels[role]}
-                                                    </SelectItem>
-                                                ))}
-                                                <SelectItem value="admin" disabled>{roleLabels.admin}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <Button
-                                            size="icon"
-                                            onClick={() => handleSaveChanges(user.id)}
-                                            disabled={isProcessing}
-                                            aria-label="Salvar alterações de perfil"
-                                        >
-                                            {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {loadFailed ? (
+                                <Alert variant="destructive">
+                                    <ShieldAlert className="h-4 w-4" />
+                                    <AlertTitle>Não foi possível carregar as contas</AlertTitle>
+                                    <AlertDescription>
+                                        <Button variant="outline" size="sm" className="mt-2" onClick={reloadUsers}>
+                                            Tentar novamente
                                         </Button>
-                                        <AlertDialogTrigger asChild>
+                                    </AlertDescription>
+                                </Alert>
+                            ) : users.length === 0 ? (
+                                <p className="text-muted-foreground text-center py-4">Nenhum outro usuário no sistema para gerenciar.</p>
+                            ) : users.map(user => {
+                                const draft = draftRoles[user.id];
+                                const account = user.displayName?.trim() || user.email || 'Conta sem nome';
+
+                                return (
+                                    <div key={user.id} className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-lg border bg-muted/50 gap-4">
+                                        <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
+                                            <Avatar>
+                                                <AvatarImage src={user.photoURL ?? undefined} />
+                                                <AvatarFallback>{account.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="min-w-0 break-words">
+                                                <p className="font-semibold">{account}</p>
+                                                {user.email && user.email !== account && (
+                                                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                                                )}
+                                                {draft && (
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        Perfil confirmado: {roleLabels[user.role]}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 w-full sm:w-auto sm:shrink-0">
+                                            <Select
+                                                value={draft ?? user.role}
+                                                onValueChange={(newRole) => handleRoleChange(user, newRole as UserRole)}
+                                                disabled={isProcessing}
+                                            >
+                                                <SelectTrigger className="w-full sm:w-[180px]" aria-label={'Perfil de ' + account}>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableRoles.map((role) => (
+                                                        <SelectItem key={role} value={role}>
+                                                            {roleLabels[role]}
+                                                        </SelectItem>
+                                                    ))}
+                                                    <SelectItem value="admin" disabled>{roleLabels.admin}</SelectItem>
+                                                    <SelectItem value="paciente" disabled>{roleLabels.paciente}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <Button
                                                 size="icon"
-                                                variant="destructive"
-                                                disabled={isProcessing}
-                                                onClick={() => setUserToDelete(user)}
-                                                aria-label="Excluir usuário"
+                                                className="shrink-0"
+                                                onClick={() => handleSaveChanges(user)}
+                                                disabled={isProcessing || !draft}
+                                                aria-label={'Salvar perfil de ' + account}
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                {savingUserId === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                             </Button>
-                                        </AlertDialogTrigger>
+                                            <AlertDialogTrigger asChild>
+                                                <Button
+                                                    size="icon"
+                                                    variant="destructive"
+                                                    className="shrink-0"
+                                                    disabled={isProcessing}
+                                                    onClick={() => setUserToDelete(user)}
+                                                    aria-label={'Excluir usuário ' + account}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                            {users.length === 0 && (
-                                <p className="text-muted-foreground text-center py-4">Nenhum outro usuário no sistema para gerenciar.</p>
-                            )}
+                                );
+                            })}
                         </CardContent>
                     </Card>
                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. Isso excluirá permanentemente o usuário <span className="font-bold">{userToDelete?.displayName}</span> e revogará seu acesso ao sistema.
+                                Esta ação não pode ser desfeita. Isso excluirá permanentemente o usuário <span className="font-bold">{userToDelete?.displayName?.trim() || userToDelete?.email}</span> e revogará seu acesso ao sistema.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel onClick={() => setUserToDelete(null)} disabled={isProcessing}>Cancelar</AlertDialogCancel>
                             <AlertDialogAction onClick={handleDeleteUser} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sim, Excluir'}
+                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sim, Excluir'}
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

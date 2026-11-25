@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import {
     getAuditLogs,
@@ -36,36 +36,63 @@ function SeverityBadge({ severity }: { severity: string }) {
     return <Badge variant={variant as any} className={cls}>{severity}</Badge>;
 }
 
+type LogsData = {
+    stats: Awaited<ReturnType<typeof getLogsStats>> | null;
+    audit: AuditLogRow[] | null;
+    security: SecurityEventRow[] | null;
+    business: BusinessEventRow[] | null;
+    webhooks: TwilioWebhookRow[] | null;
+};
+
+function fulfilledOrNull<T>(result: PromiseSettledResult<T>): T | null {
+    return result.status === 'fulfilled' ? result.value : null;
+}
+
 export default function LogsPage() {
     const { profile, loading: authLoading } = useAuth();
-    const [stats, setStats] = useState<Awaited<ReturnType<typeof getLogsStats>> | null>(null);
-    const [audit, setAudit] = useState<AuditLogRow[]>([]);
-    const [security, setSecurity] = useState<SecurityEventRow[]>([]);
-    const [business, setBusiness] = useState<BusinessEventRow[]>([]);
-    const [webhooks, setWebhooks] = useState<TwilioWebhookRow[]>([]);
+    const [{ stats, audit, security, business, webhooks }, setData] = useState<LogsData>({
+        stats: null,
+        audit: null,
+        security: null,
+        business: null,
+        webhooks: null,
+    });
     const [loading, setLoading] = useState(true);
-    const [isRefreshing, startRefresh] = useTransition();
+    const [reload, setReload] = useState(0);
     const [auditFilter, setAuditFilter] = useState('');
     const [webhookStatusFilter, setWebhookStatusFilter] = useState('');
+    const role = profile?.role;
 
-    async function loadAll() {
-        const [s, a, sec, biz, web] = await Promise.all([
+    useEffect(() => {
+        if (authLoading || role !== 'admin') return;
+        let active = true;
+        setLoading(true);
+
+        void Promise.allSettled([
             getLogsStats(),
             getAuditLogs({ limit: 200 }),
             getSecurityEvents({ limit: 200 }),
             getBusinessEvents({ limit: 200 }),
             getTwilioWebhooks({ limit: 200 }),
-        ]);
-        setStats(s); setAudit(a); setSecurity(sec); setBusiness(biz); setWebhooks(web);
-    }
+        ]).then(([statsResult, auditResult, securityResult, businessResult, webhooksResult]) => {
+            if (!active) return;
+            setData({
+                stats: fulfilledOrNull(statsResult),
+                audit: fulfilledOrNull(auditResult),
+                security: fulfilledOrNull(securityResult),
+                business: fulfilledOrNull(businessResult),
+                webhooks: fulfilledOrNull(webhooksResult),
+            });
+            setLoading(false);
+        });
 
-    useEffect(() => {
-        if (profile?.role !== 'admin') return;
+        return () => { active = false; };
+    }, [authLoading, reload, role]);
+
+    const refresh = () => {
         setLoading(true);
-        loadAll().finally(() => setLoading(false));
-    }, [profile?.role]);
-
-    const refresh = () => startRefresh(() => { loadAll(); });
+        setReload(previous => previous + 1);
+    };
 
     if (authLoading) return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
 
@@ -81,21 +108,24 @@ export default function LogsPage() {
         );
     }
 
-    const filteredAudit = auditFilter
-        ? audit.filter(r =>
-            r.action.toLowerCase().includes(auditFilter.toLowerCase()) ||
-            (r.patient_name ?? '').toLowerCase().includes(auditFilter.toLowerCase()) ||
-            (r.resource_type ?? '').toLowerCase().includes(auditFilter.toLowerCase())
+    const auditTerm = auditFilter.trim().toLowerCase();
+    const auditRows = audit ?? [];
+    const filteredAudit = auditTerm
+        ? auditRows.filter(row =>
+            row.action.toLowerCase().includes(auditTerm) ||
+            (row.patient_name ?? '').toLowerCase().includes(auditTerm) ||
+            (row.resource_type ?? '').toLowerCase().includes(auditTerm)
         )
-        : audit;
+        : auditRows;
 
+    const webhookRows = webhooks ?? [];
     const filteredWebhooks = webhookStatusFilter
-        ? webhooks.filter(r => r.status === webhookStatusFilter)
-        : webhooks;
+        ? webhookRows.filter(row => row.status === webhookStatusFilter)
+        : webhookRows;
 
     return (
         <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold flex items-center gap-2">
                         <FileSearch className="h-7 w-7 text-brand" />
@@ -105,8 +135,8 @@ export default function LogsPage() {
                         Trilha de auditoria LGPD, eventos de segurança, métricas de negócio e entregas Twilio.
                     </p>
                 </div>
-                <Button variant="outline" onClick={refresh} disabled={isRefreshing}>
-                    {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                <Button variant="outline" onClick={refresh} disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                     Atualizar
                 </Button>
             </div>
@@ -135,13 +165,16 @@ export default function LogsPage() {
                             <CardDescription>Quem fez o quê, quando. Retenção 5 anos (CFM / LGPD Art. 19).</CardDescription>
                             <Input
                                 placeholder="Filtrar por ação, paciente ou recurso…"
+                                aria-label="Filtrar trilha de auditoria"
                                 value={auditFilter}
                                 onChange={(e) => setAuditFilter(e.target.value)}
                                 className="mt-2 max-w-md"
                             />
                         </CardHeader>
                         <CardContent>
-                            {loading ? <Skeleton className="h-64 w-full" /> : (
+                            {loading ? <Skeleton className="h-64 w-full" /> : audit === null ? (
+                                <LogLoadError title="Não foi possível carregar a trilha de auditoria." onRetry={refresh} />
+                            ) : (
                                 <div className="border rounded-lg overflow-x-auto">
                                     <Table>
                                         <TableHeader>
@@ -156,7 +189,11 @@ export default function LogsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {filteredAudit.length === 0 ? (
-                                                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sem registros.</TableCell></TableRow>
+                                                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                                                    {auditTerm && auditRows.length > 0
+                                                        ? 'Nenhum registro carregado corresponde ao filtro.'
+                                                        : 'Sem registros de auditoria.'}
+                                                </TableCell></TableRow>
                                             ) : filteredAudit.map(row => (
                                                 <TableRow key={row.id}>
                                                     <TableCell className="font-mono text-xs whitespace-nowrap">{fmt(row.created_at)}</TableCell>
@@ -190,7 +227,9 @@ export default function LogsPage() {
                             <CardDescription>Tentativas de acesso não autorizado, rate limits, token inválido. Retenção 1 ano.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {loading ? <Skeleton className="h-64 w-full" /> : (
+                            {loading ? <Skeleton className="h-64 w-full" /> : security === null ? (
+                                <LogLoadError title="Não foi possível carregar os eventos de segurança." onRetry={refresh} />
+                            ) : (
                                 <div className="border rounded-lg overflow-x-auto">
                                     <Table>
                                         <TableHeader>
@@ -230,7 +269,9 @@ export default function LogsPage() {
                             <CardDescription>Funil de onboarding, check-ins, opt-outs — pseudonimizado. Retenção 2 anos.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {loading ? <Skeleton className="h-64 w-full" /> : (
+                            {loading ? <Skeleton className="h-64 w-full" /> : business === null ? (
+                                <LogLoadError title="Não foi possível carregar os eventos de negócio." onRetry={refresh} />
+                            ) : (
                                 <div className="border rounded-lg overflow-x-auto">
                                     <Table>
                                         <TableHeader>
@@ -275,6 +316,7 @@ export default function LogsPage() {
                                         size="sm"
                                         variant={webhookStatusFilter === s ? 'default' : 'outline'}
                                         onClick={() => setWebhookStatusFilter(s)}
+                                        aria-pressed={webhookStatusFilter === s}
                                     >
                                         {s || 'Todos'}
                                     </Button>
@@ -282,7 +324,9 @@ export default function LogsPage() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            {loading ? <Skeleton className="h-64 w-full" /> : (
+                            {loading ? <Skeleton className="h-64 w-full" /> : webhooks === null ? (
+                                <LogLoadError title="Não foi possível carregar as entregas Twilio." onRetry={refresh} />
+                            ) : (
                                 <div className="border rounded-lg overflow-x-auto">
                                     <Table>
                                         <TableHeader>
@@ -296,7 +340,11 @@ export default function LogsPage() {
                                         </TableHeader>
                                         <TableBody>
                                             {filteredWebhooks.length === 0 ? (
-                                                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Nenhum webhook recebido ainda.</TableCell></TableRow>
+                                                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                                                    {webhookStatusFilter && webhookRows.length > 0
+                                                        ? 'Nenhuma entrega carregada corresponde ao status selecionado.'
+                                                        : 'Nenhum webhook recebido ainda.'}
+                                                </TableCell></TableRow>
                                             ) : filteredWebhooks.map(row => {
                                                 const isError = row.status === 'failed' || row.status === 'undelivered';
                                                 return (
@@ -330,10 +378,24 @@ export default function LogsPage() {
     );
 }
 
+function LogLoadError({ title, onRetry }: { title: string; onRetry: () => void }) {
+    return (
+        <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>{title}</AlertTitle>
+            <AlertDescription>
+                <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>
+                    Tentar novamente
+                </Button>
+            </AlertDescription>
+        </Alert>
+    );
+}
+
 function StatTile({ icon, label, value, loading, highlight }: {
     icon: React.ReactNode;
     label: string;
-    value: number | undefined;
+    value: number | null | undefined;
     loading: boolean;
     highlight?: boolean;
 }) {
@@ -343,9 +405,11 @@ function StatTile({ icon, label, value, loading, highlight }: {
                 <div className="flex items-center gap-2 text-muted-foreground text-xs font-medium mb-1">
                     {icon} {label}
                 </div>
-                {loading ? <Skeleton className="h-8 w-16" /> : (
+                {loading ? <Skeleton className="h-8 w-16" /> : value == null ? (
+                    <p className="text-sm text-muted-foreground">Indisponível</p>
+                ) : (
                     <div className={`text-3xl font-bold ${highlight ? 'text-red-600' : ''}`}>
-                        {value ?? 0}
+                        {value}
                     </div>
                 )}
             </CardContent>

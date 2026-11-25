@@ -94,7 +94,10 @@ export async function getAuditLogs(filters: LogFilters & {
     if (filters.offset) query = query.range(filters.offset, (filters.offset ?? 0) + (filters.limit ?? 100) - 1);
 
     const { data, error } = await query;
-    if (error) { console.error('getAuditLogs:', error); return []; }
+    if (error) {
+        console.error('getAuditLogs:', error);
+        throw new Error('Não foi possível carregar a trilha de auditoria.');
+    }
 
     return (data || []).map((r: any) => ({
         id: r.id,
@@ -131,7 +134,10 @@ export async function getSecurityEvents(filters: LogFilters & {
     if (filters.toDate) query = query.lte('created_at', filters.toDate);
 
     const { data, error } = await query;
-    if (error) { console.error('getSecurityEvents:', error); return []; }
+    if (error) {
+        console.error('getSecurityEvents:', error);
+        throw new Error('Não foi possível carregar os eventos de segurança.');
+    }
     return (data || []) as SecurityEventRow[];
 }
 
@@ -155,7 +161,10 @@ export async function getBusinessEvents(filters: LogFilters & {
     if (filters.toDate) query = query.lte('created_at', filters.toDate);
 
     const { data, error } = await query;
-    if (error) { console.error('getBusinessEvents:', error); return []; }
+    if (error) {
+        console.error('getBusinessEvents:', error);
+        throw new Error('Não foi possível carregar os eventos de negócio.');
+    }
     return (data || []) as BusinessEventRow[];
 }
 
@@ -181,16 +190,27 @@ export async function getTwilioWebhooks(filters: LogFilters & {
     if (filters.toDate) query = query.lte('created_at', filters.toDate);
 
     const { data, error } = await query;
-    if (error) { console.error('getTwilioWebhooks:', error); return []; }
+    if (error) {
+        console.error('getTwilioWebhooks:', error);
+        throw new Error('Não foi possível carregar as entregas Twilio.');
+    }
     return (data || []) as TwilioWebhookRow[];
+}
+
+function readLogCount(name: string, result: { count: number | null; error: unknown }): number | null {
+    if (result.error) {
+        console.error('getLogsStats:', name, result.error);
+        return null;
+    }
+    return result.count;
 }
 
 // ── Stats for dashboard tiles ──────────────────────────────
 export async function getLogsStats(): Promise<{
-    auditLast24h: number;
-    securityCritical: number;
-    webhooksFailed24h: number;
-    webhooks63049_7d: number;
+    auditLast24h: number | null;
+    securityCritical: number | null;
+    webhooksFailed24h: number | null;
+    webhooks63049_7d: number | null;
 }> {
     await requireAdmin();
     const supabase = createServiceRoleClient();
@@ -205,10 +225,10 @@ export async function getLogsStats(): Promise<{
     ]);
 
     return {
-        auditLast24h: audit.count ?? 0,
-        securityCritical: security.count ?? 0,
-        webhooksFailed24h: failed.count ?? 0,
-        webhooks63049_7d: blocked.count ?? 0,
+        auditLast24h: readLogCount('auditLast24h', audit),
+        securityCritical: readLogCount('securityCritical', security),
+        webhooksFailed24h: readLogCount('webhooksFailed24h', failed),
+        webhooks63049_7d: readLogCount('webhooks63049_7d', blocked),
     };
 }
 
