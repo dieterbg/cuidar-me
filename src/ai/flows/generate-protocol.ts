@@ -12,6 +12,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { googleAI } from '@genkit-ai/google-genai';
+import { requireStaff } from '@/lib/authz';
 
 const GenerateProtocolInputSchema = z.object({
   prompt: z.string().describe('The natural language description of the protocol to be generated.'),
@@ -35,6 +36,8 @@ export type GenerateProtocolOutput = z.infer<typeof GenerateProtocolOutputSchema
 
 
 export async function generateProtocol(input: GenerateProtocolInput): Promise<GenerateProtocolOutput> {
+  // Server action pública: só a equipe pode acionar (evita abuso de custo do Gemini)
+  await requireStaff();
   return generateProtocolFlow(input);
 }
 

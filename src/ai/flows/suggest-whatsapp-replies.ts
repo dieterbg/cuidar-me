@@ -11,6 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { requireStaff } from '@/lib/authz';
 
 const SuggestWhatsappRepliesInputSchema = z.object({
   patientMessage: z
@@ -54,5 +55,7 @@ export type SuggestWhatsappRepliesOutput = z.infer<typeof SuggestWhatsappReplies
 
 // THE ONLY EXPORT ALLOWED AS A FUNCTION IN A `use server` FILE
 export async function suggestWhatsappReplies(input: SuggestWhatsappRepliesInput): Promise<SuggestWhatsappRepliesOutput> {
+  // Server action pública: só a equipe pode acionar (evita abuso de custo do Gemini)
+  await requireStaff();
   return suggestWhatsappRepliesFlow(input);
 }

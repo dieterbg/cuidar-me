@@ -1,15 +1,23 @@
 'use server';
 
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
+import { requireAdmin, authErrorMessage } from '@/lib/authz';
 
 /**
  * Popula o banco de dados com dados de exemplo
  * ATENÇÃO: Use apenas em desenvolvimento!
  */
 export async function seedDatabase(): Promise<{ success: boolean; error?: string; details?: string }> {
-    // if (process.env.NODE_ENV === 'production') {
-    //     return { success: false, error: 'Seeding is not allowed in production' };
-    // }
+    // SEGURANÇA: server action = endpoint público. Nunca rodar em produção e
+    // sempre exigir admin (usa service-role, que ignora RLS).
+    if (process.env.VERCEL_ENV === 'production') {
+        return { success: false, error: 'Seed de dados de exemplo não é permitido em produção.' };
+    }
+    try {
+        await requireAdmin();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
 
     const supabase = createServiceRoleClient();
     const details: string[] = [];

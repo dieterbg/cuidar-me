@@ -392,8 +392,8 @@ export async function createPatientRecord(patientData: Partial<Patient>): Promis
     if (patientData.consentVersion) dbInsert.consent_version = patientData.consentVersion;
     if (patientData.consentSource) dbInsert.consent_source = patientData.consentSource;
 
-    // Default gamification if needed
-    if (patientData.gamification) dbInsert.gamification = patientData.gamification;
+    // Default gamification if needed — só staff pode definir (paciente não escolhe os próprios pontos)
+    if (callerIsStaff && patientData.gamification) dbInsert.gamification = patientData.gamification;
 
     const { data, error } = await supabase
         .from('patients')

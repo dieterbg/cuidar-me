@@ -22,7 +22,6 @@ export async function handleProtocolGamification(
         getActionType,
         generateConfirmationMessage
     } = await import('@/ai/protocol-response-processor');
-    const { registerQuickAction } = await import('@/ai/actions/gamification');
     const { getStreakMultiplier } = await import('@/lib/level-system');
 
     const currentDay = patientProtocol.current_day;
@@ -89,14 +88,14 @@ export async function handleProtocolGamification(
             }
 
             if (points > 0 && patient.user_id) {
-                const { awardGamificationPoints } = await import('@/ai/actions/gamification');
-                
+                const { applyGamificationPoints } = await import('@/lib/gamification-core');
+
                 // 4. Registrar a ação e dar XP (passando direto, bypass de Rate-Limit da Web)
-                const result = await awardGamificationPoints(
+                const result = await applyGamificationPoints(
+                    supabase,
                     patient.user_id,
                     perspective,
-                    points,
-                    supabase
+                    points
                 );
 
                 if (result.success) {

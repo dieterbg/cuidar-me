@@ -8,6 +8,16 @@ vi.mock('@/lib/supabase-server', () => ({
     createClient: vi.fn(() => mockContainer.supabase),
 }));
 
+// A action agora grava via service-role após validar a sessão.
+vi.mock('@/lib/supabase-server-utils', () => ({
+    createServiceRoleClient: vi.fn(() => mockContainer.supabase),
+}));
+
+// Sessão simulada: paciente 'user-1' logado.
+vi.mock('@/lib/authz', () => ({
+    getAuthenticatedUserAndRole: vi.fn(async () => ({ userId: 'user-1', role: 'paciente' })),
+}));
+
 vi.mock('next/cache', () => ({
     revalidatePath: vi.fn(),
     revalidateTag: vi.fn(),
@@ -32,7 +42,8 @@ vi.mock('@/ai/actions/badges', () => ({
     awardNewBadges: vi.fn().mockResolvedValue({ success: true, newBadges: [], message: '' }),
 }));
 
-import { registerQuickAction } from '@/ai/actions/gamification';
+import { registerQuickAction, awardProfileCompletionPoints } from '@/ai/actions/gamification';
+import { getAuthenticatedUserAndRole } from '@/lib/authz';
 
 describe('Server Action: Gamification', () => {
     let mockFrom: ReturnType<typeof createMockSupabase>['mockFrom'];
@@ -161,5 +172,59 @@ describe('Server Action: Gamification', () => {
         expect(result.success).toBe(true);
         expect(result.pointsEarned).toBe(12); // 10 * 1.2 = 12
         expect(result.message).toContain('streak');
+    });
+
+    // =================================================================
+    // SEGURANÇA (auditoria 2026-09-25)
+    // =================================================================
+    it('SEC-GAM-01: nega ação rápida para outro usuário', async () => {
+        mockFrom('patients', { data: makePatient(), error: null });
+
+        const result = await registerQuickAction('user-2', 'hydration');
+
+        expect(result.success).toBe(false);
+        expect(result.pointsEarned).toBe(0);
+    });
+
+    it('SEC-GAM-02: nega ação rápida sem sessão', async () => {
+        vi.mocked(getAuthenticatedUserAndRole).mockRejectedValueOnce(new Error('Não autenticado'));
+        mockFrom('patients', { data: makePatient(), error: null });
+
+        const result = await registerQuickAction('user-1', 'hydration');
+
+        expect(result.success).toBe(false);
+        expect(result.pointsEarned).toBe(0);
+    });
+
+    it('SEC-GAM-03: pontos de perfil completo = +50 definidos no servidor', async () => {
+        mockFrom('patients', {
+            data: makePatient({ birth_date: '1990-01-01', gender: 'F', goal: 'saude' }),
+            error: null,
+        });
+
+        const result = await awardProfileCompletionPoints();
+
+        expect(result.success).toBe(true);
+        expect(result.pointsEarned).toBe(50);
+    });
+
+    it('SEC-GAM-04: não concede pontos de perfil se perfil incompleto', async () => {
+        mockFrom('patients', { data: makePatient({ birth_date: null }), error: null });
+
+        const result = await awardProfileCompletionPoints();
+
+        expect(result.success).toBe(false);
+        expect(result.pointsEarned).toBe(0);
+    });
+
+    it('SEC-GAM-05: não concede pontos de perfil duas vezes', async () => {
+        const patient = makePatient({ birth_date: '1990-01-01', gender: 'F', goal: 'saude' });
+        (patient.gamification as any).profileCompletionAwarded = true;
+        mockFrom('patients', { data: patient, error: null });
+
+        const result = await awardProfileCompletionPoints();
+
+        expect(result.success).toBe(false);
+        expect(result.pointsEarned).toBe(0);
     });
 });

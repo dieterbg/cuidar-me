@@ -51,10 +51,13 @@ export interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>();
+  const [loadedProfile, setLoadedProfile] = useState<{ userId: string; profile: UserProfile | null } | null>(null);
+  const user = session?.user ?? null;
+  const userId = user?.id;
+  const accessToken = session?.access_token;
+  const profile = userId === loadedProfile?.userId ? loadedProfile?.profile ?? null : null;
+  const loading = session === undefined || (!!userId && userId !== loadedProfile?.userId);
   const [patientsUpdateCount, setPatientsUpdateCount] = useState(0);
   const { toast } = useToast();
   const router = useRouter();
@@ -96,67 +99,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Buscar sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        persistPendingConsent(session.user.id).finally(() => fetchProfile(session.user.id));
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Escutar mudanças de autenticação
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        persistPendingConsent(session.user.id).finally(() => fetchProfile(session.user.id));
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      if (!nextSession) setLoadedProfile(null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+  useEffect(() => {
+    if (!userId) return;
 
-      if (error) {
-        loggers.auth.error('Error fetching profile', error, { userId });
-        setProfile(null);
-      } else if (data) {
-        setProfile({
-          id: data.id,
-          email: data.email,
-          display_name: data.display_name,
-          photo_url: data.photo_url,
-          role: data.role as UserRole,
-          phone: data.phone,
-          privacy_consent_at: data.privacy_consent_at,
-          whatsapp_consent_at: data.whatsapp_consent_at,
-          ai_consent_at: data.ai_consent_at,
-          consent_version: data.consent_version,
-          consent_source: data.consent_source,
-        });
+    let active = true;
+
+    // As chamadas ao Supabase ficam fora do callback de autenticação.
+    async function loadProfile(id: string) {
+      let nextProfile: UserProfile | null = null;
+      try {
+        await persistPendingConsent(id);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          loggers.auth.error('Error fetching profile', error, { userId: id });
+        } else if (data) {
+          nextProfile = {
+            id: data.id,
+            email: data.email,
+            display_name: data.display_name,
+            photo_url: data.photo_url,
+            role: data.role as UserRole,
+            phone: data.phone,
+            privacy_consent_at: data.privacy_consent_at,
+            whatsapp_consent_at: data.whatsapp_consent_at,
+            ai_consent_at: data.ai_consent_at,
+            consent_version: data.consent_version,
+            consent_source: data.consent_source,
+          };
+        }
+      } catch (error) {
+        loggers.auth.error('Unexpected error in fetchProfile', error, { userId: id });
       }
-    } catch (error) {
-      loggers.auth.error('Unexpected error in fetchProfile', error, { userId });
-      setProfile(null);
-    } finally {
-      setLoading(false);
+      if (active) setLoadedProfile({ userId: id, profile: nextProfile });
     }
-  };
+
+    void loadProfile(userId);
+    return () => { active = false; };
+  }, [userId, accessToken]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -284,7 +278,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: 'Não foi possível encerrar sua sessão.'
       });
     } else {
-      router.push('/paciente');
+      window.location.replace('/paciente');
     }
   };
 
@@ -327,7 +321,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         profile,
-        session,
+        session: session ?? null,
         loading,
         signIn,
         signUp,

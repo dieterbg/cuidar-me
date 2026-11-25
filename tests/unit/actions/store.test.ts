@@ -13,6 +13,11 @@ vi.mock('next/cache', () => ({
     revalidateTag: vi.fn(),
 }));
 
+// Sessão simulada: paciente 'user-1' logado.
+vi.mock('@/lib/authz', () => ({
+    getAuthenticatedUserAndRole: vi.fn(async () => ({ userId: 'user-1', role: 'paciente' })),
+}));
+
 import { purchaseStoreItem, getUserTransactions } from '@/ai/actions/store';
 
 describe('Server Action: Store', () => {
@@ -143,5 +148,30 @@ describe('Server Action: Store', () => {
         const result = await purchaseStoreItem('fake', 'streak_freeze');
 
         expect(result.success).toBe(false);
+    });
+
+    // =================================================================
+    // SEGURANÇA (auditoria 2026-09-25)
+    // =================================================================
+    it('SEC-STO-01: nega compra em nome de outro usuário', async () => {
+        mockFrom('patients', { data: makePatient(500), error: null });
+
+        const result = await purchaseStoreItem('user-2', 'streak_freeze');
+
+        expect(result.success).toBe(false);
+        expect(result.message).toBe('Acesso negado.');
+    });
+
+    it('SEC-STO-02: código de voucher tem 8 caracteres A-Z0-9', async () => {
+        mockFrom('patients', { data: makePatient(5000), error: null });
+        mockFrom('transactions', { data: null, error: null });
+
+        const redeemable = (await import('@/lib/points-store')).STORE_CATALOG.find((i: any) => i.type === 'redeemable');
+        if (!redeemable) return; // catálogo sem item resgatável
+
+        const result = await purchaseStoreItem('user-1', redeemable.id);
+
+        expect(result.success).toBe(true);
+        expect(result.redeemCode).toMatch(/^[A-Z0-9]{8}$/);
     });
 });

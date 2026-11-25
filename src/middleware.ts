@@ -1,66 +1,92 @@
-import { type NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase-middleware'
+import { NextResponse, type NextRequest } from 'next/server';
+import { getProfileRole, STAFF_ROLES } from '@/lib/profile-role';
+import { createMiddlewareClient } from '@/lib/supabase-middleware';
 
-// Rotas exclusivas de staff — pacientes não devem acessar
-const STAFF_ROUTES = ['/overview', '/patients', '/patient/', '/protocols', '/scheduler']
+const routeRoles = new Map<string, readonly string[] | null>([
+    ['dashboard', null],
+    ['portal', ['paciente']],
+    ['admin', ['admin']],
+    ['overview', STAFF_ROLES],
+    ['patients', STAFF_ROLES],
+    ['patient', STAFF_ROLES],
+    ['protocols', STAFF_ROLES],
+    ['scheduler', STAFF_ROLES],
+    ['welcome', [...STAFF_ROLES, 'pendente']],
+    ['education', ['admin', 'equipe_saude']],
+    ['community', ['admin', 'equipe_saude']],
+    ['campaigns', ['admin', 'assistente']],
+    ['plans', ['admin', 'equipe_saude']],
+]);
 
-// Rotas exclusivas de pacientes — staff não precisa acessar pelo portal
-const PATIENT_ROUTES = ['/portal']
+function homeForRole(role: string | null) {
+    if (role === 'paciente') return '/portal/welcome';
+    if (STAFF_ROLES.some(staffRole => staffRole === role)) return '/overview';
+    return '/dashboard';
+}
 
 export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl
+    const { pathname, searchParams } = request.nextUrl;
+    const section = pathname.split('/')[1];
+    const allowedRoles = routeRoles.get(section);
+    if (allowedRoles === undefined) return NextResponse.next();
 
-    // 1. Rotas de API públicas — pular completamente (WhatsApp webhook, cron, etc.)
-    if (pathname.startsWith('/api/')) {
-        return NextResponse.next()
-    }
+    const { supabase, getResponse } = createMiddlewareClient(request);
 
-    // 2. Atualizar sessão (refresh tokens se necessário)
-    const { response, user } = await updateSession(request)
-
-    // 3. Rotas protegidas que exigem autenticação
-    const protectedPrefixes = ['/dashboard', '/portal', '/admin', ...STAFF_ROUTES]
-    const isProtectedRoute = protectedPrefixes.some(prefix => pathname.startsWith(prefix))
-
-    // 4. Não autenticado tentando acessar rota protegida → login
-    if (isProtectedRoute && !user) {
-        const loginUrl = new URL('/paciente', request.url)
-        loginUrl.searchParams.set('redirected', 'true')
-        return NextResponse.redirect(loginUrl)
-    }
-
-    // 5. Role check — lê do user_metadata (sem query extra ao DB)
-    //    Nota: user_metadata é definido no signup e é suficiente para o middleware.
-    //    A autorização granular de dados fica nas RLS policies e server actions.
-    if (user) {
-        const role = user.user_metadata?.role as string | undefined
-
-        // Paciente tentando acessar área de staff → redirecionar para o portal
-        const isStaffRoute = STAFF_ROUTES.some(r => pathname.startsWith(r))
-        if (isStaffRoute && role === 'paciente') {
-            return NextResponse.redirect(new URL('/portal/welcome', request.url))
+    function redirect(path: string) {
+        const response = NextResponse.redirect(new URL(path, request.url), 303);
+        for (const cookie of getResponse().cookies.getAll()) {
+            response.cookies.set(cookie);
         }
+        response.headers.set('Cache-Control', 'private, no-store');
+        return response;
+    }
 
-        // Staff tentando acessar o portal do paciente → redirecionar para o painel
-        const isPatientRoute = PATIENT_ROUTES.some(r => pathname.startsWith(r))
-        if (isPatientRoute && role && !['paciente', 'pendente'].includes(role)) {
-            return NextResponse.redirect(new URL('/overview', request.url))
+    // O Google já usa /dashboard como URL de retorno no Supabase.
+    if (pathname === '/dashboard' && request.method === 'GET') {
+        const code = searchParams.get('code');
+        if (code) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            return redirect(error ? '/paciente?auth_error=1' : '/dashboard');
+        }
+        if (searchParams.has('error') || searchParams.has('error_code')) {
+            return redirect('/paciente?auth_error=1');
         }
     }
 
-    // 6. Retornar response (pode ter cookies atualizados)
-    return response
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user || user.is_anonymous) {
+        const login = section === 'portal' || section === 'dashboard' ? '/paciente' : '/profissional';
+        return redirect(`${login}?redirected=true`);
+    }
+
+    const role = await getProfileRole(supabase, user.id);
+    const home = homeForRole(role);
+    const roles = /^\/patient\/[^/]+\/access-log(?:\/|$)/.test(pathname) ? ['admin'] : allowedRoles;
+
+    if ((roles && (!role || !roles.includes(role))) ||
+        ((pathname === '/dashboard' || pathname === '/portal') && pathname !== home)) {
+        return redirect(home);
+    }
+
+    const response = getResponse();
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public folder assets (svg, png, etc)
-         */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/dashboard/:path*',
+        '/portal/:path*',
+        '/admin/:path*',
+        '/overview/:path*',
+        '/patients/:path*',
+        '/patient/:path*',
+        '/protocols/:path*',
+        '/scheduler/:path*',
+        '/welcome/:path*',
+        '/education/:path*',
+        '/community/:path*',
+        '/campaigns/:path*',
+        '/plans/:path*',
     ],
-}
+};
