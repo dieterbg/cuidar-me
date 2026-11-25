@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo, useTransition } from 'react';
 import type { Patient, Video, PatientPlan } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { addMessage } from '@/ai/actions/messages';
-import { addSentVideo, getVideos, addVideo, deleteVideo } from '@/ai/actions/videos';
+import { recommendVideo, getVideos, addVideo, deleteVideo } from '@/ai/actions/videos';
 import { getPatients } from '@/ai/actions/patients';
 import { Button } from '@/components/ui/button';
 import {
@@ -54,7 +53,7 @@ const getYouTubeId = (url: string) => {
 
 export default function EducationPage() {
     const [selectedPatientId, setSelectedPatientId] = useState<string | undefined>();
-    const [isSending, startSendingTransition] = useTransition();
+    const [savingRecommendation, setSavingRecommendation] = useState<string | null>(null);
     const { toast } = useToast();
     const [patients, setPatients] = useState<Patient[]>([]);
     const [allVideos, setAllVideos] = useState<Video[]>([]);
@@ -130,38 +129,29 @@ export default function EducationPage() {
         return filtered;
     }, [allVideos, activeCategory]);
 
-    const handleSendVideo = (videoId: string) => {
-        if (!selectedPatient) return;
-
-        const video = allVideos.find(v => v.id === videoId);
-        if (!video) return;
-
-        startSendingTransition(async () => {
-            try {
-                const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/portal/education` : '/portal/education';
-                const messageText = `Olá, ${selectedPatient.name}! Temos um novo vídeo educativo para você: "${video.title}".\n\nAssista agora em nosso portal: ${portalUrl}`;
-
-                await addMessage(selectedPatient.id, {
-                    sender: 'me',
-                    text: messageText,
-                });
-
-                await addSentVideo(selectedPatient.id, video.id);
-
-                toast({
-                    title: "Vídeo Enviado!",
-                    description: `O vídeo "${video.title}" foi enviado para ${selectedPatient.name}.`,
-                });
-
-            } catch (error) {
-                toast({
-                    variant: "destructive",
-                    title: "Erro ao enviar vídeo",
-                    description: "Não foi possível registrar o envio do vídeo.",
-                });
+    const handleRecommendVideo = async (video: Video) => {
+        if (!selectedPatient || savingRecommendation) return;
+        setSavingRecommendation(video.id);
+        try {
+            const result = await recommendVideo(selectedPatient.id, video.id);
+            if (!result.success) {
+                toast({ variant: 'destructive', title: 'Erro ao registrar recomendação', description: result.error });
+                return;
             }
-        });
-    }
+            toast({
+                title: 'Recomendação registrada',
+                description: `O vídeo "${video.title}" foi registrado no histórico de ${selectedPatient.name}.`,
+            });
+        } catch {
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao registrar recomendação',
+                description: 'Não foi possível confirmar o registro. Tente novamente.',
+            });
+        } finally {
+            setSavingRecommendation(null);
+        }
+    };
 
     const handleAddVideo = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -251,7 +241,7 @@ export default function EducationPage() {
                                 Gestão de Educação
                             </h1>
                             <p className="text-muted-foreground mt-2 max-w-xl">
-                                Gerencie o catálogo de vídeos e envie conteúdo educativo para seus pacientes.
+                                Gerencie o catálogo de vídeos e registre recomendações no histórico dos pacientes.
                             </p>
                         </div>
                         <Dialog open={isVideoDialogOpen} onOpenChange={setIsVideoDialogOpen}>
@@ -331,10 +321,10 @@ export default function EducationPage() {
                     {/* Patient Selection & Filters */}
                     <div className="flex flex-col md:flex-row gap-6 items-start md:items-end justify-between bg-card/50 p-4 rounded-xl border border-border/50">
                         <div className="w-full md:w-1/3 space-y-2">
-                            <Label htmlFor="patient-select">Enviar para Paciente</Label>
-                            <Select onValueChange={setSelectedPatientId} value={selectedPatientId}>
+                            <Label htmlFor="patient-select">Recomendar vídeo ao paciente</Label>
+                            <Select onValueChange={setSelectedPatientId} value={selectedPatientId} disabled={!!savingRecommendation}>
                                 <SelectTrigger id="patient-select" className="bg-background">
-                                    <SelectValue placeholder="Selecione para habilitar envio..." />
+                                    <SelectValue placeholder="Selecione um paciente" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {patients.map((patient) => (
@@ -430,11 +420,11 @@ export default function EducationPage() {
                                                 <Button
                                                     size="sm"
                                                     className={cn("h-8 text-xs gap-1", !selectedPatient && "opacity-50")}
-                                                    disabled={!selectedPatient || !isAvailableForPatient || isSending}
-                                                    onClick={() => handleSendVideo(video.id)}
+                                                    disabled={!selectedPatient || !isAvailableForPatient || !!savingRecommendation}
+                                                    onClick={() => handleRecommendVideo(video)}
                                                 >
-                                                    {isSending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                                                    {selectedPatient ? (isAvailableForPatient ? 'Enviar' : 'Plano Incompatível') : 'Selecione Paciente'}
+                                                    {savingRecommendation === video.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                                                    {savingRecommendation === video.id ? 'Registrando…' : selectedPatient && !isAvailableForPatient ? 'Plano incompatível' : 'Registrar recomendação'}
                                                 </Button>
                                             </div>
                                         </CardContent>

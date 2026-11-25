@@ -6,6 +6,7 @@ import { sendWhatsappMessage } from '@/lib/twilio';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { loggers } from '@/lib/logger';
 import { buildWeeklySummaryMessage } from '@/lib/data';
+import { getCampaignPhone } from '@/lib/campaign-recipient';
 
 const logger = loggers.ai;
 
@@ -403,17 +404,25 @@ export async function processMessageQueue(externalSupabase?: any): Promise<{ suc
 
     // ── 3. PRE-FETCH paciente + protocolo em UMA query (elimina N+1) ──
     const uniquePatientIds = [...new Set(toProcess.map((m: any) => m.patient_id))];
-    const { data: patientRows } = await supabase
+    const campaignColumns = toProcess.some((message: { source: string; metadata?: { campaignPlan?: string } }) => message.source === 'manual' && message.metadata?.campaignPlan)
+        ? 'status, plan, whatsapp_number, whatsapp_consent_at,'
+        : '';
+    const { data: patientRows, error: patientError } = await supabase
         .from('patients')
         .select(`
-            id, user_id, full_name, gamification, total_points, level,
-            patient_protocols!inner (
+            id, user_id, full_name, gamification, total_points, level, ${campaignColumns}
+            patient_protocols (
                 id, current_day, is_active,
                 protocols:protocol_id ( id, name, duration_days )
             )
         `)
         .in('id', uniquePatientIds)
         .eq('patient_protocols.is_active', true);
+
+    if (patientError) {
+        logger.error('Erro ao verificar pacientes da fila', patientError);
+        return { success: false, processed: 0, error: 'Não foi possível verificar os pacientes da fila.' };
+    }
 
     const patientMap = new Map<string, any>(
         (patientRows || []).map((p: any) => [p.id, p])
@@ -457,8 +466,18 @@ async function _processSingleMessage(
 
     const patientRow = patientMap.get(msg.patient_id);
 
-    // IDENTITY GUARD: Se o paciente não existe ou não tem protocolo ativo, cancela a mensagem para não travar a fila
-    if (!patientRow) {
+    const campaignPlan = msg.source === 'manual' ? msg.metadata?.campaignPlan : undefined;
+    if (campaignPlan) {
+        const eligible = patientRow && patientRow.plan === campaignPlan
+            && getCampaignPhone(patientRow) === msg.patient_whatsapp_number;
+        if (!eligible) {
+            await supabase.from('scheduled_messages')
+                .update({ status: 'error', error_info: 'Campaign recipient no longer eligible' })
+                .eq('id', msg.id)
+                .eq('status', 'pending');
+            return 'skipped';
+        }
+    } else if (!patientRow?.patient_protocols?.length) {
         logger.warn('Identidade órfã detectada na fila. Cancelando mensagem.', { 
             messageId: msg.id, 
             patientId: msg.patient_id 
@@ -645,7 +664,7 @@ async function _processSingleMessage(
         return 'sent';
     } else {
         await supabase.from('scheduled_messages').update({
-            status: 'sent',
+            status: campaignPlan ? 'error' : 'sent',
             error_info: `FAILED to send via Twilio API${contentSid ? ` (ContentSID: ${contentSid})` : ''}`
         }).eq('id', msg.id);
         return 'failed';

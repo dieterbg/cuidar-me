@@ -214,7 +214,7 @@ export async function resolvePatientAttention(
 
     if (requestError) {
         console.error('Error updating attention requests:', requestError);
-        // Don't fail the whole operation if just the request update fails
+        return { success: false, error: 'Não foi possível concluir o alerta. Tente novamente.' };
     }
 
     // Audit — resolving attention touches the clinical record

@@ -7,7 +7,8 @@ import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { normalizeBrazilianNumber } from '@/lib/utils';
 import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
 import { addHealthMetricRecord } from '@/lib/health-metrics-store';
-import { authErrorMessage, getAuthenticatedUserAndRole, requireAdmin, requirePatientOwnerOrStaff, STAFF_ROLES } from '@/lib/authz';
+import { attachOpenAttentionRequests, loadPatientListRows } from '@/lib/attention-queue-store';
+import { authErrorMessage, getAuthenticatedUserAndRole, requireAdmin, requirePatientOwnerOrStaff, requireStaff, STAFF_ROLES } from '@/lib/authz';
 
 // Force recompile: 2025-11-25T00:45:00
 // ... (código anterior)
@@ -42,6 +43,13 @@ export async function getPatients(): Promise<Patient[]> {
     return (data || []).map(transformPatientFromSupabase);
 }
 
+export async function getPatientsWithAttention(): Promise<Patient[]> {
+    await requireStaff();
+    const supabase = createAdminClient();
+    const rows = await loadPatientListRows(supabase);
+    return attachOpenAttentionRequests(supabase, rows.map(transformPatientFromSupabase));
+}
+
 export async function getPatientProfileByUserId(userId: string): Promise<Patient | null> {
     const supabase = createClient();
     const auth = await getAuthenticatedUserAndRole();
@@ -73,7 +81,7 @@ export async function getPatientDetails(patientId: string): Promise<{
     sentVideos: SentVideo[];
     messages: Message[];
 }> {
-    await requirePatientOwnerOrStaff(patientId);
+    const access = await requirePatientOwnerOrStaff(patientId);
     const supabase = createAdminClient();
 
     // Fetch patient
@@ -114,7 +122,8 @@ export async function getPatientDetails(patientId: string): Promise<{
         .order('created_at', { ascending: false })
         .limit(50); // Limit to last 50 messages for performance
 
-    const patient = transformPatientFromSupabase(patientData);
+    const transformed = transformPatientFromSupabase(patientData);
+    const patient = access.isStaff ? (await attachOpenAttentionRequests(supabase, [transformed]))[0] : transformed;
 
     // Map protocol from join if exists
     if (patientData.patient_protocols && patientData.patient_protocols.length > 0) {

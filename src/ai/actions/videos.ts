@@ -1,6 +1,10 @@
 'use server';
 
 import { createClient } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase-server-utils';
+import { authErrorMessage, requireStaff } from '@/lib/authz';
+import { uuidFromHash } from '@/lib/deterministic-id';
+import { addMessageRecord } from '@/lib/message-store';
 import type { Video } from '@/lib/types';
 
 export async function getVideos(): Promise<Video[]> {
@@ -78,19 +82,40 @@ export async function getPatientEducationVideos(patientId: string): Promise<Vide
     return data || [];
 }
 
-export async function addSentVideo(patientId: string, videoId: string): Promise<{ success: boolean; error?: string }> {
-    const supabase = createClient();
+export async function recommendVideo(patientId: string, videoId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        await requireStaff();
+    } catch (error) {
+        return { success: false, error: authErrorMessage(error) };
+    }
 
+    const supabase = createServiceRoleClient();
+    const [patientResult, videoResult] = await Promise.all([
+        supabase.from('patients').select('full_name, plan, status').eq('id', patientId).maybeSingle(),
+        supabase.from('videos').select('title, eligible_plans, is_active').eq('id', videoId).maybeSingle(),
+    ]);
+    if (patientResult.error || videoResult.error) {
+        return { success: false, error: 'Não foi possível verificar o paciente e o vídeo.' };
+    }
+    const patient = patientResult.data;
+    const video = videoResult.data;
+    if (patient?.status !== 'active' || !video?.is_active || !video.eligible_plans?.includes(patient.plan)) {
+        return { success: false, error: 'Este vídeo precisa estar ativo e disponível no plano do paciente ativo.' };
+    }
+
+    const recommendationId = uuidFromHash(['video-recommendation', patientId, videoId]);
     const { error } = await supabase
         .from('sent_videos')
-        .insert({
-            patient_id: patientId,
-            video_id: videoId,
-        });
+        .upsert({ id: recommendationId, patient_id: patientId, video_id: videoId }, { onConflict: 'id', ignoreDuplicates: true });
+    if (error) return { success: false, error: 'Não foi possível registrar a recomendação do vídeo.' };
 
-    if (error) {
-        console.error('Error adding sent video:', error);
-        return { success: false, error: error.message };
+    const portalUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '') + '/portal/education';
+    const history = await addMessageRecord(patientId, {
+        sender: 'me',
+        text: `Olá, ${patient.full_name}! Recomendamos o vídeo "${video.title}".\n\nVeja na seção Educação do portal: ${portalUrl}`,
+    }, supabase, recommendationId);
+    if (!history.success) {
+        return { success: false, error: 'A recomendação foi registrada. Tente novamente para incluir a orientação no histórico.' };
     }
 
     return { success: true };

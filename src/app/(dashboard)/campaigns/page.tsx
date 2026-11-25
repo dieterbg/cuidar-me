@@ -1,15 +1,23 @@
 
 "use client";
 
-import { useState, useTransition } from 'react';
+import { useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { sendCampaignMessage } from '@/ai/actions-extended';
-import { getPatients } from '@/ai/actions/patients';
+import { previewCampaign, sendCampaignMessage } from '@/ai/actions-extended';
+import {
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { PatientPlan } from '@/lib/types';
 import { Loader2, Megaphone, Send } from 'lucide-react';
 
@@ -21,71 +29,75 @@ const plans: { id: PatientPlan, label: string }[] = [
 
 export default function CampaignsPage() {
     const { toast } = useToast();
-    const [isSending, startSending] = useTransition();
+    const [isReviewing, setIsReviewing] = useState(false);
+    const [isScheduling, setIsScheduling] = useState(false);
+    const [reviewOpen, setReviewOpen] = useState(false);
+    const [review, setReview] = useState<Parameters<typeof sendCampaignMessage>[2]>();
+    const [reviewError, setReviewError] = useState('');
+    const reviewButton = useRef<HTMLButtonElement>(null);
     const [message, setMessage] = useState('');
     const [selectedPlans, setSelectedPlans] = useState<PatientPlan[]>(['premium', 'vip']);
 
     const handlePlanChange = (plan: PatientPlan) => {
-        setSelectedPlans(prev =>
-            prev.includes(plan)
-                ? prev.filter(p => p !== plan)
-                : [...prev, plan]
+        setReview(undefined);
+        setSelectedPlans(previous =>
+            previous.includes(plan)
+                ? previous.filter(item => item !== plan)
+                : [...previous, plan]
         );
     };
 
-    const handleSendCampaign = async () => {
-        if (!message.trim()) {
-            toast({ variant: 'destructive', title: 'Mensagem vazia', description: 'Por favor, escreva a mensagem que deseja enviar.' });
-            return;
-        }
-        if (selectedPlans.length === 0) {
-            toast({ variant: 'destructive', title: 'Nenhum plano selecionado', description: 'Por favor, escolha pelo menos um plano para receber a mensagem.' });
-            return;
-        }
-
-        startSending(async () => {
-            try {
-                // Fetch all patients
-                const allPatients = await getPatients();
-
-                // Filter patients by selected plans
-                const targetPatients = allPatients.filter(p =>
-                    p.subscription && selectedPlans.includes(p.subscription.plan)
-                );
-
-                if (targetPatients.length === 0) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Nenhum paciente encontrado',
-                        description: 'Não há pacientes nos planos selecionados.',
-                    });
-                    return;
-                }
-
-                const patientIds = targetPatients.map(p => p.id);
-                const result = await sendCampaignMessage(patientIds, message);
-
-                if (result.success) {
-                    toast({
-                        title: 'Campanha Enviada!',
-                        description: `${patientIds.length} mensagens foram agendadas com sucesso.`,
-                    });
-                    setMessage('');
-                } else {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Erro ao enviar campanha',
-                        description: result.error || 'Ocorreu um erro inesperado.',
-                    });
-                }
-            } catch (error: any) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Erro ao enviar campanha',
-                    description: error.message || 'Ocorreu um erro inesperado.',
-                });
+    const handleReviewCampaign = async () => {
+        setReviewError('');
+        setIsReviewing(true);
+        try {
+            const result = await previewCampaign(selectedPlans, message);
+            if (!result.success) {
+                toast({ variant: 'destructive', title: 'Erro ao revisar campanha', description: result.error });
+                return;
             }
-        });
+            setReview(review ? { ...result.review, id: review.id } : result.review);
+            setReviewOpen(true);
+        } catch {
+            toast({ variant: 'destructive', title: 'Erro ao revisar campanha', description: 'Tente novamente.' });
+        } finally {
+            setIsReviewing(false);
+        }
+    };
+
+    const handleScheduleCampaign = async () => {
+        if (!review?.count) return;
+        setReviewError('');
+        setIsScheduling(true);
+        try {
+            const result = await sendCampaignMessage(selectedPlans, message, review);
+            if (!result.success) {
+                if (result.review) setReview(result.review);
+                setReviewError(result.error);
+                return;
+            }
+
+            const scheduled = result.scheduled === 1
+                ? '1 mensagem entrou na fila de envio.'
+                : `${result.scheduled} mensagens entraram na fila de envio.`;
+            const alreadyScheduled = result.alreadyScheduled === 1
+                ? '1 mensagem já havia sido agendada nesta campanha.'
+                : `${result.alreadyScheduled} mensagens já haviam sido agendadas nesta campanha.`;
+            toast({
+                title: result.scheduled ? 'Campanha agendada' : 'Campanha já agendada',
+                description: [
+                    result.scheduled > 0 ? scheduled : '',
+                    result.alreadyScheduled > 0 ? alreadyScheduled : '',
+                ].filter(Boolean).join(' '),
+            });
+            setReviewOpen(false);
+            setReview(undefined);
+            setMessage('');
+        } catch {
+            setReviewError('Não foi possível confirmar o agendamento. Tente novamente nesta revisão.');
+        } finally {
+            setIsScheduling(false);
+        }
     };
 
     return (
@@ -97,7 +109,7 @@ export default function CampaignsPage() {
                         Campanhas
                     </h1>
                     <p className="text-muted-foreground mt-2">
-                        Envie mensagens em massa via WhatsApp para pacientes de planos específicos.
+                        Agende orientações e lembretes por WhatsApp para pacientes dos planos selecionados.
                     </p>
                 </div>
 
@@ -105,7 +117,7 @@ export default function CampaignsPage() {
                     <CardHeader>
                         <CardTitle>Criar Nova Campanha</CardTitle>
                         <CardDescription>
-                            Escreva sua mensagem, selecione os planos de destino e clique em enviar.
+                            Revise o público e a mensagem antes de confirmar o agendamento.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -113,15 +125,19 @@ export default function CampaignsPage() {
                             <Label htmlFor="campaign-message">Mensagem</Label>
                             <Textarea
                                 id="campaign-message"
-                                placeholder="Ex: Olá! Temos uma nova condição especial no plano VIP. Gostaria de saber mais?"
+                                placeholder="Ex. Lembrete da clínica sobre o horário de atendimento desta semana."
                                 className="min-h-[150px]"
                                 value={message}
-                                onChange={(e) => setMessage(e.target.value)}
-                                disabled={isSending}
+                                onChange={(e) => {
+                                    setMessage(e.target.value);
+                                    setReview(undefined);
+                                }}
+                                maxLength={1500}
+                                disabled={isReviewing || isScheduling}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Enviar para os planos:</Label>
+                            <Label>Planos incluídos</Label>
                             <div className="flex items-center space-x-4 pt-2">
                                 {plans.map(plan => (
                                     <div key={plan.id} className="flex items-center space-x-2">
@@ -129,7 +145,7 @@ export default function CampaignsPage() {
                                             id={`plan-${plan.id}`}
                                             checked={selectedPlans.includes(plan.id)}
                                             onCheckedChange={() => handlePlanChange(plan.id)}
-                                            disabled={isSending}
+                                            disabled={isReviewing || isScheduling}
                                         />
                                         <Label htmlFor={`plan-${plan.id}`} className="font-normal">
                                             {plan.label}
@@ -140,16 +156,59 @@ export default function CampaignsPage() {
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button onClick={handleSendCampaign} disabled={isSending} className="w-full sm:w-auto">
-                            {isSending ? (
+                        <Button
+                            ref={reviewButton}
+                            onClick={handleReviewCampaign}
+                            disabled={isReviewing || isScheduling || !message.trim() || selectedPlans.length === 0}
+                            className="w-full sm:w-auto"
+                        >
+                            {isReviewing ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
                                 <Send className="mr-2 h-4 w-4" />
                             )}
-                            {isSending ? 'Enviando...' : `Enviar para ${selectedPlans.length} plano(s)`}
+                            {isReviewing ? 'Verificando público…' : 'Revisar campanha'}
                         </Button>
                     </CardFooter>
                 </Card>
+
+                <AlertDialog open={reviewOpen} onOpenChange={open => { if (!isScheduling) setReviewOpen(open); }}>
+                    <AlertDialogContent
+                        onCloseAutoFocus={event => {
+                            event.preventDefault();
+                            const focusTarget = reviewButton.current?.disabled
+                                ? document.getElementById('campaign-message')
+                                : reviewButton.current;
+                            focusTarget?.focus();
+                        }}
+                    >
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Revisar campanha</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                {review?.count === 1
+                                    ? '1 paciente elegível para agendamento pelo WhatsApp.'
+                                    : review?.count
+                                        ? `${review.count} pacientes elegíveis para agendamento pelo WhatsApp.`
+                                        : 'Nenhum paciente elegível nos planos selecionados.'}
+                                {' '}O público inclui pacientes ativos com consentimento registrado e número válido.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <p className="text-sm font-medium">
+                            {plans.filter(plan => selectedPlans.includes(plan.id)).map(plan => plan.label).join(', ')}
+                        </p>
+                        <p className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-muted p-3 text-sm">
+                            {message.trim()}
+                        </p>
+                        {reviewError && <p role="alert" className="text-sm text-destructive">{reviewError}</p>}
+                        <AlertDialogFooter>
+                            <AlertDialogCancel disabled={isScheduling}>Voltar</AlertDialogCancel>
+                            <Button onClick={handleScheduleCampaign} disabled={isScheduling || !review?.count}>
+                                {isScheduling && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+                                {isScheduling ? 'Agendando…' : 'Confirmar agendamento'}
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );

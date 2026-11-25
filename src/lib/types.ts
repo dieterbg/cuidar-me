@@ -129,6 +129,7 @@ export interface GamificationState {
 
 
 export interface AttentionRequest {
+    id?: string;
     reason: string;
     triggerMessage: string;
     aiSummary: string;

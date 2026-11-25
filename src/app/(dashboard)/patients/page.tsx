@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect, useMemo, useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -13,7 +13,8 @@ import { Search, ShieldCheck, AlertTriangle, Database, Star, Check, FilePenLine,
 import { useAuth } from '@/hooks/use-auth';
 import type { Patient, PatientPlan } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { getPatients } from '@/ai/actions/patients';
+import { getPatientsWithAttention } from '@/ai/actions/patients';
+import { compareAttentionPatients, isInAttentionQueue } from '@/lib/attention-priority';
 import { seedDatabase } from '@/ai/seed-database';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -46,20 +47,20 @@ import {
 } from "@/components/ui/select"
 
 
-// Classifica o tipo de alerta pelo texto do motivo (heurística client-side)
-function classifyUrgency(reason?: string | null): 'emergency' | 'question' | 'disengaged' {
-  if (!reason) return 'disengaged';
-  const r = reason.toLowerCase();
-  if (/dor|falta de ar|tont|desmaio|crise|emergên|urgente|socorro|pior|mal/.test(r)) return 'emergency';
-  if (/pergunt|dúvid|como|posso|quando|precis|explica|saber|entend/.test(r)) return 'question';
-  return 'disengaged';
-}
-
-const urgencyConfig = {
-  emergency:  { label: '🔴 Emergência',  className: 'bg-red-100 text-red-700 border border-red-200' },
-  question:   { label: '🟡 Pergunta',    className: 'bg-yellow-100 text-yellow-700 border border-yellow-200' },
-  disengaged: { label: '🟠 Desengajado', className: 'bg-orange-100 text-orange-700 border border-orange-200' },
+const priorityConfig = {
+  3: { label: 'Prioridade alta', className: 'bg-red-100 text-red-800' },
+  2: { label: 'Prioridade média', className: 'bg-amber-100 text-amber-900' },
+  1: { label: 'Prioridade padrão', className: 'bg-slate-100 text-slate-700' },
 } as const;
+
+function PatientsLoading() {
+  return (
+    <div role="status" className="text-center py-20">
+      <Loader2 className="h-10 w-10 mx-auto animate-spin text-primary/50" aria-hidden="true" />
+      <p className="mt-4 text-muted-foreground">Carregando pacientes…</p>
+    </div>
+  );
+}
 
 const riskLevelConfig: { [key in Patient['riskLevel'] & string]: { icon: React.ElementType, color: string, label: string, bg: string } } = {
   low: {
@@ -148,8 +149,16 @@ const StatusIndicator = ({ patient }: { patient: Patient }) => {
 
 
 export default function PatientsListPage() {
-  const { user, session, loading: authLoading, triggerPatientsUpdate } = useAuth();
-  const router = useRouter();
+  return (
+    <Suspense fallback={<PatientsLoading />}>
+      <PatientsList />
+    </Suspense>
+  );
+}
+
+function PatientsList() {
+  const { user, session, loading: authLoading, patientsUpdateCount, triggerPatientsUpdate } = useAuth();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
   const [isSeeding, startSeedingTransition] = useTransition();
@@ -157,7 +166,19 @@ export default function PatientsListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<string>('all');
   const [selectedRisk, setSelectedRisk] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState('attention');
+  const requestedTab = searchParams.get('tab');
+  const activeTab = requestedTab === 'pending' || requestedTab === 'inactive' || requestedTab === 'all'
+    ? requestedTab
+    : 'attention';
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
+  const selectTab = (tab: string) => {
+    const url = new URL(window.location.href);
+    if (tab === 'attention') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', tab);
+    window.history.pushState(null, '', url);
+  };
   const [patients, setPatients] = useState<Patient[]>([]);
 
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -167,46 +188,37 @@ export default function PatientsListPage() {
   const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
+    if (authLoading || !user) return;
+    let cancelled = false;
+
     const fetchPatients = async () => {
       setIsLoadingPatients(true);
+      setLoadFailed(false);
       try {
-        const fetchedPatients = await getPatients();
-        setPatients(fetchedPatients);
-      } catch (err: any) {
-        console.error("Erro ao buscar pacientes:", err);
-        toast({
-          variant: 'destructive',
-          title: 'Erro ao carregar pacientes',
-          description: err.message || 'Não foi possível buscar os dados do servidor.',
-        });
+        const fetchedPatients = await getPatientsWithAttention();
+        if (!cancelled) setPatients(fetchedPatients);
+      } catch {
+        if (!cancelled) {
+          setPatients([]);
+          setLoadFailed(true);
+        }
       } finally {
-        setIsLoadingPatients(false);
+        if (!cancelled) setIsLoadingPatients(false);
       }
     };
 
-    if (!authLoading && user) {
-      fetchPatients();
-    }
-  }, [user, authLoading, toast, triggerPatientsUpdate]);
+    void fetchPatients();
+    return () => { cancelled = true; };
+  }, [user, authLoading, patientsUpdateCount, loadAttempt]);
 
   const filteredPatients = useMemo(() => {
     let sortedPatients = [...patients];
 
-    if (activeTab === 'attention') {
-      // Sort by priority (desc) then by attention request time (asc)
-      sortedPatients.sort((a, b) => {
-        const priorityA = a.attentionRequest?.priority || a.subscription.priority || 1;
-        const priorityB = b.attentionRequest?.priority || b.subscription.priority || 1;
-        if (priorityB !== priorityA) return priorityB - priorityA;
-        const timeA = a.attentionRequest?.createdAt ? new Date(a.attentionRequest.createdAt as string).getTime() : 0;
-        const timeB = b.attentionRequest?.createdAt ? new Date(b.attentionRequest.createdAt as string).getTime() : 0;
-        return timeA - timeB;
-      });
-    }
+    if (activeTab === 'attention') sortedPatients.sort(compareAttentionPatients);
 
     return sortedPatients
       .filter(patient => {
-        if (activeTab === 'attention') return patient.needsAttention && patient.status !== 'pending';
+        if (activeTab === 'attention') return isInAttentionQueue(patient);
         if (activeTab === 'pending') return patient.status === 'pending';
         if (activeTab === 'inactive') {
           if (patient.status === 'inactive_cancellation' || patient.status === 'inactive') return true;
@@ -292,7 +304,7 @@ export default function PatientsListPage() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const attentionCount = useMemo(() => patients.filter(p => p.needsAttention && p.status !== 'pending').length, [patients]);
+  const attentionCount = useMemo(() => patients.filter(isInAttentionQueue).length, [patients]);
   const pendingCount = useMemo(() => patients.filter(p => p.status === 'pending').length, [patients]);
   const inactiveCount = useMemo(() => {
     const threeDaysAgo = subDays(new Date(), 3);
@@ -370,8 +382,8 @@ export default function PatientsListPage() {
                       <MessageCircleWarning className="h-4 w-4" />
                       <p className="text-xs font-bold uppercase tracking-wide">Atenção Necessária</p>
                     </div>
-                    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', urgencyConfig[classifyUrgency(patient.attentionRequest.reason)].className)}>
-                      {urgencyConfig[classifyUrgency(patient.attentionRequest.reason)].label}
+                    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', priorityConfig[patient.attentionRequest.priority].className)}>
+                      {priorityConfig[patient.attentionRequest.priority].label}
                     </span>
                   </div>
                   <p className="text-sm font-medium text-foreground mb-1">{patient.attentionRequest.reason}</p>
@@ -379,7 +391,9 @@ export default function PatientsListPage() {
                 </div>
               ) : (
                 <div className="flex-grow mb-4">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Última Mensagem</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                    {patient.needsAttention ? 'Prioridade a confirmar pela equipe' : 'Última mensagem'}
+                  </p>
                   <p className="text-sm text-foreground/80 italic line-clamp-2">"{patient.lastMessage || 'Nenhuma mensagem recente'}"</p>
                 </div>
               )}
@@ -454,7 +468,7 @@ export default function PatientsListPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="attention" className="w-full space-y-6" onValueChange={setActiveTab}>
+      <Tabs value={activeTab} className="w-full space-y-6" onValueChange={selectTab}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/50 p-2 rounded-2xl border border-border/50 backdrop-blur-sm">
           <TabsList className="bg-transparent p-0 h-auto gap-2 flex-wrap justify-start">
             <TabsTrigger value="attention" className="data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-md rounded-full px-6 py-2.5 h-10 transition-all font-medium">
@@ -531,9 +545,11 @@ export default function PatientsListPage() {
 
         <div className="min-h-[400px]">
           {isLoadingPatients ? (
-            <div className="text-center py-20">
-              <Loader2 className="h-10 w-10 mx-auto animate-spin text-primary/50" />
-              <p className="mt-4 text-muted-foreground animate-pulse">Sincronizando dados...</p>
+            <PatientsLoading />
+          ) : loadFailed ? (
+            <div className="text-center py-16 space-y-4">
+              <p role="alert" className="text-destructive">Não foi possível carregar a lista de pacientes e alertas.</p>
+              <Button variant="outline" onClick={() => setLoadAttempt(attempt => attempt + 1)}>Tentar novamente</Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

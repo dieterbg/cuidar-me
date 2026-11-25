@@ -1,9 +1,12 @@
 'use server';
 console.log('[DEBUG] actions-extended.ts loaded');
 
+import { createHash, randomUUID } from 'node:crypto';
+import { getCampaignPhone } from '@/lib/campaign-recipient';
+import { uuidFromHash } from '@/lib/deterministic-id';
 import { createClient } from '@/lib/supabase-server';
 import { createServiceRoleClient } from '@/lib/supabase-server-utils';
-import type { CommunityTopic, CommunityComment, ScheduledMessage, UserProfile } from '@/lib/types';
+import type { CommunityTopic, CommunityComment, ScheduledMessage, UserProfile, PatientPlan } from '@/lib/types';
 import {
     authErrorMessage,
     getAuthenticatedUserAndRole,
@@ -306,59 +309,125 @@ export async function getScheduledMessages(): Promise<ScheduledMessage[]> {
 
 
 
-export async function sendCampaignMessage(
-    patientIds: string[],
+const CAMPAIGN_PLANS: PatientPlan[] = ['freemium', 'premium', 'vip'];
+const MAX_CAMPAIGN_RECIPIENTS = 500;
+const CAMPAIGN_PAGE_SIZE = 500;
+
+type CampaignReview = { id: string; fingerprint: string; count: number };
+type CampaignRecipient = { id: string; plan: PatientPlan; phone: string };
+
+class CampaignAudienceError extends Error {}
+
+function validCampaignPlans(plans: PatientPlan[]): boolean {
+    return Array.isArray(plans) && plans.length > 0 && plans.length <= CAMPAIGN_PLANS.length
+        && plans.every(plan => CAMPAIGN_PLANS.includes(plan));
+}
+
+async function loadCampaignRecipients(
+    supabase: ReturnType<typeof createServiceRoleClient>,
+    plans: PatientPlan[]
+): Promise<CampaignRecipient[]> {
+    const recipients: CampaignRecipient[] = [];
+    let cursor: string | undefined;
+    while (true) {
+        let query = supabase.from('patients')
+            .select('id, plan, status, whatsapp_number, whatsapp_consent_at')
+            .eq('status', 'active')
+            .in('plan', plans)
+            .not('whatsapp_consent_at', 'is', null)
+            .order('id')
+            .limit(CAMPAIGN_PAGE_SIZE);
+        if (cursor) query = query.gt('id', cursor);
+        const { data, error } = await query;
+        if (error || !data) throw new CampaignAudienceError('Não foi possível verificar o público da campanha.');
+        if (!data.length) return recipients;
+
+        for (const patient of data) {
+            const phone = getCampaignPhone(patient);
+            if (phone) recipients.push({ id: patient.id, plan: patient.plan, phone });
+            if (recipients.length > MAX_CAMPAIGN_RECIPIENTS) {
+                throw new CampaignAudienceError('O público ultrapassa 500 pacientes. Selecione menos planos.');
+            }
+        }
+
+        cursor = data[data.length - 1].id;
+    }
+}
+
+function buildCampaignReview(id: string, message: string, recipients: CampaignRecipient[]): CampaignReview {
+    return {
+        id,
+        fingerprint: createHash('sha256').update(JSON.stringify([message, recipients])).digest('hex'),
+        count: recipients.length,
+    };
+}
+
+export async function previewCampaign(
+    plans: PatientPlan[],
     message: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: true; review: CampaignReview } | { success: false; error: string }> {
     try {
         await requireStaff();
+        const text = typeof message === 'string' ? message.trim() : '';
+        if (!text || text.length > 1500) return { success: false, error: 'Escreva uma mensagem de até 1.500 caracteres.' };
+        if (!validCampaignPlans(plans)) return { success: false, error: 'Escolha pelo menos um plano.' };
+
+        const recipients = await loadCampaignRecipients(createServiceRoleClient(), plans);
+        return { success: true, review: buildCampaignReview(randomUUID(), text, recipients) };
     } catch (error) {
-        return { success: false, error: authErrorMessage(error) };
+        return { success: false, error: error instanceof CampaignAudienceError ? error.message : authErrorMessage(error) };
     }
+}
 
-    const uniquePatientIds = Array.from(new Set(patientIds.filter(Boolean)));
-    const trimmedMessage = message.trim();
+export async function sendCampaignMessage(
+    plans: PatientPlan[],
+    message: string,
+    review: CampaignReview
+): Promise<
+    | { success: true; scheduled: number; alreadyScheduled: number }
+    | { success: false; error: string; review?: CampaignReview }
+> {
+    try {
+        await requireStaff();
+        const text = typeof message === 'string' ? message.trim() : '';
+        if (!text || text.length > 1500) return { success: false, error: 'Escreva uma mensagem de até 1.500 caracteres.' };
+        if (!validCampaignPlans(plans) || !review || !/^[a-f0-9-]{36}$/i.test(review.id)) {
+            return { success: false, error: 'Revise o público antes de agendar.' };
+        }
 
-    if (uniquePatientIds.length === 0 || uniquePatientIds.length > 500) {
-        return { success: false, error: 'Quantidade de pacientes invalida' };
+        const supabase = createServiceRoleClient();
+        const recipients = await loadCampaignRecipients(supabase, plans);
+        const currentReview = buildCampaignReview(review.id, text, recipients);
+        if (currentReview.fingerprint !== review.fingerprint || currentReview.count !== review.count) {
+            return { success: false, error: 'O público mudou. Confira a nova contagem antes de agendar.', review: currentReview };
+        }
+        if (!recipients.length) return { success: false, error: 'Nenhum paciente elegível para agendar.' };
+
+        const sendAt = new Date().toISOString();
+        const rows = recipients.map(patient => ({
+            id: uuidFromHash(['campaign', review.id, patient.id]),
+            patient_id: patient.id,
+            patient_whatsapp_number: patient.phone,
+            message_content: text,
+            send_at: sendAt,
+            source: 'manual' as const,
+            status: 'pending' as const,
+            metadata: { campaignPlan: patient.plan },
+        }));
+        const { data, error } = await supabase
+            .from('scheduled_messages')
+            .upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
+            .select('id');
+
+        if (error || !data) {
+            if (error) console.error('Error scheduling campaign messages:', error.code);
+            return { success: false, error: 'Não foi possível confirmar o agendamento. Tente novamente nesta revisão.' };
+        }
+
+        return { success: true, scheduled: data.length, alreadyScheduled: rows.length - data.length };
+    } catch (error) {
+        return { success: false, error: error instanceof CampaignAudienceError ? error.message : authErrorMessage(error) };
     }
-
-    if (!trimmedMessage || trimmedMessage.length > 1500) {
-        return { success: false, error: 'Mensagem invalida' };
-    }
-
-    const supabase = createServiceRoleClient();
-
-    // Buscar pacientes
-    const { data: patients, error: fetchError } = await supabase
-        .from('patients')
-        .select('id, whatsapp_number')
-        .in('id', uniquePatientIds);
-
-    if (fetchError || !patients) {
-        return { success: false, error: 'Failed to fetch patients' };
-    }
-
-    // Agendar mensagens
-    const scheduledMessages = (patients as any[]).map((p: any) => ({
-        patient_id: p.id,
-        patient_whatsapp_number: p.whatsapp_number,
-        message_content: trimmedMessage,
-        send_at: new Date().toISOString(),
-        source: 'manual' as const,
-        status: 'pending' as const,
-    }));
-
-    const { error } = await supabase
-        .from('scheduled_messages')
-        .insert(scheduledMessages);
-
-    if (error) {
-        console.error('Error scheduling campaign messages:', error);
-        return { success: false, error: error.message };
-    }
-
-    return { success: true };
 }
 
 // =====================================================

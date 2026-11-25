@@ -121,6 +121,7 @@ describe('Server Action: Patients', () => {
             adminMockFrom('health_metrics', { data: [{ id: 'm1', weight_kg: 80, date: '2026-01-01' }], error: null });
             adminMockFrom('sent_videos', { data: [{ id: 'sv1', video_id: 'v1', patient_id: 'p1', sent_at: '2026-01-01' }], error: null });
             adminMockFrom('messages', { data: [{ id: 'msg1', sender: 'patient', text: 'Olá', created_at: '2026-01-01' }], error: null });
+            adminMockFrom('attention_requests', { data: [], count: 0, error: null });
 
             const result = await getPatientDetails('p1');
 

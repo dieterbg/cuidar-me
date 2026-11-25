@@ -27,7 +27,7 @@ import {
     addCommentToTopic,
     createCommunityTopic,
     deleteAllUsers,
-    sendCampaignMessage,
+    previewCampaign,
     togglePinStatus,
     updateGamificationProgress,
 } from '@/ai/actions-extended';
@@ -90,10 +90,9 @@ describe('actions-extended security guards', () => {
     });
 
     it('rejeita campanha com mensagem muito longa antes de consultar pacientes', async () => {
-        const result = await sendCampaignMessage(['p1'], 'a'.repeat(1501));
+        const result = await previewCampaign(['premium'], 'a'.repeat(1501));
 
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('Mensagem invalida');
+        expect(result).toEqual({ success: false, error: 'Escreva uma mensagem de até 1.500 caracteres.' });
         expect(mockContainer.serviceSupabase.from).not.toHaveBeenCalled();
     });
 

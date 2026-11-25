@@ -11,20 +11,21 @@ export type StoredMessageInput = {
 export async function addMessageRecord(
     patientId: string,
     message: StoredMessageInput,
-    supabase = createServiceRoleClient()
+    supabase = createServiceRoleClient(),
+    messageId?: string
 ): Promise<{ success: boolean; error?: string }> {
-    const { error } = await supabase
-        .from('messages')
-        .insert({
-            patient_id: patientId,
-            sender: message.sender,
-            text: message.text,
-        });
+    const row = { patient_id: patientId, sender: message.sender, text: message.text };
+    const messages = supabase.from('messages');
+    const { data, error } = messageId
+        ? await messages.upsert({ ...row, id: messageId }, { onConflict: 'id', ignoreDuplicates: true }).select('id')
+        : await messages.insert(row);
 
     if (error) {
         console.error('Error adding message:', error);
         return { success: false, error: error.message };
     }
+
+    if (messageId && !data?.length) return { success: true };
 
     const { error: updateError } = await supabase
         .from('patients')

@@ -48,7 +48,8 @@ function AttentionBox({ patient, onResolve, onUseReply }: AttentionBoxProps) {
     const handleResolve = () => {
         startResolvingTransition(async () => {
             try {
-                await resolvePatientAttention(patient.id);
+                const result = await resolvePatientAttention(patient.id);
+                if (!result.success) throw new Error(result.error);
                 onResolve();
                 toast({ title: 'Alerta Resolvido', description: 'O paciente foi marcado como atendido.' });
             } catch (error) {
@@ -255,7 +256,8 @@ export function ChatPanel({ patient, conversation, onNewMessage, onPatientUpdate
         if (!patientId) return;
         startResolvingTransition(async () => {
             try {
-                await resolvePatientAttention(patientId);
+                const result = await resolvePatientAttention(patientId);
+                if (!result.success) throw new Error(result.error);
                 // Fetch updated patient data and pass it up
                 const details = await getPatientDetails(patientId);
                 if (details.patient) {
