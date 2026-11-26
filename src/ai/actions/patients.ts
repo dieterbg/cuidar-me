@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { normalizeBrazilianNumber } from '@/lib/utils';
+import { uuidFromHash } from '@/lib/deterministic-id';
+import { parsePatientRegistrationPhone, type PatientRegistrationInput, type PatientRegistrationResult } from '@/lib/patient-registration';
 import type { Patient, HealthMetric, SentVideo, Message } from '@/lib/types';
 import { addHealthMetricRecord } from '@/lib/health-metrics-store';
 import { attachOpenAttentionRequests, loadPatientListRows } from '@/lib/attention-queue-store';
@@ -255,171 +257,114 @@ export async function deletePatient(patientId: string): Promise<{ success: boole
     return { success: true };
 }
 
-export async function createPatientRecord(patientData: Partial<Patient>): Promise<{ success: boolean; patientId?: string; error?: string }> {
-    // PII redacted: patientData pode conter telefone, email, CPF
-    console.log('createPatientRecord called');
-    const supabase = createClient();
-    let auth;
+function readConsentTimestamp(value: unknown): string | null {
+    return typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+export async function createPatientRecord(input: PatientRegistrationInput = {}): Promise<PatientRegistrationResult> {
+    const unavailable = { success: false, error: 'Não foi possível concluir seu cadastro. Tente novamente.' } as const;
     try {
-        auth = await getAuthenticatedUserAndRole();
-    } catch (error: any) {
-        return { success: false, error: error.message || 'Não autenticado' };
-    }
-
-    const callerIsStaff = !!auth.role && STAFF_ROLES.includes(auth.role as any);
-    if (!callerIsStaff) {
-        if (patientData.userId && patientData.userId !== auth.userId) {
-            return { success: false, error: 'Acesso negado — não é permitido criar paciente para outro usuário.' };
+        const supabase = createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user || user.is_anonymous) {
+            return { success: false, error: 'Entre na sua conta para continuar o cadastro.' };
         }
-        patientData.userId = auth.userId;
-    }
 
-    const adminSupabase = createAdminClient(); // Use admin for checks to avoid RLS issues
-
-    // Verify if user exists in auth.users using admin client
-    if (patientData.userId) {
-        try {
-            const { data: user, error: userError } = await adminSupabase.auth.admin.getUserById(patientData.userId);
-            if (userError || !user) {
-                console.error('User not found in auth.users:', userError?.message);
-                return { success: false, error: 'User not found' };
-            }
-            console.log('User verified in auth.users');
-
-            // Check if profile exists
-            const { data: profile, error: profileError } = await adminSupabase
-                .from('profiles')
-                .select('*')
-                .eq('id', patientData.userId)
-                .single();
-
-            if (profileError || !profile) {
-                console.error('Profile not found for user:', profileError?.message);
-                // If profile is missing, try to create it manually (fallback)
-                console.log('Attempting to create missing profile...');
-                const { error: createProfileError } = await adminSupabase.from('profiles').insert({
-                    id: patientData.userId,
-                    email: patientData.email,
-                    role: 'paciente', // Default role
-                    display_name: patientData.fullName || '',
-                    phone: patientData.whatsappNumber || '',
-                    privacy_consent_at: patientData.privacyConsentAt || null,
-                    whatsapp_consent_at: patientData.whatsappConsentAt || null,
-                    ai_consent_at: patientData.aiConsentAt || null,
-                    consent_version: patientData.consentVersion || null,
-                    consent_source: patientData.consentSource || null,
-                });
-
-                if (createProfileError) {
-                    console.error('Failed to create fallback profile:', createProfileError);
-                    return { success: false, error: `Profile missing and creation failed: ${createProfileError.message}` };
-                }
-                console.log('Fallback profile created successfully.');
-            } else {
-                console.log('Profile verified');
-            }
-
-        } catch (err) {
-            console.error('Error verifying user/profile:', err);
-        }
-    }
-
-    // 1. Check if patient with this WhatsApp already exists
-    if (patientData.whatsappNumber) {
-        const { data: existingPatient, error: searchError } = await adminSupabase
-            .from('patients')
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
             .select('*')
-            .eq('whatsapp_number', patientData.whatsappNumber)
-            .single();
-
-        if (existingPatient) {
-            console.log('Found existing patient with this WhatsApp');
-
-            // Case A: Already linked to THIS user
-            if (existingPatient.user_id === patientData.userId) {
-                console.log('Patient already linked to this user. Returning success.');
-                return { success: true, patientId: existingPatient.id };
-            }
-
-            // Case B: Linked to ANOTHER user
-            if (existingPatient.user_id && existingPatient.user_id !== patientData.userId) {
-                console.warn('Patient linked to another user');
-                return { success: false, error: 'Este número de WhatsApp já está associado a outra conta.' };
-            }
-
-            // Case C: Unlinked (Ghost Patient) -> Claim it!
-            if (!existingPatient.user_id) {
-                console.log('Patient is unlinked. Claiming for authenticated user');
-
-                const updateData: any = {
-                    user_id: patientData.userId,
-                    email: patientData.email,
-                    status: 'pending', // Reset to pending to force onboarding review if needed? Or keep as is? Let's set to pending or active based on input.
-                    // Update name if provided
-                    full_name: patientData.fullName || existingPatient.full_name,
-                    privacy_consent_at: patientData.privacyConsentAt || existingPatient.privacy_consent_at,
-                    whatsapp_consent_at: patientData.whatsappConsentAt || existingPatient.whatsapp_consent_at,
-                    ai_consent_at: patientData.aiConsentAt || existingPatient.ai_consent_at,
-                    consent_version: patientData.consentVersion || existingPatient.consent_version,
-                    consent_source: patientData.consentSource || existingPatient.consent_source,
-                };
-
-                const { error: updateError } = await adminSupabase
-                    .from('patients')
-                    .update(updateData)
-                    .eq('id', existingPatient.id);
-
-                if (updateError) {
-                    console.error('Error claiming patient:', updateError);
-                    return { success: false, error: 'Erro ao vincular paciente existente.' };
-                }
-
-                return { success: true, patientId: existingPatient.id };
-            }
+            .eq('id', user.id)
+            .maybeSingle();
+        if (profileError || !profile) return unavailable;
+        if (profile.role !== 'paciente') {
+            return { success: false, error: 'Este cadastro está disponível para contas de paciente.' };
         }
-    }
 
-    // Mapear para snake_case também na criação
-    const dbInsert: any = {};
-    if (patientData.fullName) dbInsert.full_name = patientData.fullName;
-    if (patientData.email) dbInsert.email = patientData.email;
-    if (patientData.userId) dbInsert.user_id = patientData.userId;
-    if (patientData.whatsappNumber) dbInsert.whatsapp_number = normalizeBrazilianNumber(patientData.whatsappNumber);
-    if (patientData.birthDate) dbInsert.birth_date = patientData.birthDate;
-    if (patientData.gender) dbInsert.gender = patientData.gender;
-    if (patientData.height) dbInsert.height_cm = patientData.height;
-    if (patientData.initialWeight) dbInsert.initial_weight_kg = patientData.initialWeight;
-    if (patientData.healthConditions) dbInsert.health_conditions = patientData.healthConditions;
-    if (patientData.allergies) dbInsert.allergies = patientData.allergies;
-    if (patientData.status) dbInsert.status = patientData.status;
-    if (patientData.goal) dbInsert.goal = patientData.goal;
-    if (patientData.waist) dbInsert.waist_circumference_cm = patientData.waist;
-    if (patientData.medications) dbInsert.medications = patientData.medications;
-    if (patientData.privacyConsentAt) dbInsert.privacy_consent_at = patientData.privacyConsentAt;
-    if (patientData.whatsappConsentAt) dbInsert.whatsapp_consent_at = patientData.whatsappConsentAt;
-    if (patientData.aiConsentAt) dbInsert.ai_consent_at = patientData.aiConsentAt;
-    if (patientData.consentVersion) dbInsert.consent_version = patientData.consentVersion;
-    if (patientData.consentSource) dbInsert.consent_source = patientData.consentSource;
+        const admin = createAdminClient();
+        const findPatient = () => admin.from('patients').select('*').eq('user_id', user.id).maybeSingle();
+        const { data: existing, error: lookupError } = await findPatient();
+        if (lookupError) return unavailable;
+        if (existing) return { success: true, patient: transformPatientFromSupabase(existing) };
 
-    // Default gamification if needed — só staff pode definir (paciente não escolhe os próprios pontos)
-    if (callerIsStaff && patientData.gamification) dbInsert.gamification = patientData.gamification;
-
-    const { data, error } = await supabase
-        .from('patients')
-        .insert(dbInsert)
-        .select()
-        .single();
-
-    if (error) {
-        console.error('Error creating patient:', error);
-        // Fallback for race condition
-        if (error.code === '23505') { // Unique violation
-            return { success: false, error: 'Este número de WhatsApp já está cadastrado.' };
+        const metadata = user.user_metadata ?? {};
+        const name = [input?.fullName, profile.display_name, metadata.displayName, metadata.full_name]
+            .find(value => typeof value === 'string' && value.trim())?.trim();
+        const rawPhone = [input?.whatsappNumber, profile.phone, metadata.phone]
+            .find(value => typeof value === 'string' && value.trim())?.trim();
+        const phone = rawPhone ? parsePatientRegistrationPhone(rawPhone) : null;
+        const consent = {
+            privacy_consent_at: readConsentTimestamp(profile.privacy_consent_at) ?? readConsentTimestamp(metadata.privacy_consent_at),
+            whatsapp_consent_at: readConsentTimestamp(profile.whatsapp_consent_at) ?? readConsentTimestamp(metadata.whatsapp_consent_at),
+            ai_consent_at: readConsentTimestamp(profile.ai_consent_at) ?? readConsentTimestamp(metadata.ai_consent_at),
+        };
+        const hasConsent = Boolean(consent.privacy_consent_at && consent.whatsapp_consent_at && consent.ai_consent_at);
+        const missing = { name: !name || name.length > 160, phone: !phone, consent: !hasConsent && input?.acceptConsent !== true };
+        if (missing.name || missing.phone || missing.consent) {
+            return { success: false, missing, error: (rawPhone && !phone) ? 'Confira o DDD e o número de WhatsApp.' : undefined };
         }
-        return { success: false, error: error.message };
-    }
 
-    return { success: true, patientId: data.id };
+        const phoneConflict = {
+            success: false,
+            missing: { name: false, phone: true, consent: !hasConsent },
+            error: 'Este WhatsApp já está cadastrado. Confira o número ou fale com a clínica.',
+        } as const;
+        if (!phone) return unavailable;
+        // Detect the same number on old records stored without the canonical prefix.
+        const international = phone.slice('whatsapp:'.length);
+        const local = international.slice('+55'.length);
+        const areaCode = local.slice(0, 2);
+        const subscriber = local.slice(2);
+        const localFormatted = `(${areaCode}) ${subscriber.slice(0, -4)}-${subscriber.slice(-4)}`;
+        const { data: conflict, error: phoneError } = await admin.from('patients')
+            .select('id')
+            .in('whatsapp_number', [phone, international, international.slice(1), local, localFormatted])
+            .limit(1)
+            .maybeSingle();
+        if (phoneError) return unavailable;
+        if (conflict) {
+            const { data: ownPatient, error } = await findPatient();
+            if (error) return unavailable;
+            return ownPatient ? { success: true, patient: transformPatientFromSupabase(ownPatient) } : phoneConflict;
+        }
+
+        const { data: invite, error: inviteError } = await admin
+            .from('invite_tokens')
+            .select('plan')
+            .eq('used_by', user.id)
+            .not('used_at', 'is', null)
+            .order('used_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (inviteError) return unavailable;
+        const plan = invite?.plan === 'premium' || invite?.plan === 'vip' ? invite.plan : 'freemium';
+        const consentAt = hasConsent ? null : new Date().toISOString();
+        const { data: created, error: insertError } = await admin.from('patients').insert({
+            // One primary key per authenticated account keeps parallel attempts idempotent.
+            id: uuidFromHash(['patient-registration', user.id]),
+            user_id: user.id,
+            email: user.email,
+            full_name: name,
+            whatsapp_number: phone,
+            privacy_consent_at: consent.privacy_consent_at ?? consentAt,
+            whatsapp_consent_at: consent.whatsapp_consent_at ?? consentAt,
+            ai_consent_at: consent.ai_consent_at ?? consentAt,
+            consent_version: hasConsent ? (profile.consent_version || metadata.consent_version || '2026-06-16') : '2026-06-16',
+            consent_source: hasConsent ? (profile.consent_source || metadata.consent_source || 'patient_signup_form') : 'patient_activation_form',
+            plan,
+            status: 'active',
+        }).select('*').single();
+        if (!insertError && created) return { success: true, patient: transformPatientFromSupabase(created) };
+
+        if (insertError?.code === '23505') {
+            const { data: ownPatient, error: retryError } = await findPatient();
+            if (retryError) return unavailable;
+            if (ownPatient) return { success: true, patient: transformPatientFromSupabase(ownPatient) };
+            return phoneConflict;
+        }
+        return unavailable;
+    } catch {
+        return unavailable;
+    }
 }
 
 export async function addHealthMetric(

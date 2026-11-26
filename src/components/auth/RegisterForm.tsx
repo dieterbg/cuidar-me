@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, Phone } from 'lucide-react';
 import { SocialAuthButton } from './SocialAuthButton';
 import { handleAuthError } from './auth-utils';
+import { parsePatientRegistrationPhone } from '@/lib/patient-registration';
 
 const CONSENT_VERSION = '2026-06-16';
 
@@ -24,14 +25,6 @@ const OAuthDivider = () => (
     </div>
   </div>
 );
-
-const applyPhoneMask = (value: string): string => {
-  let v = value.replace(/\D/g, '');
-  if (v.length > 11) v = v.slice(0, 11);
-  if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-  if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
-  return v;
-};
 
 interface RegisterFormProps {
   userType: 'staff' | 'patient';
@@ -68,13 +61,23 @@ export const RegisterForm: FC<RegisterFormProps> = ({ userType }) => {
       return;
     }
 
+    const phone = isPatient ? parsePatientRegistrationPhone(whatsapp) : null;
+    if (isPatient && (!name.trim() || !phone)) {
+      toast({
+        variant: 'destructive',
+        title: 'Confira os dados do cadastro',
+        description: 'Informe seu nome e um WhatsApp com DDD.',
+      });
+      return;
+    }
+
     setIsPending(true);
     try {
       const roleToAssign = isPatient ? 'paciente' : 'pendente';
       await signUp(email.toLowerCase().trim(), password, {
         displayName: name.trim(),
         role: roleToAssign,
-        phone: whatsapp.replace(/\D/g, ''),
+        phone: phone?.slice('whatsapp:+55'.length) || '',
         privacyConsentAccepted: privacyConsent,
         whatsappConsentAccepted: whatsappConsent,
         aiConsentAccepted: aiConsent,
@@ -116,6 +119,8 @@ export const RegisterForm: FC<RegisterFormProps> = ({ userType }) => {
                 type="text"
                 placeholder="Seu nome completo"
                 value={name}
+                autoComplete="name"
+                maxLength={160}
                 onChange={(e) => setName(e.target.value)}
                 required
                 disabled={isPending}
@@ -132,7 +137,9 @@ export const RegisterForm: FC<RegisterFormProps> = ({ userType }) => {
                 type="tel"
                 placeholder="(11) 99999-9999"
                 value={whatsapp}
-                onChange={(e) => setWhatsapp(applyPhoneMask(e.target.value))}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                autoComplete="tel"
+                maxLength={32}
                 required
                 disabled={isPending}
                 className="pl-9 h-12 bg-white/50"

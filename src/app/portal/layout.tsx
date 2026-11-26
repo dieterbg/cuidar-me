@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -24,9 +24,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-client';
-import type { Patient } from '@/lib/types';
+import type { PatientRegistrationInput, PatientRegistrationResult } from '@/lib/patient-registration';
 import { createPatientRecord } from '@/ai/actions/patients';
-import { useToast } from '@/hooks/use-toast';
+import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -39,284 +39,80 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const router = useRouter();
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [patient, setPatient] = useState<Patient | null>(null);
-  const [isStatusLoading, setIsStatusLoading] = useState(true);
-  const [isCreatingPatient, setIsCreatingPatient] = useState(false);
+  const userId = user?.id;
+  const profileRole = profile?.role;
+  const [attempt, setAttempt] = useState<{ userId: string; fields?: PatientRegistrationInput } | null>(null);
+  const [registration, setRegistration] = useState<{
+    userId: string;
+    attempt: typeof attempt;
+    result: PatientRegistrationResult;
+  } | null>(null);
+  const result = registration && registration.userId === userId && registration.attempt === attempt
+    ? registration.result
+    : null;
+  const patient = result?.success ? result.patient : null;
   const [activationName, setActivationName] = useState('');
   const [activationPhone, setActivationPhone] = useState('');
   const [activationPrivacyConsent, setActivationPrivacyConsent] = useState(false);
   const [activationWhatsappConsent, setActivationWhatsappConsent] = useState(false);
   const [activationAiConsent, setActivationAiConsent] = useState(false);
-  const autoCreateAttempted = useRef(false); // evita dupla chamada no StrictMode
-  const { toast } = useToast();
-
-  const hasStoredConsent = Boolean(
-    (profile?.privacy_consent_at || user?.user_metadata?.privacy_consent_at) &&
-    (profile?.whatsapp_consent_at || user?.user_metadata?.whatsapp_consent_at) &&
-    (profile?.ai_consent_at || user?.user_metadata?.ai_consent_at)
-  );
-
-  const activationConsentsAccepted = hasStoredConsent || (
-    activationPrivacyConsent &&
-    activationWhatsappConsent &&
-    activationAiConsent
-  );
-
-  const getConsentFields = () => {
-    const manualConsentAt = activationConsentsAccepted && !hasStoredConsent
-      ? new Date().toISOString()
-      : null;
-
-    return {
-      privacyConsentAt: profile?.privacy_consent_at || user?.user_metadata?.privacy_consent_at || manualConsentAt,
-      whatsappConsentAt: profile?.whatsapp_consent_at || user?.user_metadata?.whatsapp_consent_at || manualConsentAt,
-      aiConsentAt: profile?.ai_consent_at || user?.user_metadata?.ai_consent_at || manualConsentAt,
-      consentVersion: profile?.consent_version || user?.user_metadata?.consent_version || '2026-06-16',
-      consentSource: profile?.consent_source || user?.user_metadata?.consent_source || 'patient_activation_form',
-    };
-  };
+  const activationConsentsAccepted = activationPrivacyConsent && activationWhatsappConsent && activationAiConsent;
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/paciente');
-      return;
-    }
-
-    // Proteção: Se o usuário logado NÃO for um paciente, tire ele do portal
-    if (!authLoading && profile && profile.role !== 'paciente') {
-      router.replace('/dashboard');
-    }
-  }, [user, profile, authLoading, router]);
-
-  // Se o perfil já tem nome + telefone (ex: cadastro via QR code), cria o
-  // registro de paciente automaticamente sem mostrar o formulário de ativação.
-  // Se faltar algum dado, pré-preenche o que tiver e exibe o form normalmente.
-  useEffect(() => {
-    if (!profile || patient || isStatusLoading || autoCreateAttempted.current) return;
-
-    const name = profile.display_name?.trim();
-    const rawPhone = profile.phone?.replace(/\D/g, '');
-
-    if (name && rawPhone && hasStoredConsent) {
-      // Dados completos — criação silenciosa, sem form
-      autoCreateAttempted.current = true;
-      autoCreatePatient(name, rawPhone);
-    } else {
-      // Dados incompletos — pré-preenche o que tiver e exibe o form
-      if (name && !activationName) setActivationName(name);
-      if (rawPhone && !activationPhone) {
-        let v = rawPhone;
-        if (v.length > 11) v = v.slice(0, 11);
-        if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-        if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
-        setActivationPhone(v);
-      }
-    }
-  }, [profile, patient, isStatusLoading, hasStoredConsent, activationName, activationPhone]);
+    setActivationName('');
+    setActivationPhone('');
+    setActivationPrivacyConsent(false);
+    setActivationWhatsappConsent(false);
+    setActivationAiConsent(false);
+  }, [userId]);
 
   useEffect(() => {
-    if (user) {
-      setIsStatusLoading(true);
-      const supabase = createClient();
+    if (authLoading) return;
+    if (!userId) router.replace('/paciente');
+    else if (profileRole && profileRole !== 'paciente') router.replace('/dashboard');
+  }, [userId, profileRole, authLoading, router]);
 
-      // Buscar paciente inicial
-      const fetchPatient = async () => {
-        const { data, error } = await supabase
-          .from('patients')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching patient:", error);
-          setPatient(null);
-        } else if (data) {
-          // Mapeamento manual dos campos do banco para o tipo Patient
-          const mappedPatient: any = {
-            ...data,
-            height: data.height_cm,
-            initialWeight: data.initial_weight_kg,
-            birthDate: data.birth_date,
-            // Garante que subscription exista para evitar erro
-            subscription: {
-              plan: data.plan || 'freemium',
-              priority: data.priority || 1
-            },
-            gamification: {
-              totalPoints: data.total_points || 0,
-              level: data.level || 1, // Garantir que seja número
-              badges: data.badges || [],
-              weeklyProgress: { weekStartDate: new Date(), perspectives: {} as any }
-            }
-          };
-          setPatient(mappedPatient as Patient);
-        } else {
-          setPatient(null);
-        }
-        setIsStatusLoading(false);
-      };
-
-      fetchPatient();
-
-      // Realtime subscription para atualizações de gamificação
-      const channel = supabase
-        .channel('patient_updates')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'patients',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            // Atualizar estado local quando houver mudança no banco
-            const newData = payload.new;
-            setPatient(prev => prev ? ({
-              ...prev,
-              gamification: newData.gamification || prev.gamification
-            }) : null);
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
-
-  // Criação automática quando perfil já tem nome + telefone do cadastro
-  const autoCreatePatient = async (name: string, rawPhone: string) => {
-    if (!user) return;
-    if (!activationConsentsAccepted) {
-      toast({
-        variant: "destructive",
-        title: "Consentimentos obrigatorios",
-        description: "Aceite os termos de privacidade, WhatsApp e assistente de IA para ativar a conta.",
+  useEffect(() => {
+    if (authLoading || !userId || (profileRole && profileRole !== 'paciente')) return;
+    let cancelled = false;
+    const fields = attempt?.userId === userId ? attempt.fields : undefined;
+    createPatientRecord(fields)
+      .catch((): PatientRegistrationResult => ({
+        success: false,
+        error: 'Não foi possível concluir seu cadastro. Tente novamente.',
+      }))
+      .then(result => {
+        if (!cancelled) setRegistration({ userId, attempt, result });
       });
-      return;
-    }
+    return () => { cancelled = true; };
+  }, [userId, profileRole, authLoading, attempt]);
 
-    setIsCreatingPatient(true);
-    try {
-      const invitePreApproved = user.user_metadata?.invite_pre_approved === true;
-      const invitePlan = user.user_metadata?.invite_plan || 'freemium';
-      const patientPlan = invitePreApproved ? invitePlan : 'freemium';
-      const patientStatus = (patientPlan === 'freemium' || invitePreApproved) ? 'active' : 'pending';
-
-      const result = await createPatientRecord({
-        userId: user.id,
-        email: user.email || '',
-        fullName: name,
-        whatsappNumber: rawPhone,
-        status: patientStatus,
-        ...getConsentFields(),
-      });
-
-      if (!result.success) throw new Error(result.error || 'Erro ao criar registro');
-
-      setPatient({
-        id: result.patientId || 'temp-id',
-        userId: user.id,
-        email: user.email || '',
-        fullName: name,
-        phone: rawPhone,
-        status: patientStatus,
-        gamification: { level: 1, totalPoints: 0, badges: [], weeklyProgress: { weekStartDate: new Date(), perspectives: {} as any } },
-        subscription: { plan: patientPlan, priority: 1 }
-      } as any);
-    } catch (error: any) {
-      console.error('[autoCreatePatient]', error);
-      // Fallback: exibe form manual com os dados que temos
-      setActivationName(name);
-      let v = rawPhone;
-      if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-      if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
-      setActivationPhone(v);
-    } finally {
-      setIsCreatingPatient(false);
-    }
-  };
-
-  const createPatientDocument = async () => {
-    if (!user) {
-      console.error("createPatientDocument called but user is null");
-      return;
-    }
-
-    console.log("createPatientDocument called");
-
-    if (!activationName.trim()) {
-      toast({ variant: "destructive", title: "Nome obrigatório", description: "Por favor, preencha seu nome completo." });
-      return;
-    }
-
-    if (!activationPhone.trim()) {
-      toast({ variant: "destructive", title: "WhatsApp obrigatório", description: "Por favor, preencha seu WhatsApp." });
-      return;
-    }
-
-    setIsCreatingPatient(true);
-
-    try {
-      // Verificar se há convite pré-aprovado na metadata do usuário
-      const invitePreApproved = user.user_metadata?.invite_pre_approved === true;
-      const invitePlan = user.user_metadata?.invite_plan || 'freemium';
-      const patientPlan = invitePreApproved ? invitePlan : 'freemium';
-      // Freemium = ativa direto (só vê conteúdo/comunidade, sem risco clínico)
-      // Premium/VIP com convite = ativa direto (médico já decidiu na consulta)
-      // Premium/VIP sem convite = não deveria acontecer (default é freemium)
-      const patientStatus = (patientPlan === 'freemium' || invitePreApproved) ? 'active' : 'pending';
-
-      const result = await createPatientRecord({
-        userId: user.id,
-        email: user.email || '',
-        fullName: activationName,
-        whatsappNumber: activationPhone,
-        status: patientStatus,
-        ...getConsentFields(),
-      });
-
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao criar registro de paciente');
-      }
-
-      // Update local state to reflect the new patient immediately
-      setPatient({
-        id: result.patientId || 'temp-id',
-        userId: user.id,
-        email: user.email || '',
-        fullName: activationName,
-        phone: activationPhone,
-        status: patientStatus,
-        gamification: {
-          level: 1,
-          totalPoints: 0,
-          badges: [],
-          weeklyProgress: { weekStartDate: new Date(), perspectives: {} as any }
-        },
-        subscription: { plan: patientPlan, priority: 1 }
-      } as any);
-
-      if (invitePreApproved) {
-        toast({ title: "Conta Ativada!", description: "Convite aceito — seu protocolo será iniciado em breve!" });
-      } else {
-        toast({ title: "Conta Criada!", description: "A clínica liberará seu acesso em breve." });
-      }
-      // router.push('/portal/welcome'); // No need to push if we update state, layout will render children
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erro", description: error.message });
-    } finally {
-      setIsCreatingPatient(false);
-    }
-  };
+  const patientId = patient?.id;
+  useEffect(() => {
+    if (!patientId || !userId) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel('patient_updates')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'patients',
+        filter: `user_id=eq.${userId}`,
+      }, ({ new: row }) => {
+        if (row.id !== patientId || row.user_id !== userId) return;
+        setRegistration(previous => previous?.userId === userId && previous.result.success
+          ? { ...previous, result: { success: true, patient: transformPatientFromSupabase(row) } }
+          : previous);
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [patientId, userId]);
 
   const isProfileComplete = !!patient?.height;
 
   // Proteção de rotas para usuários "incompletos" e planos restritos (deve ficar ANTES dos early returns para evitar erro #310)
   useEffect(() => {
-    if (!isStatusLoading && patient) {
+    if (patient) {
       const isFreemium = patient.subscription?.plan === 'freemium';
 
       // Bloqueia rotas de comunidade/educação para quem não completou perfil
@@ -329,16 +125,31 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         router.replace('/portal/welcome');
       }
     }
-  }, [pathname, isStatusLoading, patient, isProfileComplete, router]);
+  }, [pathname, patient, isProfileComplete, router]);
 
-  // Se estiver redirecionando ou carregando, não renderize nada que dependa de 'patient'
-  if (authLoading || isStatusLoading || isCreatingPatient || (profile && profile.role !== 'paciente')) {
-    return <div className="flex h-screen items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+  if (authLoading || !userId || !result || (profileRole && profileRole !== 'paciente')) {
+    return (
+      <div role="status" className="flex h-screen flex-col items-center justify-center gap-3 bg-background">
+        <div aria-hidden="true" className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <span className="text-sm text-muted-foreground">Carregando seu cadastro…</span>
+      </div>
+    );
   }
 
-  // Se o usuário for um paciente, mas o documento dele ainda não existe, mostre a tela de criação.
-  // Somente mostramos isso para quem tem a role 'paciente' ou se for um novo cadastro ainda não classificado
-  if (!patient) {
+  if (!result.success) {
+    const { missing, error } = result;
+    const handleContinue = () => {
+      const previousFields = attempt?.userId === userId ? attempt.fields : undefined;
+      const fields = missing
+        ? {
+          ...previousFields,
+          ...(missing.name ? { fullName: activationName.trim() } : {}),
+          ...(missing.phone ? { whatsappNumber: activationPhone.trim() } : {}),
+          ...(missing.consent ? { acceptConsent: activationConsentsAccepted } : {}),
+        }
+        : previousFields;
+      setAttempt({ userId, fields });
+    };
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center border-none shadow-xl bg-card/50 backdrop-blur-md">
@@ -346,41 +157,39 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4 animate-pulse">
               <UserPlus className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Quase lá!</CardTitle>
+            <CardTitle className="text-2xl">{missing ? 'Complete seu cadastro' : 'Não foi possível concluir seu cadastro'}</CardTitle>
             <CardDescription>
-              Confirme seus dados para ativar o acompanhamento via WhatsApp.
+              {missing ? 'Preencha os dados solicitados para continuar.' : 'Tente novamente para acessar seu portal.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-left">
-            <p className="text-muted-foreground mb-2 text-center text-sm">
-              Usaremos o WhatsApp para enviar seus check-ins diários.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="activation-name">Nome Completo</Label>
-              <Input
-                id="activation-name"
-                placeholder="Seu nome completo"
-                value={activationName}
-                onChange={(e) => setActivationName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="activation-phone">WhatsApp</Label>
-              <Input
-                id="activation-phone"
-                placeholder="(11) 99999-9999"
-                value={activationPhone}
-                onChange={(e) => {
-                  // Simple mask
-                  let v = e.target.value.replace(/\D/g, '');
-                  if (v.length > 11) v = v.slice(0, 11);
-                  if (v.length > 2) v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-                  if (v.length > 9) v = `${v.slice(0, 9)}-${v.slice(9)}`;
-                  setActivationPhone(v);
-                }}
-              />
-            </div>
-            {!hasStoredConsent && (
+            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            {missing?.name && (
+              <div className="space-y-2">
+                <Label htmlFor="activation-name">Nome completo</Label>
+                <Input
+                  id="activation-name"
+                  autoComplete="name"
+                  value={activationName}
+                  maxLength={160}
+                  onChange={(event) => setActivationName(event.target.value)}
+                />
+              </div>
+            )}
+            {missing?.phone && (
+              <div className="space-y-2">
+                <Label htmlFor="activation-phone">WhatsApp</Label>
+                <Input
+                  id="activation-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="(11) 99999-9999"
+                  value={activationPhone}
+                  onChange={(event) => setActivationPhone(event.target.value)}
+                />
+              </div>
+            )}
+            {missing?.consent && (
               <div className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-3 text-xs text-muted-foreground">
                 <label className="flex items-start gap-2">
                   <Checkbox
@@ -411,11 +220,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </CardContent>
           <CardFooter className="flex-col gap-3">
             <Button
-              onClick={createPatientDocument}
-              disabled={isCreatingPatient || !activationConsentsAccepted}
+              onClick={handleContinue}
+              disabled={Boolean((missing?.name && !activationName.trim()) || (missing?.phone && !activationPhone.trim()) || (missing?.consent && !activationConsentsAccepted))}
               className="w-full rounded-full h-12 text-base shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
             >
-              {isCreatingPatient ? 'Ativando...' : 'Salvar e Ativar Conta'}
+              {missing ? 'Continuar' : 'Tentar novamente'}
             </Button>
             <Button variant="ghost" onClick={signOut} className="w-full rounded-full text-muted-foreground hover:text-destructive">
               Sair

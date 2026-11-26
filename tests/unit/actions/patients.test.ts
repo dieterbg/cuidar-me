@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockSupabase } from '../../helpers/supabase-mock-helper';
+import { createChainMock, createMockSupabase } from '../../helpers/supabase-mock-helper';
 
 // --- Mock container (mutável para cada test) ---
 const mockContainer = { supabase: null as any, adminSupabase: null as any };
@@ -30,7 +30,7 @@ vi.mock('next/cache', () => ({
 }));
 
 vi.mock('@/lib/utils', () => ({
-    normalizeBrazilianNumber: vi.fn((val: string) => val),
+    normalizeBrazilianNumber: vi.fn((val: string) => 'whatsapp:+55' + val.replace(/\D/g, '')),
 }));
 
 import {
@@ -144,21 +144,122 @@ describe('Server Action: Patients', () => {
     // PAT-06: createPatientRecord
     // =================================================================
     describe('createPatientRecord', () => {
-        it('PAT-06: cria paciente com campos corretos', async () => {
-            // Admin mock for user verification
-            adminMockFrom('profiles', { data: { id: 'user-1', role: 'paciente' }, error: null });
-            adminMockFrom('patients', { data: null, error: { code: 'PGRST116', message: 'not found' } });
-            mockFrom('patients', { data: { id: 'new-p1' }, error: null });
+        const consentAt = '2026-11-25T10:00:00Z';
+        const consent = {
+            privacy_consent_at: consentAt,
+            whatsapp_consent_at: consentAt,
+            ai_consent_at: consentAt,
+        };
+        const account = {
+            id: 'user-1', email: 'patient@example.test',
+            user_metadata: { ...consent, invite_plan: 'vip', invite_pre_approved: true },
+        };
+        const profile = { role: 'paciente', display_name: 'Paciente de teste', phone: '(11) 90000-0000' };
 
-            const result = await createPatientRecord({
-                fullName: 'Ana Souza',
-                email: 'ana@test.com',
-                userId: 'user-1',
-                whatsappNumber: 'whatsapp:+5511999',
+        beforeEach(() => {
+            mockContainer.supabase.auth.getUser.mockResolvedValue({ data: { user: account }, error: null });
+            mockFrom('profiles', { data: profile, error: null });
+            adminMockFrom('invite_tokens', { data: null, error: null });
+        });
+
+        it('reaproveita os dados e consentimentos sem confiar no plano editável da conta', async () => {
+            const initial = createChainMock();
+            const insert = createChainMock({ data: { id: 'p1', status: 'active' }, error: null });
+            mockContainer.adminSupabase.from
+                .mockReturnValueOnce(initial)
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(insert);
+
+            const result = await createPatientRecord();
+            expect(result).toMatchObject({ success: true, patient: { id: 'p1', status: 'active' } });
+            expect(initial.eq).toHaveBeenCalledWith('user_id', 'user-1');
+            expect(insert.insert).toHaveBeenCalledWith(expect.objectContaining({
+                user_id: 'user-1', full_name: 'Paciente de teste', email: 'patient@example.test',
+                whatsapp_number: 'whatsapp:+5511900000000', plan: 'freemium', status: 'active',
+                ...consent,
+            }));
+            expect(mockContainer.supabase.from).not.toHaveBeenCalledWith('patients');
+        });
+
+        it('pede somente o WhatsApp quando o restante está salvo', async () => {
+            mockFrom('profiles', { data: { ...profile, phone: '' }, error: null });
+            await expect(createPatientRecord()).resolves.toMatchObject({
+                success: false, missing: { name: false, phone: true, consent: false },
             });
+            expect(mockContainer.adminSupabase.from).not.toHaveBeenCalledWith('invite_tokens');
+        });
 
-            expect(result.success).toBe(true);
-            expect(result.patientId).toBe('new-p1');
+        it('reutiliza um cadastro existente e preserva o status pendente', async () => {
+            const existing = createChainMock({ data: { id: 'existing', status: 'pending' }, error: null });
+            mockContainer.adminSupabase.from.mockReturnValueOnce(existing);
+            await expect(createPatientRecord()).resolves.toMatchObject({
+                success: true, patient: { id: 'existing', status: 'pending' },
+            });
+            expect(existing.insert).not.toHaveBeenCalled();
+            expect(mockContainer.adminSupabase.from).not.toHaveBeenCalledWith('invite_tokens');
+        });
+
+        it('usa o plano do convite consumido pela conta autenticada', async () => {
+            const invite = createChainMock({ data: { plan: 'premium' }, error: null });
+            const insert = createChainMock({ data: { id: 'p1' }, error: null });
+            mockContainer.adminSupabase.from
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(invite)
+                .mockReturnValueOnce(insert);
+            await expect(createPatientRecord()).resolves.toMatchObject({ success: true });
+            expect(invite.eq).toHaveBeenCalledWith('used_by', 'user-1');
+            expect(insert.insert).toHaveBeenCalledWith(expect.objectContaining({ plan: 'premium' }));
+        });
+
+        it('mantém o cadastro anterior intacto quando o WhatsApp já foi usado por outra conta', async () => {
+            const duplicate = createChainMock({ data: null, error: { code: '23505' } });
+            const owned = createChainMock();
+            mockContainer.adminSupabase.from
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(duplicate)
+                .mockReturnValueOnce(owned);
+            await expect(createPatientRecord()).resolves.toMatchObject({
+                success: false, error: expect.stringContaining('WhatsApp já está cadastrado'),
+                missing: { name: false, phone: true, consent: false },
+            });
+            expect(owned.eq).toHaveBeenCalledWith('user_id', 'user-1');
+            expect(owned.update).not.toHaveBeenCalled();
+        });
+
+        it('detecta o mesmo telefone em cadastros legados sem alterar dados existentes', async () => {
+            const legacy = createChainMock({ data: { id: 'legacy' }, error: null });
+            mockContainer.adminSupabase.from
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(legacy)
+                .mockReturnValueOnce(createChainMock());
+            await expect(createPatientRecord()).resolves.toMatchObject({
+                success: false, missing: { name: false, phone: true, consent: false },
+            });
+            expect(legacy.in).toHaveBeenCalledWith('whatsapp_number', expect.arrayContaining(['11900000000', '(11) 90000-0000']));
+            expect(legacy.update).not.toHaveBeenCalled();
+            expect(mockContainer.adminSupabase.from).not.toHaveBeenCalledWith('invite_tokens');
+        });
+
+        it('recupera o registro existente se outra tentativa concluir primeiro', async () => {
+            mockContainer.adminSupabase.from
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(createChainMock())
+                .mockReturnValueOnce(createChainMock({ data: null, error: { code: '23505' } }))
+                .mockReturnValueOnce(createChainMock({ data: { id: 'created-first', status: 'active' }, error: null }));
+            await expect(createPatientRecord()).resolves.toMatchObject({
+                success: true, patient: { id: 'created-first' },
+            });
+        });
+
+        it('bloqueia a criação para uma conta da clínica', async () => {
+            mockFrom('profiles', { data: { ...profile, role: 'assistente' }, error: null });
+            await expect(createPatientRecord()).resolves.toMatchObject({ success: false });
+            expect(mockContainer.adminSupabase.from).not.toHaveBeenCalled();
         });
     });
 
