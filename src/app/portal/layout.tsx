@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-client';
-import type { PatientRegistrationInput, PatientRegistrationResult } from '@/lib/patient-registration';
+import { parsePatientRegistrationPhone, type PatientRegistrationInput, type PatientRegistrationResult } from '@/lib/patient-registration';
 import { createPatientRecord } from '@/ai/actions/patients';
 import { transformPatientFromSupabase } from '@/lib/supabase-transforms';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,7 +52,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     : null;
   const patient = result?.success ? result.patient : null;
   const [activationName, setActivationName] = useState('');
-  const [activationPhone, setActivationPhone] = useState('');
+  const [activationPhone, setActivationPhone] = useState<string | null>(null);
+  const [editingPhone, setEditingPhone] = useState(false);
   const [activationPrivacyConsent, setActivationPrivacyConsent] = useState(false);
   const [activationWhatsappConsent, setActivationWhatsappConsent] = useState(false);
   const [activationAiConsent, setActivationAiConsent] = useState(false);
@@ -60,7 +61,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     setActivationName('');
-    setActivationPhone('');
+    setActivationPhone(null);
+    setEditingPhone(false);
     setActivationPrivacyConsent(false);
     setActivationWhatsappConsent(false);
     setActivationAiConsent(false);
@@ -137,17 +139,29 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }
 
   if (!result.success) {
-    const { missing, error } = result;
+    const { conflictingPhone, error } = result;
+    const showPhoneConflict = !!conflictingPhone && !editingPhone;
+    const missing = conflictingPhone ? { name: false, phone: true, consent: false } : result.missing;
+    const phoneValue = activationPhone ?? conflictingPhone ?? result.enteredPhone ?? '';
+    const normalizedPhone = parsePatientRegistrationPhone(phoneValue);
+    const sameConflictingPhone = conflictingPhone && normalizedPhone === parsePatientRegistrationPhone(conflictingPhone);
+    const canContinue = (!missing?.name || !!activationName.trim())
+      && (!missing?.phone || (!!normalizedPhone && !sameConflictingPhone))
+      && (!missing?.consent || activationConsentsAccepted);
+    const title = showPhoneConflict
+      ? 'WhatsApp já cadastrado'
+      : conflictingPhone ? 'Corrija seu WhatsApp' : missing ? 'Complete seu cadastro' : 'Não foi possível concluir seu cadastro';
     const handleContinue = () => {
       const previousFields = attempt?.userId === userId ? attempt.fields : undefined;
       const fields = missing
         ? {
           ...previousFields,
           ...(missing.name ? { fullName: activationName.trim() } : {}),
-          ...(missing.phone ? { whatsappNumber: activationPhone.trim() } : {}),
+          ...(missing.phone ? { whatsappNumber: phoneValue.trim() } : {}),
           ...(missing.consent ? { acceptConsent: activationConsentsAccepted } : {}),
         }
         : previousFields;
+      setEditingPhone(false);
       setAttempt({ userId, fields });
     };
     return (
@@ -157,79 +171,106 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4 animate-pulse">
               <UserPlus className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">{missing ? 'Complete seu cadastro' : 'Não foi possível concluir seu cadastro'}</CardTitle>
+            <CardTitle className="text-2xl">{title}</CardTitle>
             <CardDescription>
-              {missing ? 'Preencha os dados solicitados para continuar.' : 'Tente novamente para acessar seu portal.'}
+              {showPhoneConflict
+                ? `Já existe um cadastro com o WhatsApp terminado em ${conflictingPhone.slice(-4)}.`
+                : missing ? 'Preencha os dados solicitados para continuar.' : 'Tente novamente para acessar seu portal.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 text-left">
-            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-            {missing?.name && (
-              <div className="space-y-2">
-                <Label htmlFor="activation-name">Nome completo</Label>
-                <Input
-                  id="activation-name"
-                  autoComplete="name"
-                  value={activationName}
-                  maxLength={160}
-                  onChange={(event) => setActivationName(event.target.value)}
-                />
-              </div>
-            )}
-            {missing?.phone && (
-              <div className="space-y-2">
-                <Label htmlFor="activation-phone">WhatsApp</Label>
-                <Input
-                  id="activation-phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="(11) 99999-9999"
-                  value={activationPhone}
-                  onChange={(event) => setActivationPhone(event.target.value)}
-                />
-              </div>
-            )}
-            {missing?.consent && (
-              <div className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-3 text-xs text-muted-foreground">
-                <label className="flex items-start gap-2">
-                  <Checkbox
-                    checked={activationPrivacyConsent}
-                    onCheckedChange={(checked) => setActivationPrivacyConsent(checked === true)}
-                    aria-label="Aceito a politica de privacidade"
-                  />
-                  <span>Li e aceito a politica de privacidade e o uso dos meus dados para acompanhamento digital em saude.</span>
-                </label>
-                <label className="flex items-start gap-2">
-                  <Checkbox
-                    checked={activationWhatsappConsent}
-                    onCheckedChange={(checked) => setActivationWhatsappConsent(checked === true)}
-                    aria-label="Aceito receber mensagens por WhatsApp"
-                  />
-                  <span>Aceito receber check-ins, lembretes e orientacoes pelo WhatsApp informado.</span>
-                </label>
-                <label className="flex items-start gap-2">
-                  <Checkbox
-                    checked={activationAiConsent}
-                    onCheckedChange={(checked) => setActivationAiConsent(checked === true)}
-                    aria-label="Aceito apoio de assistente de IA"
-                  />
-                  <span>Entendo que a assistente de IA oferece apoio educativo e triagem, sem substituir consulta medica.</span>
-                </label>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex-col gap-3">
-            <Button
-              onClick={handleContinue}
-              disabled={Boolean((missing?.name && !activationName.trim()) || (missing?.phone && !activationPhone.trim()) || (missing?.consent && !activationConsentsAccepted))}
-              className="w-full rounded-full h-12 text-base shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
-            >
-              {missing ? 'Continuar' : 'Tentar novamente'}
-            </Button>
-            <Button variant="ghost" onClick={signOut} className="w-full rounded-full text-muted-foreground hover:text-destructive">
-              Sair
-            </Button>
-          </CardFooter>
+          {showPhoneConflict ? (
+            <>
+              <CardContent className="text-sm text-muted-foreground">
+                Use a conta que você já tinha para acessar o cadastro. Se você precisa vincular esse WhatsApp à sua conta atual, peça à clínica para conferir a titularidade.
+              </CardContent>
+              <CardFooter className="flex-col gap-3">
+                <Button onClick={signOut} className="w-full rounded-full h-12">
+                  Entrar com a conta anterior
+                </Button>
+                <Button variant="outline" onClick={() => setEditingPhone(true)} className="w-full rounded-full">
+                  Corrigir meu WhatsApp
+                </Button>
+              </CardFooter>
+            </>
+          ) : (
+            <>
+              <CardContent className="space-y-4 text-left">
+                {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+                {missing?.name && (
+                  <div className="space-y-2">
+                    <Label htmlFor="activation-name">Nome completo</Label>
+                    <Input
+                      id="activation-name"
+                      autoComplete="name"
+                      value={activationName}
+                      maxLength={160}
+                      onChange={(event) => setActivationName(event.target.value)}
+                    />
+                  </div>
+                )}
+                {missing?.phone && (
+                  <div className="space-y-2">
+                    <Label htmlFor="activation-phone">WhatsApp</Label>
+                    <Input
+                      id="activation-phone"
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="(11) 99999-9999"
+                      value={phoneValue}
+                      maxLength={32}
+                      onChange={(event) => setActivationPhone(event.target.value)}
+                    />
+                    {conflictingPhone && (
+                      <p className="text-sm text-muted-foreground">Informe um número diferente para continuar com esta conta.</p>
+                    )}
+                  </div>
+                )}
+                {missing?.consent && (
+                  <div className="space-y-3 rounded-lg border border-border/60 bg-background/60 p-3 text-xs text-muted-foreground">
+                    <label className="flex items-start gap-2">
+                      <Checkbox
+                        checked={activationPrivacyConsent}
+                        onCheckedChange={(checked) => setActivationPrivacyConsent(checked === true)}
+                        aria-label="Aceito a politica de privacidade"
+                      />
+                      <span>Li e aceito a politica de privacidade e o uso dos meus dados para acompanhamento digital em saude.</span>
+                    </label>
+                    <label className="flex items-start gap-2">
+                      <Checkbox
+                        checked={activationWhatsappConsent}
+                        onCheckedChange={(checked) => setActivationWhatsappConsent(checked === true)}
+                        aria-label="Aceito receber mensagens por WhatsApp"
+                      />
+                      <span>Aceito receber check-ins, lembretes e orientacoes pelo WhatsApp informado.</span>
+                    </label>
+                    <label className="flex items-start gap-2">
+                      <Checkbox
+                        checked={activationAiConsent}
+                        onCheckedChange={(checked) => setActivationAiConsent(checked === true)}
+                        aria-label="Aceito apoio de assistente de IA"
+                      />
+                      <span>Entendo que a assistente de IA oferece apoio educativo e triagem, sem substituir consulta medica.</span>
+                    </label>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="flex-col gap-3">
+                <Button
+                  onClick={handleContinue}
+                  disabled={!canContinue}
+                  className="w-full rounded-full h-12 text-base shadow-lg shadow-primary/20 hover:scale-105 transition-transform"
+                >
+                  {missing ? 'Continuar' : 'Tentar novamente'}
+                </Button>
+                <Button variant="ghost" onClick={conflictingPhone ? () => {
+                  setActivationPhone(null);
+                  setEditingPhone(false);
+                } : signOut} className="w-full rounded-full text-muted-foreground hover:text-destructive">
+                  {conflictingPhone ? 'Voltar' : 'Sair'}
+                </Button>
+              </CardFooter>
+            </>
+          )}
         </Card>
       </div>
     );

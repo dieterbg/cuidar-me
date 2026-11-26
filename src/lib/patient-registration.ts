@@ -20,4 +20,6 @@ export type PatientRegistrationResult =
         success: false;
         error?: string;
         missing?: { name: boolean; phone: boolean; consent: boolean };
+        enteredPhone?: string;
+        conflictingPhone?: string;
     };

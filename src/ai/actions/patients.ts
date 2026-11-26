@@ -299,22 +299,26 @@ export async function createPatientRecord(input: PatientRegistrationInput = {}):
         };
         const hasConsent = Boolean(consent.privacy_consent_at && consent.whatsapp_consent_at && consent.ai_consent_at);
         const missing = { name: !name || name.length > 160, phone: !phone, consent: !hasConsent && input?.acceptConsent !== true };
-        if (missing.name || missing.phone || missing.consent) {
-            return { success: false, missing, error: (rawPhone && !phone) ? 'Confira o DDD e o número de WhatsApp.' : undefined };
+        if (missing.name || !phone || missing.consent) {
+            return {
+                success: false,
+                missing,
+                enteredPhone: missing.phone ? rawPhone?.slice(0, 32) : undefined,
+                error: (rawPhone && !phone) ? 'Confira o DDD e o número de WhatsApp.' : undefined,
+            };
         }
 
-        const phoneConflict = {
-            success: false,
-            missing: { name: false, phone: true, consent: !hasConsent },
-            error: 'Este WhatsApp já está cadastrado. Confira o número ou fale com a clínica.',
-        } as const;
-        if (!phone) return unavailable;
         // Detect the same number on old records stored without the canonical prefix.
         const international = phone.slice('whatsapp:'.length);
         const local = international.slice('+55'.length);
         const areaCode = local.slice(0, 2);
         const subscriber = local.slice(2);
         const localFormatted = `(${areaCode}) ${subscriber.slice(0, -4)}-${subscriber.slice(-4)}`;
+        // Report the phone supplied by this account. Never return the conflicting record.
+        const phoneConflict = {
+            success: false,
+            conflictingPhone: localFormatted,
+        } as const;
         const { data: conflict, error: phoneError } = await admin.from('patients')
             .select('id')
             .in('whatsapp_number', [phone, international, international.slice(1), local, localFormatted])

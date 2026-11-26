@@ -223,8 +223,7 @@ describe('Server Action: Patients', () => {
                 .mockReturnValueOnce(duplicate)
                 .mockReturnValueOnce(owned);
             await expect(createPatientRecord()).resolves.toMatchObject({
-                success: false, error: expect.stringContaining('WhatsApp já está cadastrado'),
-                missing: { name: false, phone: true, consent: false },
+                success: false, conflictingPhone: '(11) 90000-0000',
             });
             expect(owned.eq).toHaveBeenCalledWith('user_id', 'user-1');
             expect(owned.update).not.toHaveBeenCalled();
@@ -237,7 +236,7 @@ describe('Server Action: Patients', () => {
                 .mockReturnValueOnce(legacy)
                 .mockReturnValueOnce(createChainMock());
             await expect(createPatientRecord()).resolves.toMatchObject({
-                success: false, missing: { name: false, phone: true, consent: false },
+                success: false, conflictingPhone: '(11) 90000-0000',
             });
             expect(legacy.in).toHaveBeenCalledWith('whatsapp_number', expect.arrayContaining(['11900000000', '(11) 90000-0000']));
             expect(legacy.update).not.toHaveBeenCalled();
